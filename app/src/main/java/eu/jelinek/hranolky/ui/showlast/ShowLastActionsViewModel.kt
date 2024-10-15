@@ -1,6 +1,7 @@
 package eu.jelinek.hranolky.ui.showlast
 
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,7 +9,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import eu.jelinek.hranolky.model.Quantity
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -23,6 +26,15 @@ class ShowLastActionsViewModel(
     private val _screenStateStream =
         MutableStateFlow<ShowLastActionsScreenState>(ShowLastActionsScreenState())
     val screenStateStream get() = _screenStateStream.asStateFlow()
+
+    private val _validationSharedFlowStream = MutableSharedFlow<AddActionValidationState>()
+    val validationSharedFlowStream get() = _validationSharedFlowStream.asSharedFlow()
+
+    var radioState = mutableStateOf("")
+        private set
+
+    var quantityState = mutableStateOf("")
+        private set
 
     val TAG = "Firestore"
 
@@ -59,6 +71,14 @@ class ShowLastActionsViewModel(
                 )
             }
         }
+    }
+
+    fun onRadioSelected(selectedOption: String) {
+        radioState.value = selectedOption
+    }
+
+    fun onQuantityChanged(newQuantity: String) {
+        quantityState.value = newQuantity
     }
 
     suspend fun fetchSlotFromFirestore(): WarehouseSlot? {
@@ -137,6 +157,40 @@ class ShowLastActionsViewModel(
         }
     }
 
+    fun addActionToTheSlot() {
+        if (validateInputs()) {
+            resetFields()
+        }
+    }
+
+    private fun resetFields() {
+        radioState.value = ""
+        quantityState.value = ""
+
+        viewModelScope.launch {
+            _validationSharedFlowStream.emit(AddActionValidationState())
+        }
+
+        // _status.postValue(ResultStatus.LOADING)
+    }
+
+    private fun validateInputs(): Boolean {
+        if (radioState.value.isEmpty()) {
+            viewModelScope.launch {
+                _validationSharedFlowStream.emit(AddActionValidationState(isRadioError = true))
+            }
+            return false
+        } else {
+            val quantity = quantityState.value.toDoubleOrNull()
+            if (quantity == null || quantity <= 0 || quantity > 9_999) {
+                viewModelScope.launch {
+                    _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
+                }
+                return false
+            }
+        }
+        return true
+    }
 
 }
 
@@ -144,4 +198,10 @@ data class ShowLastActionsScreenState(
     val slot: WarehouseSlot? = null,
     val loading: Boolean = false,
     val error: String? = null,
+)
+
+
+data class AddActionValidationState(
+    val isQuantityError: Boolean = false,
+    val isRadioError: Boolean = false,
 )

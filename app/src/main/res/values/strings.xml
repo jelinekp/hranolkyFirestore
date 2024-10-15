@@ -1,3 +1,23 @@
 <resources>
-    <string name="app_name">Hranolky Firestore</string>
+    <string name="app_name">Hranolky</string>
+    <string name="p_jem">+ Příjem</string>
+    <string name="v_dej">- Výdej</string>
+    <string name="data_se_odes_laj">Data se odesílají…</string>
+    <string name="ahoj_romane_co_si_p_eje_ud_lat">Ahoj, co si přeješ udělat?</string>
+    <string name="vyber_akci">Vyber akci</string>
+    <string name="n_zev_naskenuj_k_d">Název (naskenuj kód)</string>
+    <string name="zadej_platn_n_zev">Zadej platný název (10 - 20 znaků)</string>
+    <string name="zadej_mno_stv">Zadej množství</string>
+    <string name="zadej_platn_mno_stv">Zadej platné množství (&gt;0 a &lt;9999)</string>
+    <string name="odeslat_data_do_tabulky">Odeslat data do tabulky</string>
+    <string name="data_sp_n_odesl_na">Data úspěšně odeslána.</string>
+    <string name="data_se_neodeslala_jsi_p_ipojen_k_internetu">Data se neodeslala. Jsi připojen k internetu?</string>
+    <string name="patn_form_t_dat">Špatný formát dat.</string>
+    <string name="nastala_jin_chyba_zapamatuj_si_co_jsi_d_lal_a_kontaktuj_pavla">Nastala jiná chyba, zapamatuj si co jsi dělal a kontaktuj Pavla.</string>
+    <string name="na_st_dal_k_d">Načíst další kód</string>
+    <string name="nejste_p_ipojeni_k_internetu">Nejste připojeni k internetu.</string>
+    <string name="odpov_serveru">Odpověď serveru: %1$s</string>
+    <string name="prejit_na_demo">Přejít na demo\n</string>
+    <string name="odeslat">Odeslat</string>
+    <string name="back_icon">Zpět</string>
 </resources>
