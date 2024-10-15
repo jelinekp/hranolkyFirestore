@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -72,7 +73,7 @@ fun ShowLastActionsScreen(
     ) { padding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = modifier
                 .padding(padding)
                 .fillMaxWidth()
@@ -106,6 +107,7 @@ fun SlotData(
         val length = slot.length ?: 1
         val thickness = slot.thickness ?: 1.0f
         val volume = ((quantity * width * length).toFloat() * thickness)/1_000_000_000f
+        val formattedVolume = String.format("%.3f", volume)
 
         val alternateRowModifier =
             Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
@@ -114,7 +116,7 @@ fun SlotData(
         DataRow("Tloušťka", "$thickness mm", alternateRowModifier)
         DataRow("Šířka", "$width mm")
         DataRow("Délka", "$length mm", alternateRowModifier)
-        DataRow("Objem", "$volume m3")
+        DataRow("Celkový objem", "$formattedVolume m³")
     }
 }
 
@@ -132,7 +134,8 @@ fun LastActions(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .heightIn(min = 100.dp),
     ) {
         stickyHeader { // Makes the header sticky
             HeaderRowContent() // Your header row composable function
@@ -191,8 +194,12 @@ fun DataRow(
     ) {
         Text(
             text = "$label: ",
+            style = MaterialTheme.typography.bodySmall
         )
-        Text(text = value ?: "neznámá hodnota")
+        Text(
+            text = value ?: "neznámá hodnota",
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
@@ -202,26 +209,30 @@ fun HeaderRowContent() {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(vertical = 5.dp, horizontal = 16.dp),
+            .padding(vertical = 4.dp, horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = "Datum a čas",
-            modifier = Modifier.weight(8f)
+            modifier = Modifier.weight(8f),
+            style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Pohyb",
-            modifier = Modifier.weight(3f)
+            modifier = Modifier.weight(3f),
+            style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Změna",
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(3f)
+            modifier = Modifier.weight(3f),
+            style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Stav",
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(3f)
+            modifier = Modifier.weight(3f),
+            style = MaterialTheme.typography.bodySmall
         )
     }
 }
@@ -250,16 +261,20 @@ fun LastActionRow(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp),
     ) {
-        Text(readableDate, modifier = Modifier.weight(8f))
-        Text(action, modifier = Modifier.weight(3f))
+        Text(readableDate, modifier = Modifier.weight(8f), style = MaterialTheme.typography.bodySmall)
+        Text(action, modifier = Modifier.weight(3f), style = MaterialTheme.typography.bodySmall)
         Text(
             text = slotAction.quantityChange.toString(),
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(3f))
+            modifier = Modifier.weight(3f),
+            style = MaterialTheme.typography.bodySmall
+        )
         Text(
             text = slotAction.newQuantity.toString(),
             textAlign = TextAlign.End,
-            modifier = Modifier.weight(3f))
+            modifier = Modifier.weight(3f),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
@@ -281,7 +296,7 @@ fun AddAction(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(all = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
     ) {
         Text(
             text = "Přidat pohyb",
@@ -391,6 +406,10 @@ fun AddAction(
         // If there's an error, display the error message
         if (validationFlow.isQuantityError) {
             ErrorText(text = stringResource(R.string.zadej_platn_mno_stv))
+        }
+
+        if (validationFlow.isRemovedError) {
+            ErrorText(text = stringResource(R.string.vydej_nemuze_byt_vetsi_nez_aktualni_stav))
         }
     }
 }

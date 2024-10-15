@@ -43,34 +43,34 @@ class ShowLastActionsViewModel(
 
     init {
         viewModelScope.launch {
-            var slot = fetchSlotFromFirestore()
+            updateSlot(fetchSlotFromFirestore())
+        }
+    }
 
-            if (slot != null) {
-                val quality = slot.productId.take(5)
-                val parts = slot.productId.split("-")
-                val rawThickness = parts[2].toFloat()
+    private fun updateSlot(slot: WarehouseSlot?) {
+        if (slot != null) {
+            val quality = slot.productId.take(5)
+            val parts = slot.productId.split("-")
+            val rawThickness = parts[2].toFloat()
 
-                val thickness = when(rawThickness) {
-                    20.0f -> 20.0f
-                    27.0f -> 27.4f
-                    42.0f -> 42.4f
-                    else -> rawThickness
-                }
-
-                val width = parts[3].toInt()
-                val length = parts[4].toInt()
-
-                slot = slot.copy(
-                    quality = quality,
-                    thickness = thickness,
-                    width = width,
-                    length = length,
-                )
+            val thickness = when(rawThickness) {
+                20.0f -> 20.0f
+                27.0f -> 27.4f
+                42.0f -> 42.4f
+                else -> rawThickness
             }
+
+            val width = parts[3].toInt()
+            val length = parts[4].toInt()
 
             _screenStateStream.update {
                 it.copy(
-                    slot = slot
+                    slot = slot.copy(
+                        quality = quality,
+                        thickness = thickness,
+                        width = width,
+                        length = length,
+                    )
                 )
             }
         }
@@ -235,6 +235,7 @@ class ShowLastActionsViewModel(
                 } catch (e: Exception) {
                     Log.e(TAG, "Error sending slot Action to Firestore", e)
                 }
+                updateSlot(fetchSlotFromFirestore())
             }
 
             resetFields()
@@ -265,6 +266,11 @@ class ShowLastActionsViewModel(
                     _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
                 }
                 return false
+            } else if (radioState.value == "vydej" && quantity > screenStateStream.value.slot!!.quantity) {
+                viewModelScope.launch {
+                    _validationSharedFlowStream.emit(AddActionValidationState(isRemovedError = true))
+                }
+                return false
             }
         }
         return true
@@ -281,5 +287,10 @@ data class ShowLastActionsScreenState(
 
 data class AddActionValidationState(
     val isQuantityError: Boolean = false,
+    val isRemovedError: Boolean = false,
     val isRadioError: Boolean = false,
 )
+
+enum class ResultStatus {
+    LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR
+}
