@@ -33,7 +33,15 @@ class ShowLastActionsViewModel(
             if (slot != null) {
                 val quality = slot.productId.take(5)
                 val parts = slot.productId.split("-")
-                val thickness = parts[2].toInt()
+                val rawThickness = parts[2].toFloat()
+
+                val thickness = when(rawThickness) {
+                    20.0f -> 20.0f
+                    27.0f -> 27.4f
+                    42.0f -> 42.4f
+                    else -> rawThickness
+                }
+
                 val width = parts[3].toInt()
                 val length = parts[4].toInt()
 

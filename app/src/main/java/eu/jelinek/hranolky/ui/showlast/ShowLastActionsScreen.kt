@@ -1,9 +1,11 @@
 package eu.jelinek.hranolky.ui.showlast
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -50,14 +52,14 @@ fun ShowLastActionsScreen(
         } else {
             Column (
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = modifier.width(250.dp),
+                modifier = modifier.width(260.dp),
             ) {
-                DataRow("Množství na skladě", screenState.slot!!.quantity.toString())
+                val alternateRowModifier = Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+                DataRow("Množství na skladě", screenState.slot!!.quantity.toString(), alternateRowModifier)
                 DataRow("Kvalita", screenState.slot!!.quality.toString())
-                DataRow("Tloušťka", screenState.slot!!.thickness.toString())
-                DataRow("Šířka", screenState.slot!!.width.toString())
-                DataRow("Délka", screenState.slot!!.length.toString())
+                DataRow("Tloušťka", screenState.slot!!.thickness.toString() + " mm", alternateRowModifier)
+                DataRow("Šířka", screenState.slot!!.width.toString() + " mm")
+                DataRow("Délka", screenState.slot!!.length.toString() + " mm", alternateRowModifier)
             }
         }
     }
@@ -66,16 +68,16 @@ fun ShowLastActionsScreen(
 @Composable
 fun DataRow(
     label: String,
-    value: String,
+    value: String?,
     modifier: Modifier = Modifier
 ) {
     Row (
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(
             text = "$label: ",
         )
-        Text(text = value)
+        Text(text = value ?: "neznámá hodnota")
     }
 }

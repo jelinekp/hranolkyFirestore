@@ -5,7 +5,7 @@ data class WarehouseSlot(
     val quantity: Int,
     val quality: String? = null,
     val width: Int? = null,
-    val thickness: Int? = null,
+    val thickness: Float? = null,
     val length: Int? = null,
 )
 
