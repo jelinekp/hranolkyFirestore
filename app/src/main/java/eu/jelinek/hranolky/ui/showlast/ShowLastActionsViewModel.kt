@@ -5,8 +5,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import eu.jelinek.hranolky.model.Quantity
+import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -95,6 +98,7 @@ class ShowLastActionsViewModel(
                 return WarehouseSlot(
                     productId = slotId,
                     quantity = warehouseQuantity?.quantity ?: 0,
+                    slotActions = getLastActionsForSlot(slotId),
                 )
             } else {
                 Log.w(TAG, "Document not found")
@@ -104,6 +108,29 @@ class ShowLastActionsViewModel(
         } catch (exception: Exception) {
             Log.w(TAG, "Error getting document.", exception)
             return null
+        }
+    }
+
+    private suspend fun getLastActionsForSlot(documentId: String): List<SlotAction> {
+        val firestore = FirebaseFirestore.getInstance()
+        val slotActionsRef = firestore.collection("WarehouseSlots")
+            .document(documentId)
+            .collection("SlotActions")
+
+        return try {
+            val querySnapshot = slotActionsRef
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(10)
+                .get()
+                .await()
+
+            querySnapshot.documents.map { document ->
+                document.toObject(SlotAction::class.java) ?: SlotAction()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error receiving last actions from Firestore", e)
+            // Handle error, e.g., log it or return an empty list
+            emptyList()
         }
     }
 
@@ -159,6 +186,57 @@ class ShowLastActionsViewModel(
 
     fun addActionToTheSlot() {
         if (validateInputs()) {
+
+            val quantityChange = when (radioState.value) {
+                "prijem" -> quantityState.value.toLong()
+                "vydej" -> -quantityState.value.toLong()
+                else -> return
+            }
+
+            val quantityFieldUpdate = when (radioState.value) {
+                "prijem" -> FieldValue.increment(quantityState.value.toLong())
+                "vydej" -> FieldValue.increment(-quantityState.value.toLong())
+                else -> return
+            }
+
+            val slotAction = hashMapOf(
+                "action" to radioState.value,
+                "quantityChange" to quantityChange,
+                "newQuantity" to (screenStateStream.value.slot?.quantity?.plus(quantityChange) ?: 0),
+                "timestamp" to FieldValue.serverTimestamp(),
+            )
+
+            viewModelScope.launch {
+                try {
+                    firestoreDb.collection("WarehouseSlots")
+                        .document(slotId!!)
+                        .update("quantity", quantityFieldUpdate)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "Updated slot with ID: $slotId to new Value: $quantityFieldUpdate")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.w(TAG, "Error adding document", e)
+                        }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating data in Firestore", e)
+                }
+
+                try {
+                    firestoreDb.collection("WarehouseSlots")
+                        .document(slotId!!)
+                        .collection("SlotActions")
+                        .add(slotAction)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "Added slot action to slot $slotId with: $slotAction")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.w(TAG, "Error adding slot Action", e)
+                        }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sending slot Action to Firestore", e)
+                }
+            }
+
             resetFields()
         }
     }

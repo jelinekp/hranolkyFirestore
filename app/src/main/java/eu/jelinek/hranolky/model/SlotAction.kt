@@ -1,7 +1,6 @@
 package eu.jelinek.hranolky.model
 
-data class SlotHistoryEntry(
-    var productId: String? = null,
+data class SlotAction(
     var action: String? = null,
     var quantityChange: Int = 0,
     var newQuantity: Int = 0,

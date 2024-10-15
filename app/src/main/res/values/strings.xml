@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Hranolky</string>
-    <string name="p_jem">+ Příjem</string>
-    <string name="v_dej">- Výdej</string>
+    <string name="p_jem">+ příjem</string>
+    <string name="v_dej">&#8722; výdej</string>
     <string name="data_se_odes_laj">Data se odesílají…</string>
     <string name="ahoj_romane_co_si_p_eje_ud_lat">Ahoj, co si přeješ udělat?</string>
     <string name="vyber_akci">Vyber akci</string>
