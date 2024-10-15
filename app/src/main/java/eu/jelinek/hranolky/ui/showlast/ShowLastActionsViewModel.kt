@@ -20,16 +20,30 @@ class ShowLastActionsViewModel(
 ) : ViewModel() {
 
     val slotId: String? = savedStateHandle[Screen.ShowLastActionsScreen.ID]
-    private val _screenStateStream = MutableStateFlow<ShowLastActionsScreenState>(ShowLastActionsScreenState())
+    private val _screenStateStream =
+        MutableStateFlow<ShowLastActionsScreenState>(ShowLastActionsScreenState())
     val screenStateStream get() = _screenStateStream.asStateFlow()
 
     val TAG = "Firestore"
 
     init {
         viewModelScope.launch {
-            val slot = fetchSlotFromFirestore()
+            var slot = fetchSlotFromFirestore()
 
+            if (slot != null) {
+                val quality = slot.productId.take(5)
+                val parts = slot.productId.split("-")
+                val thickness = parts[2].toInt()
+                val width = parts[3].toInt()
+                val length = parts[4].toInt()
 
+                slot = slot.copy(
+                    quality = quality,
+                    thickness = thickness,
+                    width = width,
+                    length = length,
+                )
+            }
 
             _screenStateStream.update {
                 it.copy(
@@ -48,15 +62,15 @@ class ShowLastActionsViewModel(
 
             if (documentSnapshot.exists()) {
                 Log.d(TAG, "DocumentSnapshot data: ${documentSnapshot.data}")
-                val warehouseQuantity = documentSnapshot.toObject(Quantity::class.java) // Convert to your data class
-                Log.d(TAG, "WarehouseQuantity: $warehouseQuantity")
-                Log.d(TAG, "WarehouseQuantity value: ${warehouseQuantity?.quantity}")
+                val warehouseQuantity =
+                    documentSnapshot.toObject(Quantity::class.java) // Convert to your data class
                 return WarehouseSlot(
                     productId = slotId,
                     quantity = warehouseQuantity?.quantity ?: 0,
                 )
             } else {
                 Log.w(TAG, "Document not found")
+                sendNewSlotToFirestore(0)
                 return null // Document not found
             }
         } catch (exception: Exception) {
@@ -80,12 +94,12 @@ class ShowLastActionsViewModel(
         }
     }
 
-    fun sendNewSlotToFirestore() {
+    fun sendNewSlotToFirestore(quantity: Int) {
         // Create a new user with a first and last name
         val slot = WarehouseSlot(
             productId = slotId!!,
             //productId = "DUB-A-20-42-0480",
-            quantity = 630,
+            quantity = quantity,
             /*quality = slotId!!.take(5),
             thickness = 20,
             width = 42,
@@ -118,8 +132,8 @@ class ShowLastActionsViewModel(
 
 }
 
-data class ShowLastActionsScreenState (
-        val slot: WarehouseSlot? = null,
-        val loading: Boolean = false,
-        val error: String? = null,
-        )
+data class ShowLastActionsScreenState(
+    val slot: WarehouseSlot? = null,
+    val loading: Boolean = false,
+    val error: String? = null,
+)
