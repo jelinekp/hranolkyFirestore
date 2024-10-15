@@ -33,7 +33,7 @@ fun StartScreen(
     navigateToShowLastActions: (String) -> Unit,
     viewModel: StartViewModel = StartViewModel()
 ) {
-    var scannedText by remember { mutableStateOf("DUB-R-27-42-0450") }
+    var scannedText by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     var isAutoScanEnabled by remember { mutableStateOf(true) }
     var isWrongLength by remember { mutableStateOf(false) }

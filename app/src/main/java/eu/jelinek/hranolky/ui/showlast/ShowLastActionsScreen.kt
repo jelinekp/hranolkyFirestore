@@ -45,7 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavBackStackEntry
 import eu.jelinek.hranolky.R
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.WarehouseSlot
@@ -58,8 +57,6 @@ import java.util.Locale
 fun ShowLastActionsScreen(
     modifier: Modifier = Modifier,
     navigateUp: () -> Unit,
-    navigateToAddAction: () -> Unit,
-    navBackStackEntry: NavBackStackEntry,
     viewModel: ShowLastActionsViewModel = koinViewModel()
 ) {
     val slotId = viewModel.slotId

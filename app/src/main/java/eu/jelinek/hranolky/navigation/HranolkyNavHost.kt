@@ -12,8 +12,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import eu.jelinek.hranolky.ui.AddActionScreen
 import eu.jelinek.hranolky.ui.ResultScreen
-import eu.jelinek.hranolky.ui.showlast.ShowLastActionsScreen
 import eu.jelinek.hranolky.ui.StartScreen
+import eu.jelinek.hranolky.ui.showlast.ShowLastActionsScreen
 
 @Composable
 fun HranolkyNavHost(
@@ -41,8 +41,6 @@ fun HranolkyNavHost(
                 },)) {
             ShowLastActionsScreen(
                 navigateUp = { navController.navigateUp() },
-                navigateToAddAction = { navController.navigate(ScreenNames.ADD_ACTION.name) },
-                navBackStackEntry = it,
             )
         }
 

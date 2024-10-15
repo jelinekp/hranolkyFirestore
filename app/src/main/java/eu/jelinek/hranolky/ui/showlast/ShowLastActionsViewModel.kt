@@ -103,7 +103,7 @@ class ShowLastActionsViewModel(
             } else {
                 Log.w(TAG, "Document not found")
                 sendNewSlotToFirestore(0)
-                return null // Document not found
+                return fetchSlotFromFirestore()
             }
         } catch (exception: Exception) {
             Log.w(TAG, "Error getting document.", exception)
