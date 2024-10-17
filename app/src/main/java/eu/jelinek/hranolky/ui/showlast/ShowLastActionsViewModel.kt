@@ -39,6 +39,14 @@ class ShowLastActionsViewModel(
     var quantityState = mutableStateOf("")
         private set
 
+    fun onRadioSelected(selectedOption: String) {
+        radioState.value = selectedOption
+    }
+
+    fun onQuantityChanged(newQuantity: String) {
+        quantityState.value = newQuantity
+    }
+
     val TAG = "Firestore"
 
     init {
@@ -49,39 +57,12 @@ class ShowLastActionsViewModel(
 
     private fun updateSlot(slot: WarehouseSlot?) {
         if (slot != null) {
-            val quality = slot.productId.take(5)
-            val parts = slot.productId.split("-")
-            val rawThickness = parts[2].toFloat()
-
-            val thickness = when(rawThickness) {
-                20.0f -> 20.0f
-                27.0f -> 27.4f
-                42.0f -> 42.4f
-                else -> rawThickness
-            }
-
-            val width = parts[3].toInt()
-            val length = parts[4].toInt()
+            val parsedSlot = slot.parsePropertiesFromProductId() // crucial part - extracting data from productId to unassigned slot properties
 
             _screenStateStream.update {
-                it.copy(
-                    slot = slot.copy(
-                        quality = quality,
-                        thickness = thickness,
-                        width = width,
-                        length = length,
-                    )
-                )
+                it.copy(slot = parsedSlot)
             }
         }
-    }
-
-    fun onRadioSelected(selectedOption: String) {
-        radioState.value = selectedOption
-    }
-
-    fun onQuantityChanged(newQuantity: String) {
-        quantityState.value = newQuantity
     }
 
     suspend fun fetchSlotFromFirestore(): WarehouseSlot? {
@@ -94,7 +75,7 @@ class ShowLastActionsViewModel(
             if (documentSnapshot.exists()) {
                 Log.d(TAG, "DocumentSnapshot data: ${documentSnapshot.data}")
                 val warehouseQuantity =
-                    documentSnapshot.toObject(Quantity::class.java) // Convert to your data class
+                    documentSnapshot.toObject(Quantity::class.java) // Convert to mock data class
                 return WarehouseSlot(
                     productId = slotId,
                     quantity = warehouseQuantity?.quantity ?: 0,
@@ -129,36 +110,19 @@ class ShowLastActionsViewModel(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error receiving last actions from Firestore", e)
-            // Handle error, e.g., log it or return an empty list
             emptyList()
         }
     }
 
-    fun fetchAllDocumentsFromFirestore() {
-        viewModelScope.launch {
-            firestoreDb.collection("WarehouseSlots")
-                .get()
-                .addOnSuccessListener { result ->
-                    for (document in result) {
-                        Log.d(TAG, "${document.id} => ${document.data}")
-                    }
-                }
-                .addOnFailureListener { exception ->
-                    Log.w(TAG, "Error getting documents.", exception)
-                }
-        }
-    }
-
     fun sendNewSlotToFirestore(quantity: Int) {
-        // Create a new user with a first and last name
         val slot = WarehouseSlot(
             productId = slotId!!,
-            //productId = "DUB-A-20-42-0480",
+            //productId = "DUB-A-20-42-0480", is already the unique id of the document
             quantity = quantity,
-            /*quality = slotId!!.take(5),
-            thickness = 20,
-            width = 42,
-            length = 480,*/
+            /*quality = , decided to not implement now, is maybe a problem in the future
+            thickness = ,
+            width = ,
+            length = ,*/
         )
 
         val slotToSend = hashMapOf(
@@ -193,16 +157,12 @@ class ShowLastActionsViewModel(
                 else -> return
             }
 
-            val quantityFieldUpdate = when (radioState.value) {
-                "prijem" -> FieldValue.increment(quantityState.value.toLong())
-                "vydej" -> FieldValue.increment(-quantityState.value.toLong())
-                else -> return
-            }
+            val quantityFieldUpdate = FieldValue.increment(quantityChange)
 
             val slotAction = hashMapOf(
                 "action" to radioState.value,
                 "quantityChange" to quantityChange,
-                "newQuantity" to (screenStateStream.value.slot?.quantity?.plus(quantityChange) ?: 0),
+                "newQuantity" to quantityFieldUpdate,
                 "timestamp" to FieldValue.serverTimestamp(),
             )
 
@@ -249,8 +209,6 @@ class ShowLastActionsViewModel(
         viewModelScope.launch {
             _validationSharedFlowStream.emit(AddActionValidationState())
         }
-
-        // _status.postValue(ResultStatus.LOADING)
     }
 
     private fun validateInputs(): Boolean {
