@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -56,10 +55,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.WarehouseSlot
+import eu.jelinek.hranolky.ui.shared.formatDate
+import eu.jelinek.hranolky.ui.shared.slotActionsIndexedWithAlternatingModifier
 import org.koin.androidx.compose.koinViewModel
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @Composable
 fun ShowLastActionsScreen(
@@ -169,6 +168,10 @@ fun LastActions(
     lastActions: List<SlotAction>,
     modifier: Modifier = Modifier
 ) {
+
+    val alternateRowModifier =
+        Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+
     Text(
         text = "Poslední akce",
         style = MaterialTheme.typography.headlineSmall,
@@ -183,8 +186,8 @@ fun LastActions(
         stickyHeader { // Makes the header sticky
             HeaderRowContent() // Your header row composable function
         }
-        items(lastActions) { slotAction ->
-            LastActionRow(slotAction)
+        slotActionsIndexedWithAlternatingModifier(lastActions, alternateRowModifier) { index, slotAction, modifier ->
+            LastActionRow(slotAction, modifier)
         }
     }
 }
@@ -278,11 +281,6 @@ fun HeaderRowContent() {
             //style = MaterialTheme.typography.bodySmall
         )
     }
-}
-
-fun formatDate(date: Date): String {
-    val formatter = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-    return formatter.format(date)
 }
 
 @Composable

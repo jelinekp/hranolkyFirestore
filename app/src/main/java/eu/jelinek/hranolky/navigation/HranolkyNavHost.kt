@@ -12,7 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import eu.jelinek.hranolky.ui.AddActionScreen
 import eu.jelinek.hranolky.ui.ResultScreen
-import eu.jelinek.hranolky.ui.StartScreen
+import eu.jelinek.hranolky.ui.start.StartScreen
 import eu.jelinek.hranolky.ui.showlast.ShowLastActionsScreen
 
 @Composable

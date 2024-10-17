@@ -8,6 +8,7 @@ data class WarehouseSlot(
     val width: Int? = null,
     val thickness: Float? = null,
     val length: Int? = null,
+    val lastModified: com.google.firebase.Timestamp? = null
 ) {
     fun parsePropertiesFromProductId(): WarehouseSlot {
         val quality = this.productId.take(5)
@@ -33,6 +34,16 @@ data class WarehouseSlot(
     }
 }
 
-data class Quantity(
+data class FirestoreSlot(
     val quantity: Int = 0,
-)
+    val lastModified: com.google.firebase.Timestamp? = null,
+) {
+    fun toWarehouseSlot(productId: String): WarehouseSlot {
+        val slot = WarehouseSlot(
+            productId = productId,
+            quantity = this.quantity,
+            lastModified = this.lastModified,
+        )
+        return slot.parsePropertiesFromProductId()
+    }
+}

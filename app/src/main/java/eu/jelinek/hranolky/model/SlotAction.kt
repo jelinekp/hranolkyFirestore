@@ -1,8 +1,8 @@
 package eu.jelinek.hranolky.model
 
 data class SlotAction(
-    var action: String? = null,
-    var quantityChange: Int = 0,
-    var newQuantity: Int = 0,
-    var timestamp: com.google.firebase.Timestamp? = null
+    val action: String? = null,
+    val quantityChange: Int = 0,
+    val newQuantity: Int = 0,
+    val timestamp: com.google.firebase.Timestamp? = null
 )

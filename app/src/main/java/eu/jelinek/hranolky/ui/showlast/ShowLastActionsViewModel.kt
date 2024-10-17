@@ -9,7 +9,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
-import eu.jelinek.hranolky.model.Quantity
+import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
@@ -80,23 +80,28 @@ class ShowLastActionsViewModel(
                         return@addSnapshotListener
                     }
 
-                    if (slotSnapshot != null && slotSnapshot.exists()) {
-                        Log.d(TAG, "DocumentSnapshot data: ${slotSnapshot.data}")
-                        val warehouseQuantity =
-                            slotSnapshot.toObject(Quantity::class.java) // Convert to mock data class
-                        var slot = WarehouseSlot(
-                            productId = id,
-                            quantity = warehouseQuantity?.quantity ?: 0,
-                            slotActions = listOf(),
-                        )
+                    if (slotSnapshot != null) {
+                        if (slotSnapshot.exists()) {
+                            Log.d(TAG, "DocumentSnapshot data: ${slotSnapshot.data}")
+                            val firestoreSlot =
+                                slotSnapshot.toObject(FirestoreSlot::class.java) // Convert to mock data class
+                            var slot = WarehouseSlot(
+                                productId = id,
+                                quantity = firestoreSlot?.quantity ?: 0,
+                                lastModified = firestoreSlot?.lastModified,
+                                slotActions = listOf(),
+                            )
 
-                        fetchSlotActionsInRealtime(id)
+                            fetchSlotActionsInRealtime(id)
 
-                        updateSlot(slot)
+                            updateSlot(slot)
 
+                        } else {
+                            Log.w(TAG, "Document not found creating a new one")
+                            sendNewSlotToFirestore(0)
+                        }
                     } else {
-                        Log.w(TAG, "Document not found creating a new one")
-                        sendNewSlotToFirestore(0)
+                        Log.d(TAG, "Not connected to the internet")
                     }
                 }
         }
@@ -148,7 +153,7 @@ class ShowLastActionsViewModel(
             try {
                 firestoreDb.collection("WarehouseSlots")
                     .document(slot.productId)
-                    .set(slotToSend)
+                    .set(slotToSend) // TODO replace .set with something that does not overwrite data!
                     .addOnSuccessListener {
                         Log.d(TAG, "DocumentSnapshot added with ID: ${slot.productId}")
                     }
@@ -170,6 +175,11 @@ class ShowLastActionsViewModel(
                 else -> return
             }
 
+            val updateSlot = mapOf(
+                "quantity" to FieldValue.increment(quantityChange), // crucial part - updating by increment, possible inconsistency with newQuantity which is based on last downloaded quantity, but THIS is the truth maker
+                "lastModified" to FieldValue.serverTimestamp(),
+            )
+
             val slotAction = hashMapOf(
                 "action" to radioState.value,
                 "quantityChange" to quantityChange,
@@ -182,10 +192,7 @@ class ShowLastActionsViewModel(
                 try {
                     firestoreDb.collection("WarehouseSlots")
                         .document(slotId!!)
-                        .update(
-                            "quantity",
-                            FieldValue.increment(quantityChange)
-                        ) // crucial part - updating by increment, possible inconsistency with newQuantity which is based on last downloaded quantity, but THIS is the truth maker
+                        .update(updateSlot)
                         .addOnSuccessListener {
                             Log.d(TAG, "Updated slot with ID: $slotId")
                         }
