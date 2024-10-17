@@ -1,5 +1,8 @@
 package eu.jelinek.hranolky.ui.showlast
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,6 +23,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +38,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -62,15 +70,17 @@ fun ShowLastActionsScreen(
     val slotId = viewModel.slotId
     val screenState by viewModel.screenStateStream.collectAsStateWithLifecycle()
 
-    Scaffold (
-        topBar = { ShowLastActionsTopBar(
-            text = "$slotId",
-            navigateUp = navigateUp,
-        ) }
+    Scaffold(
+        topBar = {
+            ShowLastActionsTopBar(
+                text = "$slotId",
+                navigateUp = navigateUp,
+            )
+        }
     ) { padding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = modifier
                 .padding(padding)
                 .fillMaxWidth()
@@ -92,29 +102,65 @@ fun ShowLastActionsScreen(
 
 @Composable
 fun SlotData(
-    slot : WarehouseSlot,
+    slot: WarehouseSlot,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.width(260.dp),
-    ) {
-        val quantity = slot.quantity
-        val width = slot.width ?: 1
-        val length = slot.length ?: 1
-        val thickness = slot.thickness ?: 1.0f
-        val volume = ((quantity * width * length).toFloat() * thickness)/1_000_000_000f
-        val formattedVolume = String.format("%.3f", volume)
-
-        val alternateRowModifier =
-            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-        DataRow("Množství na skladě", quantity.toString(), alternateRowModifier)
-        DataRow("Kvalita", slot.quality.toString())
-        DataRow("Tloušťka", "$thickness mm", alternateRowModifier)
-        DataRow("Šířka", "$width mm")
-        DataRow("Délka", "$length mm", alternateRowModifier)
-        DataRow("Celkový objem", "$formattedVolume m³")
+    var isShowMore by rememberSaveable {
+        mutableStateOf(false)
     }
+
+    Row(
+        modifier = Modifier.animateContentSize(
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        )
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier.width(260.dp),
+        ) {
+
+
+            val quantity = slot.quantity
+            val width = slot.width ?: 1
+            val length = slot.length ?: 1
+            val thickness = slot.thickness ?: 1.0f
+            val volume = ((quantity * width * length).toFloat() * thickness) / 1_000_000_000f
+            val formattedVolume = String.format("%.3f", volume)
+
+            val alternateRowModifier =
+                Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+
+            DataRow("Množství na skladě", quantity.toString(), alternateRowModifier)
+            DataRow("Objem dřeva", "$formattedVolume m³")
+            if (isShowMore) {
+                DataRow("Kvalita", slot.quality.toString(), alternateRowModifier)
+                DataRow("Tloušťka", "$thickness mm")
+                DataRow("Šířka", "$width mm", alternateRowModifier)
+                DataRow("Délka", "$length mm")
+            }
+        }
+
+        IconButton(
+            onClick = { isShowMore = !isShowMore },
+            modifier = Modifier.size(48.dp),
+        ) {
+            val icon = if (isShowMore) {
+                Icons.Default.KeyboardArrowUp
+            } else {
+                Icons.Default.KeyboardArrowDown
+            }
+
+            Icon(
+                imageVector = icon,
+                contentDescription = "Zobrazit více",
+                modifier = Modifier.size(40.dp) // Adjust icon size
+            )
+        }
+    }
+
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -152,7 +198,7 @@ fun ShowLastActionsTopBar(
 ) {
     TopAppBar(
         title = {
-            Row (
+            Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .padding(end = 48.dp)
@@ -162,7 +208,7 @@ fun ShowLastActionsTopBar(
                     text = text ?: "Neznámý kód",
                 )
             }
-                },
+        },
         navigationIcon = {
             IconButton(onClick = {
                 navigateUp()
@@ -191,11 +237,11 @@ fun DataRow(
     ) {
         Text(
             text = "$label: ",
-            style = MaterialTheme.typography.bodySmall
+            // style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = value ?: "neznámá hodnota",
-            style = MaterialTheme.typography.bodySmall
+            // style = MaterialTheme.typography.bodySmall
         )
     }
 }
@@ -212,24 +258,24 @@ fun HeaderRowContent() {
         Text(
             text = "Datum a čas",
             modifier = Modifier.weight(8f),
-            style = MaterialTheme.typography.bodySmall
+            //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Pohyb",
             modifier = Modifier.weight(3f),
-            style = MaterialTheme.typography.bodySmall
+            //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Změna",
             textAlign = TextAlign.End,
             modifier = Modifier.weight(3f),
-            style = MaterialTheme.typography.bodySmall
+            //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Stav",
             textAlign = TextAlign.End,
             modifier = Modifier.weight(3f),
-            style = MaterialTheme.typography.bodySmall
+            //style = MaterialTheme.typography.bodySmall
         )
     }
 }
@@ -258,19 +304,27 @@ fun LastActionRow(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp),
     ) {
-        Text(readableDate, modifier = Modifier.weight(8f), style = MaterialTheme.typography.bodySmall)
-        Text(action, modifier = Modifier.weight(3f), style = MaterialTheme.typography.bodySmall)
+        Text(
+            readableDate,
+            modifier = Modifier.weight(8f),
+            //style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            action,
+            modifier = Modifier.weight(3f),
+            //style = MaterialTheme.typography.bodySmall
+        )
         Text(
             text = slotAction.quantityChange.toString(),
             textAlign = TextAlign.End,
             modifier = Modifier.weight(3f),
-            style = MaterialTheme.typography.bodySmall
+            //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = slotAction.newQuantity.toString(),
             textAlign = TextAlign.End,
             modifier = Modifier.weight(3f),
-            style = MaterialTheme.typography.bodySmall
+            //style = MaterialTheme.typography.bodySmall
         )
     }
 }
