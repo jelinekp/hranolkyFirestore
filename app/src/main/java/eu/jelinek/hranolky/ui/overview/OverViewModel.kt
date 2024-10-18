@@ -35,22 +35,15 @@ class OverViewModel(
 
                     querySnapshot.documents.forEach {
                         val firestoreSlot = it.toObject(FirestoreSlot::class.java)
-                        firestoreSlot?.toWarehouseSlot(it.id)
 
                         if (firestoreSlot != null) {
-
+                            setOfSlots.add(firestoreSlot.toWarehouseSlot(it.id))
                         }
-                    }
-
-                    val allSlots = querySnapshot.documents.map { document ->
-                        val firestoreSlot = document.toObject(FirestoreSlot::class.java)
-                        // Build WarehouseSlot using FirestoreSlot and document.id
-                        firestoreSlot?.toWarehouseSlot(document.id) // Pass document.id here
                     }
 
                     // Update the UI state with the new actions
                     _overviewScreenState.update {
-                        it.copy(allSlots = allSlots)
+                        it.copy(allSlots = setOfSlots)
                     }
                 }
             }
