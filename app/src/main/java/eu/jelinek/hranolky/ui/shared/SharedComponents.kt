@@ -33,3 +33,7 @@ fun LazyListScope.slotActionsIndexedWithAlternatingModifier(
         itemContent(index, item, modifier) // Pass the modifier to itemContent
     }
 }
+
+fun formatCubicMeters(volume: Double): String {
+    return String.format("%.3f m³", volume)
+}

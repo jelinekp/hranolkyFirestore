@@ -47,23 +47,21 @@ class ShowLastActionsViewModel(
 
     init {
         viewModelScope.launch {
-            fetchSlotFromFirestore()
+            fetchSlotFromFirestoreInRealTime()
         }
     }
 
-    private fun updateSlot(slot: WarehouseSlot?) {
+    private fun updateSlot(slot: WarehouseSlot?, slotActions: List<SlotAction>) {
         if (slot != null) {
-            val parsedSlot =
-                slot.parsePropertiesFromProductId() // crucial part - extracting data from productId to unassigned slot properties
-
+            val parsedSlot = slot.parsePropertiesFromProductId()
+                .copy(slotActions = slotActions)  // Assign slotActions here
             _screenStateStream.update {
                 it.copy(slot = parsedSlot)
             }
         }
     }
 
-    fun fetchSlotFromFirestore() {
-
+    private fun fetchSlotFromFirestoreInRealTime() {
         slotId?.let { id ->
             slotListener = firestoreDb.collection("WarehouseSlots")
                 .document(id)
@@ -77,7 +75,7 @@ class ShowLastActionsViewModel(
                         if (slotSnapshot.exists()) {
                             Log.d(TAG, "DocumentSnapshot data: ${slotSnapshot.data}")
                             val firestoreSlot =
-                                slotSnapshot.toObject(FirestoreSlot::class.java) // Convert to mock data class
+                                slotSnapshot.toObject(FirestoreSlot::class.java)
                             var slot = WarehouseSlot(
                                 productId = id,
                                 quantity = firestoreSlot?.quantity ?: 0,
@@ -85,9 +83,7 @@ class ShowLastActionsViewModel(
                                 slotActions = listOf(),
                             )
 
-                            fetchSlotActionsInRealtime(id)
-
-                            updateSlot(slot)
+                            fetchSlotActionsInRealtime(id, slot) //Fetch actions passing the slot
 
                         } else {
                             Log.w(TAG, "Document not found creating a new one")
@@ -100,7 +96,7 @@ class ShowLastActionsViewModel(
         }
     }
 
-    private fun fetchSlotActionsInRealtime(slotId: String) {
+    private fun fetchSlotActionsInRealtime(slotId: String, slot: WarehouseSlot) {
         firestoreDb.collection("WarehouseSlots")
             .document(slotId)
             .collection("SlotActions")
@@ -117,10 +113,9 @@ class ShowLastActionsViewModel(
                         document.toObject(SlotAction::class.java) ?: SlotAction()
                     }
 
-                    // Update the UI state with the new actions
-                    _screenStateStream.update {
-                        it.copy(slot = it.slot?.copy(slotActions = lastActions))
-                    }
+                    Log.d(TAG, "Last actions received: $lastActions")
+
+                    updateSlot(slot, lastActions) // Update with both slot and actions
                 }
             }
     }
@@ -128,12 +123,7 @@ class ShowLastActionsViewModel(
     fun sendNewSlotToFirestore(quantity: Int) {
         val slot = WarehouseSlot(
             productId = slotId!!,
-            //productId = "DUB-A-20-42-0480", is already the unique id of the document
             quantity = quantity,
-            /*quality = , decided to not implement now, is maybe a problem in the future
-            thickness = ,
-            width = ,
-            length = ,*/
         )
 
         val slotToSend = hashMapOf(

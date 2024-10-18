@@ -28,7 +28,6 @@ fun HranolkyNavHost(
         composable(route = Screen.StartScreen.route) {
             StartScreen(
                 navigateToShowLastActions = {
-                    Log.d("Navigation", it)
                     navController.navigate(Screen.ShowLastActionsScreen(it).route) },
                 navigateToOverview = { navController.navigate(ScreenNames.OVERVIEW.name) }
             )
@@ -47,6 +46,8 @@ fun HranolkyNavHost(
         composable(route = ScreenNames.OVERVIEW.name) {
             OverviewScreen(
                 navigateUp = { navController.navigateUp() },
+                navigateToShowLastActions = {
+                    navController.navigate(Screen.ShowLastActionsScreen(it).route) },
             )
         }
 

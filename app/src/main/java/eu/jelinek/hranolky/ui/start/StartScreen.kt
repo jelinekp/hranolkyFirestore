@@ -57,7 +57,7 @@ fun StartScreen(
     var isWrongLength by remember { mutableStateOf(false) }
     val screenState by viewModel.startScreenState.collectAsStateWithLifecycle()
 
-    Scaffold (
+    Scaffold(
         // topBar = { StartScreenTopBar() }
     ) { padding ->
         Column(
@@ -70,20 +70,22 @@ fun StartScreen(
         ) {
             // Text("Začněte naskenováním kódu")
 
-            Row (
+            Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.width(width = 280.dp).padding(top = 16.dp)
-                ) {
+                modifier = Modifier
+                    .width(width = 280.dp)
+                    .padding(top = 16.dp)
+            ) {
                 Text(
                     text = "Automatický mód",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 8.dp)
-                    )
+                )
                 Switch(
                     checked = isAutoScanEnabled,
                     onCheckedChange = { isAutoScanEnabled = it },
-                    )
+                )
             }
 
             OutlinedTextField(
@@ -93,10 +95,12 @@ fun StartScreen(
                     if (isAutoScanEnabled && text.length == 16)
                         navigateToShowLastActions(text)
                 },
-                label = { Text(
-                    stringResource(R.string.naskenuj_kod),
-                    //style = MaterialTheme.typography.bodySmall
-                ) },
+                label = {
+                    Text(
+                        stringResource(R.string.naskenuj_kod),
+                        //style = MaterialTheme.typography.bodySmall
+                    )
+                },
                 modifier = modifier.focusRequester(focusRequester),
                 isError = isWrongLength,
                 singleLine = true
@@ -131,45 +135,7 @@ fun StartScreen(
                 Text("Přehled všech hranolků")
             }
 
-            Text("Položky s posledními pohyby:", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 24.dp))
-
-
-            val alternateRowModifier =
-                Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-            LazyColumn (
-                modifier = Modifier.widthIn(max = 500.dp)
-            ) {
-                stickyHeader { // Makes the header sticky
-                    HeaderLastSlotsContent() // Your header row composable function
-                }
-                itemsIndexedWithAlternatingModifier(screenState.lastModifiedSlots, alternateRowModifier) { index, slot, modifier ->
-                    slot?.let {
-                        Row(
-                            // extract and make it clickable
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = modifier
-                                .clickable {
-                                    navigateToShowLastActions(slot.productId)
-                                }
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                        ) {
-                            val date = slot.lastModified?.toDate() ?: Date()
-                            val readableDate = formatShortDate(date)
-
-                            Text(readableDate, modifier = Modifier.weight(4f))
-                            Text(slot.productId, modifier = Modifier.weight(6f),
-                                //style = MaterialTheme.typography.bodySmall
-                            )
-                            Text(
-                                slot.quantity.toString(),
-                                modifier = Modifier.weight(4f),
-                                textAlign = TextAlign.End
-                            )
-                        }
-                    }
-                }
-            }
+            SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions)
         }
     }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -187,6 +153,71 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
             alternateModifier
         }
         itemContent(index, item, modifier) // Pass the modifier to itemContent
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun SlotTable(
+    lastModifiedSlots: List<WarehouseSlot?>,
+    navigateToShowLastActions: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    ) {
+    Text(
+        "Položky s posledními pohyby:",
+        style = MaterialTheme.typography.headlineSmall,
+        modifier = Modifier.padding(top = 24.dp)
+    )
+
+
+    val alternateRowModifier =
+        Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+    LazyColumn(
+        modifier = Modifier.widthIn(max = 500.dp)
+    ) {
+        stickyHeader { // Makes the header sticky
+            HeaderLastSlotsContent() // Your header row composable function
+        }
+        itemsIndexedWithAlternatingModifier(
+            lastModifiedSlots,
+            alternateRowModifier
+        ) { index, slot, modifier ->
+            slot?.let {
+                SlotRow(it, navigateToShowLastActions, modifier)
+            }
+        }
+    }
+}
+
+@Composable
+fun SlotRow(
+    slot: WarehouseSlot,
+    navigateToShowLastActions: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        // extract and make it clickable
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier
+            .clickable {
+                navigateToShowLastActions(slot.productId)
+            }
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        val date = slot.lastModified?.toDate() ?: Date()
+        val readableDate = formatShortDate(date)
+
+        Text(readableDate, modifier = Modifier.weight(4f))
+        Text(
+            slot.productId, modifier = Modifier.weight(6f),
+            //style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            slot.quantity.toString(),
+            modifier = Modifier.weight(4f),
+            textAlign = TextAlign.End
+        )
     }
 }
 

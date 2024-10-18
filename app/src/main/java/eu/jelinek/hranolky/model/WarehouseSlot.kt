@@ -39,6 +39,16 @@ data class WarehouseSlot(
             )
     }
 
+    fun getVolume(): Double? {
+        val quantity = this.quantity
+        val width = this.width ?: return null
+        val length = this.length ?: return null
+        val thickness = this.thickness ?: return null
+        val volume = ((quantity * length).toDouble() * thickness * width) / 1_000_000_000.0
+
+        return volume
+    }
+/*
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -49,7 +59,7 @@ data class WarehouseSlot(
 
     override fun hashCode(): Int {
         return productId.toInt()
-    }
+    }*/
 }
 
 data class FirestoreSlot(
