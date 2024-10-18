@@ -21,4 +21,7 @@
     <string name="odeslat">Odeslat</string>
     <string name="back_icon">Zpět</string>
     <string name="vydej_nemuze_byt_vetsi_nez_aktualni_stav">Výdej nemůže být větší než aktuální stav</string>
+    <string name="prijem">Příjem</string>
+    <string name="vydej">Výdej −</string>
+    <string name="naskenuj_kod">Naskenuj nebo napiš kód</string>
 </resources>

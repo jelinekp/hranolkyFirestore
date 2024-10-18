@@ -10,10 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import eu.jelinek.hranolky.ui.AddActionScreen
-import eu.jelinek.hranolky.ui.ResultScreen
-import eu.jelinek.hranolky.ui.start.StartScreen
+import eu.jelinek.hranolky.ui.overview.OverviewScreen
 import eu.jelinek.hranolky.ui.showlast.ShowLastActionsScreen
+import eu.jelinek.hranolky.ui.start.StartScreen
 
 @Composable
 fun HranolkyNavHost(
@@ -26,11 +25,12 @@ fun HranolkyNavHost(
         startDestination = startDestination.name,
         modifier = modifier
     ) {
-        composable(Screen.StartScreen.route) {
+        composable(route = Screen.StartScreen.route) {
             StartScreen(
                 navigateToShowLastActions = {
                     Log.d("Navigation", it)
-                    navController.navigate(Screen.ShowLastActionsScreen(it).route) }
+                    navController.navigate(Screen.ShowLastActionsScreen(it).route) },
+                navigateToOverview = { navController.navigate(ScreenNames.OVERVIEW.name) }
             )
         }
 
@@ -44,14 +44,8 @@ fun HranolkyNavHost(
             )
         }
 
-        composable(ScreenNames.ADD_ACTION.name) {
-            AddActionScreen(
-                navigateToResult = { navController.navigate(ScreenNames.RESULT.name) },
-            )
-        }
-
-        composable(ScreenNames.RESULT.name) {
-            ResultScreen(
+        composable(route = ScreenNames.OVERVIEW.name) {
+            OverviewScreen(
                 navigateUp = { navController.navigateUp() },
             )
         }

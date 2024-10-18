@@ -5,7 +5,7 @@ data class WarehouseSlot(
     val quantity: Int,
     val slotActions: List<SlotAction> = emptyList(),
     val quality: String? = null,
-    val width: Int? = null,
+    val width: Float? = null,
     val thickness: Float? = null,
     val length: Int? = null,
     val lastModified: com.google.firebase.Timestamp? = null
@@ -22,7 +22,13 @@ data class WarehouseSlot(
             else -> rawThickness
         }
 
-        val width = parts[3].toInt()
+        val rawWidth = parts[3].toFloat()
+
+        val width = when (rawWidth) {
+            42.0f -> 42.4f
+            else -> rawWidth
+        }
+
         val length = parts[4].toInt()
 
         return this.copy(
@@ -31,6 +37,18 @@ data class WarehouseSlot(
             width = width,
             length = length,
             )
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as WarehouseSlot
+        return productId == other.productId
+    }
+
+    override fun hashCode(): Int {
+        return productId.toInt()
     }
 }
 

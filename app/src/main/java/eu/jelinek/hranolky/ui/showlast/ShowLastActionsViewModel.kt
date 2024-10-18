@@ -33,15 +33,8 @@ class ShowLastActionsViewModel(
     private val _validationSharedFlowStream = MutableSharedFlow<AddActionValidationState>()
     val validationSharedFlowStream get() = _validationSharedFlowStream.asSharedFlow()
 
-    var radioState = mutableStateOf("")
-        private set
-
     var quantityState = mutableStateOf("")
         private set
-
-    fun onRadioSelected(selectedOption: String) {
-        radioState.value = selectedOption
-    }
 
     fun onQuantityChanged(newQuantity: String) {
         quantityState.value = newQuantity
@@ -166,12 +159,12 @@ class ShowLastActionsViewModel(
         }
     }
 
-    fun addActionToTheSlot() {
-        if (validateInputs()) {
+    fun addActionToTheSlot(actionType: ActionType) {
+        if (validateInputs(actionType)) {
 
-            val quantityChange = when (radioState.value) {
-                "prijem" -> quantityState.value.toLong()
-                "vydej" -> -quantityState.value.toLong()
+            val quantityChange = when (actionType) {
+                ActionType.ADD -> quantityState.value.toLong()
+                ActionType.REMOVE -> -quantityState.value.toLong()
                 else -> return
             }
 
@@ -181,7 +174,7 @@ class ShowLastActionsViewModel(
             )
 
             val slotAction = hashMapOf(
-                "action" to radioState.value,
+                "action" to actionType.toString(),
                 "quantityChange" to quantityChange,
                 "newQuantity" to (screenStateStream.value.slot?.quantity?.plus(quantityChange)
                     ?: 0),
@@ -225,7 +218,6 @@ class ShowLastActionsViewModel(
     }
 
     private fun resetFields() {
-        radioState.value = ""
         quantityState.value = ""
 
         viewModelScope.launch {
@@ -233,26 +225,21 @@ class ShowLastActionsViewModel(
         }
     }
 
-    private fun validateInputs(): Boolean {
-        if (radioState.value.isEmpty()) {
+    private fun validateInputs(actionType: ActionType): Boolean {
+
+        val quantity = quantityState.value.toDoubleOrNull()
+        if (quantity == null || quantity <= 0 || quantity > 9_999) {
             viewModelScope.launch {
-                _validationSharedFlowStream.emit(AddActionValidationState(isRadioError = true))
+                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
             }
             return false
-        } else {
-            val quantity = quantityState.value.toDoubleOrNull()
-            if (quantity == null || quantity <= 0 || quantity > 9_999) {
-                viewModelScope.launch {
-                    _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
-                }
-                return false
-            } else if (radioState.value == "vydej" && quantity > screenStateStream.value.slot!!.quantity) {
-                viewModelScope.launch {
-                    _validationSharedFlowStream.emit(AddActionValidationState(isRemovedError = true))
-                }
-                return false
+        } else if (actionType == ActionType.REMOVE && quantity > screenStateStream.value.slot!!.quantity) {
+            viewModelScope.launch {
+                _validationSharedFlowStream.emit(AddActionValidationState(isRemovedError = true))
             }
+            return false
         }
+
         return true
     }
 
@@ -274,9 +261,19 @@ data class ShowLastActionsScreenState(
 data class AddActionValidationState(
     val isQuantityError: Boolean = false,
     val isRemovedError: Boolean = false,
-    val isRadioError: Boolean = false,
 )
 
 enum class ResultStatus {
-    LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR
+    LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR,
+}
+
+enum class ActionType {
+    ADD, REMOVE;
+
+    override fun toString(): String {
+        return when (this) {
+            ADD -> "prijem"
+            REMOVE -> "vydej"
+        }
+    }
 }

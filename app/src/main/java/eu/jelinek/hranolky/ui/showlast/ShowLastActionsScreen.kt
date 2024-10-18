@@ -5,7 +5,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,12 +15,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
@@ -31,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -79,7 +78,10 @@ fun ShowLastActionsScreen(
     ) { padding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(
+                // 16.dp for bigger screens, 8.dp for smaller screens
+                8.dp
+            ),
             modifier = modifier
                 .padding(padding)
                 .fillMaxWidth()
@@ -118,15 +120,15 @@ fun SlotData(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = modifier.width(260.dp),
+            modifier = modifier.widthIn(max = 280.dp),
         ) {
 
 
             val quantity = slot.quantity
-            val width = slot.width ?: 1
+            val width = slot.width ?: 1.0f
             val length = slot.length ?: 1
             val thickness = slot.thickness ?: 1.0f
-            val volume = ((quantity * width * length).toFloat() * thickness) / 1_000_000_000f
+            val volume = ((quantity * length).toFloat() * thickness * width) / 1_000_000_000f
             val formattedVolume = String.format("%.3f", volume)
 
             val alternateRowModifier =
@@ -179,8 +181,11 @@ fun LastActions(
     LazyColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
+            .widthIn(max = 550.dp)
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .padding(
+                // horizontal = 16.dp
+            )
             .heightIn(min = 100.dp),
     ) {
         stickyHeader { // Makes the header sticky
@@ -236,7 +241,10 @@ fun DataRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(
+                horizontal = 8.dp,
+                vertical = 2.dp,
+            ),
     ) {
         Text(
             text = "$label: ",
@@ -255,7 +263,10 @@ fun HeaderRowContent() {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(vertical = 4.dp, horizontal = 16.dp),
+            .padding(
+                vertical = 4.dp,
+                horizontal = 8.dp
+            ),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
@@ -300,7 +311,10 @@ fun LastActionRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp),
+            .padding(
+                horizontal = 8.dp,
+                vertical = 2.dp
+            ),
     ) {
         Text(
             readableDate,
@@ -343,75 +357,28 @@ fun AddAction(
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
+        modifier = Modifier.widthIn(max = 340.dp)
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Text(
-            text = "Přidat pohyb",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = modifier
-        )
-
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             horizontalArrangement = Arrangement.Center,
         ) {
-            RadioButton(
-                selected = viewModel.radioState.value == "prijem",
-                onClick = {
-                    viewModel.onRadioSelected("prijem")
-                    quantityFocusRequester.requestFocus()
-                    keyboardController?.show()
-                }
-            )
             Text(
-                text = stringResource(R.string.p_jem),
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .clickable(
-                        onClick = {
-                            viewModel.onRadioSelected("prijem")
-                            quantityFocusRequester.requestFocus()
-                            keyboardController?.show()
-                        }
-                    ))
-            Spacer(modifier = Modifier.width(48.dp))
-            RadioButton(
-                selected = viewModel.radioState.value == "vydej",
-                onClick = {
-                    viewModel.onRadioSelected("vydej")
-                    quantityFocusRequester.requestFocus()
-                    keyboardController?.show()
-                }
+                text = "Přidat pohyb:",
+                // style = MaterialTheme.typography.headlineSmall,
+                modifier = modifier
             )
-            Text(
-                text = stringResource(R.string.v_dej),
-                modifier = Modifier
-                    .padding(end = 12.dp)
-                    .clickable(
-                        onClick = {
-                            viewModel.onRadioSelected("vydej")
-                            quantityFocusRequester.requestFocus()
-                            keyboardController?.show()
-                        }
-                    )
-            )
-        }
-        if (validationFlow.isRadioError) {
-            ErrorText(text = stringResource(R.string.vyber_akci))
-        }
-
-        Row(
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.width(300.dp),
-        ) {
+            Spacer(modifier = Modifier.width(10.dp))
             OutlinedTextField(
                 value = viewModel.quantityState.value,
                 onValueChange = { viewModel.onQuantityChanged(it) },
-                label = { Text(stringResource(R.string.zadej_mno_stv)) },
+                label = { Text(
+                    stringResource(R.string.zadej_mno_stv),
+                    //style = MaterialTheme.typography.bodySmall
+                    ) },
                 isError = validationFlow.isQuantityError,
                 keyboardActions = KeyboardActions(onDone = {
                     quantityFocusRequester.freeFocus()
@@ -421,44 +388,67 @@ fun AddAction(
                     keyboardType = KeyboardType.Number,
                 ),
                 modifier = Modifier
+                    .widthIn(max = 120.dp)
                     .focusRequester(quantityFocusRequester)
                     .weight(6f),
                 singleLine = true,
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Button(
-                onClick = {
-                    keyboardController?.hide()
-                    viewModel.addActionToTheSlot()
-                },
-                modifier = Modifier
-                    .weight(5f)
-                    .focusRequester(submitFocusRequester)
-                    .height(50.dp)
-                    .padding(bottom = 8.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.odeslat),
-                    fontSize = 16.sp,
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Default.Send,
-                    contentDescription = "Ikona odeslat",
-                    modifier = Modifier
-                        .padding(0.dp)
-                        .size(40.dp)
-                )
-            }
         }
 
-        // If there's an error, display the error message
         if (validationFlow.isQuantityError) {
             ErrorText(text = stringResource(R.string.zadej_platn_mno_stv))
         }
 
         if (validationFlow.isRemovedError) {
             ErrorText(text = stringResource(R.string.vydej_nemuze_byt_vetsi_nez_aktualni_stav))
+        }
+
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.width(280.dp),
+        ) {
+            Button(
+                onClick = {
+                    keyboardController?.hide()
+                    viewModel.addActionToTheSlot(ActionType.ADD)
+                },
+                modifier = Modifier
+                    .weight(5f)
+                    .focusRequester(submitFocusRequester)
+                    .height(50.dp)
+                    .padding(vertical = 4.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.prijem),
+                    fontSize = 16.sp,
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Ikona odeslat",
+                    modifier = Modifier
+                        .padding(0.dp)
+                        .size(24.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(32.dp))
+            Button(
+                onClick = {
+                    keyboardController?.hide()
+                    viewModel.addActionToTheSlot(ActionType.REMOVE)
+                },
+                modifier = Modifier
+                    .weight(5f)
+                    .focusRequester(submitFocusRequester)
+                    .height(50.dp)
+                    .padding(vertical = 4.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.vydej),
+                    fontSize = 16.sp,
+                )
+            }
         }
     }
 }
