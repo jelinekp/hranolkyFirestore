@@ -41,31 +41,31 @@ fun FilterSlots(
             modifier = Modifier.padding(vertical = 16.dp),
             style = MaterialTheme.typography.headlineSmall
         )
-        FilterChipGroup(
+        FilterChipGroup<String>(
             label = "Filtr kvality",
             filters = allFilters.qualityFilters,
             selectedFilters = selectedFilters.qualityFilters,
-            onFilterChange = onQualityFilterChange as (List<Any>) -> Unit
+            onFilterChange = onQualityFilterChange
         )
-        FilterChipGroup(
+        FilterChipGroup<Float>(
             label = "Filtr tloušťky",
             filters = allFilters.thicknessFilters,
             suffix = " mm",
             selectedFilters = selectedFilters.thicknessFilters,
-            onFilterChange = onThicknessFilterChange as (List<Any>) -> Unit
+            onFilterChange = onThicknessFilterChange
         )
-        FilterChipGroup(
+        FilterChipGroup<Float>(
             label = "Filtr šířky",
             filters = allFilters.widthFilters,
             suffix = " mm",
             selectedFilters = selectedFilters.widthFilters,
-            onFilterChange = onWidthFilterChange as (List<Any>) -> Unit
+            onFilterChange = onWidthFilterChange
         )
-        FilterChipGroup(
+        FilterChipGroup<IntervalMm>(
             label = "Filtr délky",
             filters = allFilters.lengthFilters,
             selectedFilters = selectedFilters.lengthFilters,
-            onFilterChange = onLengthFilterChange as (List<Any>) -> Unit
+            onFilterChange = onLengthFilterChange
         )
         HorizontalDivider()
         OutlinedButton(
@@ -79,12 +79,12 @@ fun FilterSlots(
 
 
 @Composable
-fun FilterChipGroup(
+fun <T> FilterChipGroup(
     label: String,
-    filters: List<Any>,
+    filters: List<T>,
     suffix: String = "",
-    selectedFilters: List<Any>,
-    onFilterChange: (List<Any>) -> Unit
+    selectedFilters: List<T>,
+    onFilterChange: (List<T>) -> Unit
 ) {
     HorizontalDivider(
         // modifier = Modifier.fillMaxWidth()
