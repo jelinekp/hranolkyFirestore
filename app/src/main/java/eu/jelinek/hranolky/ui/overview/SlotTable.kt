@@ -12,6 +12,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +34,9 @@ import eu.jelinek.hranolky.ui.start.itemsIndexedWithAlternatingModifier
 fun AllSlotsContent(
     slots: List<WarehouseSlot>,
     slotSum: SlotSum,
+    sortingBy: String,
+    sortingDirection: SortingDirection,
+    updateSorting: (String) -> Unit,
     navigateToShowLastActions: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -46,22 +54,21 @@ fun AllSlotsContent(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 40.dp)
+                .padding(bottom = 44.dp)
         ) {
             stickyHeader {
-                OverviewRowHeader(fontWeight)
+                OverviewRowHeader(
+                    fontWeight = fontWeight,
+                    sortingBy = sortingBy,
+                    sortingDirection = sortingDirection,
+                    updateSorting = updateSorting,
+                )
             }
             itemsIndexedWithAlternatingModifier(
                 slots,
                 alternateModifier = alternateRowModifier
             ) { index, slot, modifier ->
                 OverviewRow(slot, navigateToShowLastActions, modifier)
-            }
-
-            stickyHeader(
-                key = "sum"
-            ) {
-
             }
         }
 
@@ -77,15 +84,19 @@ fun AllSlotsContent(
 @Composable
 fun OverviewRowHeader(
     fontWeight: FontWeight,
+    sortingBy: String,
+    sortingDirection: SortingDirection,
+    updateSorting: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {/*
+    ) {
+        /*
         Text(
             "Poslední pohyb",
             fontWeight = fontWeight,
@@ -97,39 +108,112 @@ fun OverviewRowHeader(
             modifier = Modifier.weight(6f)
         )*/
         Text(
-            "Kvalita",
+            text = "Kvalita",
             fontWeight = fontWeight,
-            modifier = Modifier.weight(3f)
+            modifier = Modifier.weight(2f)
+        )
+        HeaderItem(
+            text = "Tloušťka",
+            fontWeight = fontWeight,
+            isSorteredBy = sortingBy == "thickness",
+            sortingDirection = sortingDirection,
+            modifier = Modifier
+                .weight(3f)
+                .clickable(
+                    onClick = {
+                        updateSorting("thickness")
+                    }
+                ),
+            textAlign = TextAlign.End
+        )
+        HeaderItem(
+            text = "Šířka",
+            fontWeight = fontWeight,
+            isSorteredBy = sortingBy == "width",
+            sortingDirection = sortingDirection,
+            modifier = Modifier
+                .weight(3f)
+                .clickable(
+                    onClick = {
+                        updateSorting("width")
+                    }
+                ),
+            textAlign = TextAlign.End
+        )
+        HeaderItem(
+            text = "Délka",
+            fontWeight = fontWeight,
+            isSorteredBy = sortingBy == "length",
+            sortingDirection = sortingDirection,
+            modifier = Modifier
+                .weight(3f)
+                .clickable(
+                    onClick = {
+                        updateSorting("length")
+                    }
+                ),
+            textAlign = TextAlign.End
+        )
+        HeaderItem(
+            text = "Na skladě",
+            fontWeight = fontWeight,
+            isSorteredBy = sortingBy == "quantity",
+            sortingDirection = sortingDirection,
+            modifier = Modifier
+                .weight(3f)
+                .clickable(
+                    onClick = {
+                        updateSorting("quantity")
+                    }
+                ),
+            textAlign = TextAlign.End
         )
         Text(
-            "Tloušťka",
+            text = "Objem",
             fontWeight = fontWeight,
             modifier = Modifier.weight(3f),
             textAlign = TextAlign.End
         )
+    }
+}
+
+@Composable
+fun HeaderItem(
+    text: String,
+    fontWeight: FontWeight,
+    textAlign: TextAlign,
+    isSorteredBy: Boolean = false,
+    sortingDirection: SortingDirection = SortingDirection.NONE,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxSize(),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        if (isSorteredBy) {
+            if (sortingDirection == SortingDirection.ASC) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowUp,
+                    contentDescription = "sorting",
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "sorting",
+                )
+            }
+        } else {
+            Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "sorting",
+            )
+        }
+
         Text(
-            "Šířka",
+            text = text,
             fontWeight = fontWeight,
-            modifier = Modifier.weight(3f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            "Délka",
-            fontWeight = fontWeight,
-            modifier = Modifier.weight(3f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            "Na skladě",
-            fontWeight = fontWeight,
-            modifier = Modifier.weight(3f),
-            textAlign = TextAlign.End
-        )
-        Text(
-            "Objem",
-            fontWeight = fontWeight,
-            modifier = Modifier.weight(3f),
-            textAlign = TextAlign.End
+            textAlign = textAlign,
+            modifier = Modifier
         )
     }
 }
@@ -165,7 +249,7 @@ fun OverviewRow(
         )*/
         Text(
             slot.quality.toString(),
-            modifier = Modifier.weight(3f)
+            modifier = Modifier.weight(2f)
         )
         Text(
             slot.thickness.toString(),
@@ -190,10 +274,9 @@ fun OverviewRow(
             fontWeight = FontWeight.Bold, // quantity is crucial for warehouse workers
         )
 
-        val volume = slot.getVolume()
-        val formattedVolume = String.format("%.3f", volume)
+        val formattedVolume = formatCubicMeters(slot.getVolume())
         Text(
-            "$formattedVolume m³",
+            formattedVolume,
             modifier = Modifier.weight(3f),
             textAlign = TextAlign.End
         )
@@ -210,11 +293,11 @@ fun SumRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
-            "Součet: ", modifier = Modifier.weight(3f),
+            "Součet: ", modifier = Modifier.weight(2f),
             fontWeight = fontWeight,
         )
         Text(

@@ -15,8 +15,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.formatShortDate
 import java.util.Date
@@ -63,9 +65,7 @@ fun SlotTable(
             lastModifiedSlots,
             alternateRowModifier
         ) { index, slot, modifier ->
-            slot?.let {
-                SlotRow(it, navigateToShowLastActions, modifier)
-            }
+            SlotRow(slot, navigateToShowLastActions, modifier)
         }
     }
 }
@@ -89,10 +89,14 @@ fun SlotRow(
         val date = slot.lastModified?.toDate() ?: Date()
         val readableDate = formatShortDate(date)
 
-        Text(readableDate, modifier = Modifier.weight(4f))
+        Text(
+            readableDate,
+            modifier = Modifier.weight(4f),
+            fontSize = 14.sp
+        )
         Text(
             slot.productId, modifier = Modifier.weight(6f),
-            //style = MaterialTheme.typography.bodySmall
+            fontSize = 14.sp
         )
         Text(
             slot.quantity.toString(),
@@ -110,11 +114,11 @@ fun HeaderLastSlotsContent(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Text("Datum", modifier = Modifier.weight(4f))
-        Text("Hranolky", modifier = Modifier.weight(6f))
-        Text("Množství", modifier = Modifier.weight(4f), textAlign = TextAlign.End)
+        Text("Datum", modifier = Modifier.weight(4f), fontWeight = FontWeight.Bold)
+        Text("Hranolky", modifier = Modifier.weight(6f), fontWeight = FontWeight.Bold)
+        Text("Množství", modifier = Modifier.weight(4f), textAlign = TextAlign.End, fontWeight = FontWeight.Bold)
     }
 }

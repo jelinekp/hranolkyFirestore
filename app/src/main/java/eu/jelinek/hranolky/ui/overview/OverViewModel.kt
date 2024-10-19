@@ -29,10 +29,15 @@ class OverViewModel(
         }
         viewModelScope.launch {
             overviewScreenState.first { it.allSlots.isNotEmpty() }
-                .also { onFilterClear() } // Call onFilterClear after collecting the first non-empty value
+                .also {
+                    onFilterClear()
+                } // Call onFilterClear after collecting the first non-empty value
         }
         viewModelScope.launch {
             applyAllFilters()
+        }
+        viewModelScope.launch {
+            applySorting()
         }
     }
 
@@ -106,7 +111,7 @@ class OverViewModel(
         }
     }
 
-    suspend fun applyAllFilters() {
+    private suspend fun applyAllFilters() {
         overviewScreenState.distinctUntilChanged { old, new ->
             old.selectedFilters == new.selectedFilters // every time selected filters changes
         }.collect { state ->
@@ -138,6 +143,90 @@ class OverViewModel(
         }
     }
 
+    fun updateSorting(by: String) {
+        var sortingBy = ""
+        val currentDirection = _overviewScreenState.value.sortingDirection
+        var sortingDirection = SortingDirection.NONE
+        if (_overviewScreenState.value.sortingBy == by) {
+            if (currentDirection == SortingDirection.DESC) {
+                sortingDirection = SortingDirection.ASC
+                sortingBy = by
+            }
+            else {
+                sortingDirection = SortingDirection.NONE
+                sortingBy = ""
+            }
+        } else {
+            sortingBy = by
+            sortingDirection = SortingDirection.DESC
+        }
+
+        Log.d("OverViewModel", "Sorting by: $sortingBy, Direction: $sortingDirection")
+
+        _overviewScreenState.update {
+            it.copy(
+                sortingBy = sortingBy,
+                sortingDirection = sortingDirection,
+            )
+        }
+    }
+
+    private suspend fun applySorting() {
+        overviewScreenState.distinctUntilChanged { old, new ->
+            old.sortingBy == new.sortingBy && old.selectedSlots == new.selectedSlots && old.sortingDirection == new.sortingDirection // every time sortingBy or selected changes
+        }.collect { state ->
+            when (state.sortingBy) {
+                "length" -> {
+                    _overviewScreenState.update {
+                        it.copy(
+                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.length }
+                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.length }
+                            else it.selectedSlots,
+                        )
+                    }
+                }
+
+                "width" -> {
+                    _overviewScreenState.update {
+                        it.copy(
+                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.width }
+                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.width }
+                            else it.selectedSlots,
+                        )
+                    }
+                }
+
+                "thickness" -> {
+                    _overviewScreenState.update {
+                        it.copy(
+                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.thickness }
+                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.thickness }
+                            else it.selectedSlots,
+                        )
+                    }
+                }
+
+                "quantity" -> {
+                    _overviewScreenState.update {
+                        it.copy(
+                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.quantity }
+                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.quantity }
+                            else it.selectedSlots,
+                        )
+                    }
+                }
+
+                else -> {
+                    _overviewScreenState.update {
+                        it.copy(
+                            sortedSlots = it.selectedSlots,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun onFilterClear() {
         _overviewScreenState.update {
             it.copy(
@@ -152,8 +241,11 @@ class OverViewModel(
 data class OverviewUiState(
     val allSlots: List<WarehouseSlot> = emptyList(),
     val selectedSlots: List<WarehouseSlot> = emptyList(),
+    val sortedSlots: List<WarehouseSlot> = emptyList(),
     val sum: SlotSum = SlotSum.EMPTY,
     val selectedFilters: SlotFilters = SlotFilters.EMPTY,
+    val sortingBy: String = "",
+    val sortingDirection: SortingDirection = SortingDirection.NONE,
 )
 
 data class SlotSum(
@@ -223,4 +315,8 @@ data class IntervalMm(
     override fun toString(): String {
         return "$start - $end"
     }
+}
+
+enum class SortingDirection {
+    ASC, DESC, NONE
 }

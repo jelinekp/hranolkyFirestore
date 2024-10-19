@@ -61,7 +61,7 @@ fun HeaderRowContent() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(
                 vertical = 4.dp,
                 horizontal = 8.dp
