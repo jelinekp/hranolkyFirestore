@@ -4,11 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,12 +23,13 @@ fun FilterSlots(
     onQualityFilterChange: (List<String>) -> Unit,
     onThicknessFilterChange: (List<Float>) -> Unit,
     onWidthFilterChange: (List<Float>) -> Unit,
-    onLengthFilterChange: (List<IntervalMm>) -> Unit
+    onLengthFilterChange: (List<IntervalMm>) -> Unit,
+    onFilterClear: () -> Unit
 ) {
     Column (
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 24.dp)
     ) {
         Text(
             text = "Filtrování:",
@@ -61,6 +62,13 @@ fun FilterSlots(
             selectedFilters = selectedFilters.lengthFilters,
             onFilterChange = onLengthFilterChange as (List<Any>) -> Unit
         )
+        HorizontalDivider()
+        OutlinedButton(
+            onClick = onFilterClear,
+            modifier = Modifier.padding(top = 24.dp)
+        ) {
+            Text(text = "Resetovat všechny filtry")
+        }
     }
 }
 
@@ -75,7 +83,7 @@ fun FilterChipGroup(
     onFilterChange: (List<Any>) -> Unit
 ) {
     HorizontalDivider(
-        modifier = Modifier.fillMaxWidth()
+        // modifier = Modifier.fillMaxWidth()
     )
     Column(
         modifier = Modifier.padding(vertical = 14.dp)

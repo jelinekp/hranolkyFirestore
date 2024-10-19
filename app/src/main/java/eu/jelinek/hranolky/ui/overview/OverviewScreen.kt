@@ -33,17 +33,17 @@ fun OverviewScreen(
         Row( // on tablet we want to have the filter area on the left side
             modifier = Modifier.padding(paddingValues)
         ) {
+            AllSlotsContent(screenState.selectedSlots, screenState.sum, navigateToShowLastActions, modifier = Modifier.weight(25f))
+
             FilterSlots(
-                modifier = Modifier.weight(3f),
+                modifier = Modifier.weight(15f),
                 selectedFilters = screenState.selectedFilters,
                 onQualityFilterChange = { viewModel.onQualityFilterChange(it) },
                 onThicknessFilterChange = { viewModel.onThicknessFilterChange(it) },
                 onWidthFilterChange = { viewModel.onWidthFilterChange(it) },
                 onLengthFilterChange = { viewModel.onLengthFilterChange(it) },
+                onFilterClear = { viewModel.onFilterClear() }
             )
-
-            val slotsToShow = if (screenState.selectedSlots.isEmpty()) screenState.allSlots else screenState.selectedSlots
-            AllSlotsContent(slotsToShow, screenState.sum, navigateToShowLastActions, modifier = Modifier.weight(7f))
         }
     }
 }
