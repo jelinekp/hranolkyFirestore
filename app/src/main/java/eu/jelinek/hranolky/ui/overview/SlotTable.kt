@@ -22,14 +22,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.formatCubicMeters
-import eu.jelinek.hranolky.ui.shared.formatDate
 import eu.jelinek.hranolky.ui.start.itemsIndexedWithAlternatingModifier
-import java.util.Date
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AllSlotsContent(
-    slots: List<WarehouseSlot?>,
+    slots: List<WarehouseSlot>,
     slotSum: SlotSum,
     navigateToShowLastActions: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -57,9 +55,7 @@ fun AllSlotsContent(
                 slots,
                 alternateModifier = alternateRowModifier
             ) { index, slot, modifier ->
-                slot?.let { slot ->
-                    OverviewRow(slot, navigateToShowLastActions, modifier)
-                }
+                OverviewRow(slot, navigateToShowLastActions, modifier)
             }
 
             stickyHeader(
@@ -89,7 +85,7 @@ fun OverviewRowHeader(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
+    ) {/*
         Text(
             "Poslední pohyb",
             fontWeight = fontWeight,
@@ -99,7 +95,7 @@ fun OverviewRowHeader(
             "Hranolky",
             fontWeight = fontWeight,
             modifier = Modifier.weight(6f)
-        )
+        )*/
         Text(
             "Kvalita",
             fontWeight = fontWeight,
@@ -154,6 +150,7 @@ fun OverviewRow(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
+        /*
         val date = slot.lastModified?.toDate() ?: Date()
         val readableDate = formatDate(date)
 
@@ -165,7 +162,7 @@ fun OverviewRow(
             slot.productId,
             modifier = Modifier.weight(6f),
             //style = MaterialTheme.typography.bodySmall
-        )
+        )*/
         Text(
             slot.quality.toString(),
             modifier = Modifier.weight(3f)
@@ -217,15 +214,15 @@ fun SumRow(
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
-            "Součet: ", modifier = Modifier.weight(5f),
+            "Součet: ", modifier = Modifier.weight(3f),
             fontWeight = fontWeight,
         )
         Text(
-            slotSum.count.toString(), modifier = Modifier.weight(6f),
+            slotSum.count.toString(), modifier = Modifier.weight(3f),
             fontWeight = fontWeight,
         )
         Spacer(
-            modifier = Modifier.weight(4 * 3f)
+            modifier = Modifier.weight(2 * 3f)
         )
         Text(
             slotSum.quantitySum.toString(),

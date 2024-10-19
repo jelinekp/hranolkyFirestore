@@ -23,9 +23,9 @@ import java.util.Date
 
 
 fun LazyListScope.itemsIndexedWithAlternatingModifier(
-    items: List<WarehouseSlot?>,
+    items: List<WarehouseSlot>,
     alternateModifier: Modifier,
-    itemContent: @Composable (index: Int, item: WarehouseSlot?, modifier: Modifier) -> Unit
+    itemContent: @Composable (index: Int, item: WarehouseSlot, modifier: Modifier) -> Unit
 ) {
     itemsIndexed(items) { index, item ->
         val modifier = if (index % 2 == 0) {
@@ -40,7 +40,7 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SlotTable(
-    lastModifiedSlots: List<WarehouseSlot?>,
+    lastModifiedSlots: List<WarehouseSlot>,
     navigateToShowLastActions: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {

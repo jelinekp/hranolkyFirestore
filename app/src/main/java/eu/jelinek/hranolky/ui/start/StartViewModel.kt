@@ -23,7 +23,7 @@ class StartViewModel(
         _startScreenState.value = _startScreenState.value.copy(scannedCode = scannedCode)
     }
 
-    fun updateLastSlots(lastModifiedSlots: List<WarehouseSlot?>) {
+    fun updateLastSlots(lastModifiedSlots: List<WarehouseSlot>) {
         _startScreenState.value = _startScreenState.value.copy(lastModifiedSlots = lastModifiedSlots)
     }
 
@@ -50,7 +50,7 @@ class StartViewModel(
 
                     // Update the UI state with the new actions
                     _startScreenState.update {
-                        it.copy(lastModifiedSlots = lastModifiedSlots)
+                        it.copy(lastModifiedSlots = lastModifiedSlots.filterNotNull())
                     }
                 }
             }
@@ -64,5 +64,5 @@ class StartViewModel(
 
 data class StartUiState(
     val scannedCode: String = "",
-    val lastModifiedSlots: List<WarehouseSlot?> = emptyList(),
+    val lastModifiedSlots: List<WarehouseSlot> = emptyList(),
 )

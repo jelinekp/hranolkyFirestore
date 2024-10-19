@@ -41,7 +41,9 @@ fun OverviewScreen(
                 onWidthFilterChange = { viewModel.onWidthFilterChange(it) },
                 onLengthFilterChange = { viewModel.onLengthFilterChange(it) },
             )
-            AllSlotsContent(screenState.allSlots, screenState.sum, navigateToShowLastActions, modifier = Modifier.weight(7f))
+
+            val slotsToShow = if (screenState.selectedSlots.isEmpty()) screenState.allSlots else screenState.selectedSlots
+            AllSlotsContent(slotsToShow, screenState.sum, navigateToShowLastActions, modifier = Modifier.weight(7f))
         }
     }
 }

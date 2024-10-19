@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 class OverViewModel(
-    private val firestoreDb : FirebaseFirestore
+    private val firestoreDb: FirebaseFirestore
 ) : ViewModel() {
     private val _overviewScreenState = MutableStateFlow(OverviewUiState())
     val overviewScreenState get() = _overviewScreenState.asStateFlow()
@@ -38,7 +38,7 @@ class OverViewModel(
 
                     // Update the UI state with the new actions
                     _overviewScreenState.update {
-                        it.copy(allSlots = allSlots)
+                        it.copy(allSlots = allSlots.filterNotNull())
                     }
                     calculateSumSlot()
                 }
@@ -63,12 +63,25 @@ class OverViewModel(
         allSlotsListener?.remove()
     }
 
-    fun onQualityFilterChange(strings: List<String>) {
-        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(qualityFilters = strings)) }
+    fun onQualityFilterChange(qualities: List<String>) {
+        _overviewScreenState.update { state ->
+            state.copy(
+                selectedFilters = state.selectedFilters.copy(qualityFilters = qualities),
+                selectedSlots = state.allSlots.filterNotNull().filter { slot ->
+                    qualities.contains(slot.quality)
+                }
+            )
+        }
     }
 
     fun onThicknessFilterChange(floats: List<Float>) {
-        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(thicknessFilters = floats)) }
+        _overviewScreenState.update {
+            it.copy(
+                selectedFilters = it.selectedFilters.copy(
+                    thicknessFilters = floats
+                )
+            )
+        }
     }
 
     fun onWidthFilterChange(floats: List<Float>) {
@@ -76,12 +89,19 @@ class OverViewModel(
     }
 
     fun onLengthFilterChange(mms: List<IntervalMm>) {
-        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(lengthFilters = mms)) }
+        _overviewScreenState.update {
+            it.copy(
+                selectedFilters = it.selectedFilters.copy(
+                    lengthFilters = mms
+                )
+            )
+        }
     }
 }
 
 data class OverviewUiState(
-    val allSlots: List<WarehouseSlot?> = emptyList(),
+    val allSlots: List<WarehouseSlot> = emptyList(),
+    val selectedSlots: List<WarehouseSlot> = emptyList(),
     val sum: SlotSum = SlotSum.EMPTY,
     val selectedFilters: SlotFilters = SlotFilters.EMPTY,
 )
@@ -113,7 +133,11 @@ data class SlotFilters(
             qualityFilters = listOf("DUB-A", "DUB-R"),
             thicknessFilters = listOf(20f, 27.4f, 42.4f),
             widthFilters = listOf(42.4f, 50f, 70f),
-            lengthFilters = listOf(IntervalMm(0, 999), IntervalMm(1000, 1999), IntervalMm(2000, 2999))
+            lengthFilters = listOf(
+                IntervalMm(0, 999),
+                IntervalMm(1000, 1999),
+                IntervalMm(2000, 2999)
+            )
         )
     }
 }
