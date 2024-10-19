@@ -34,6 +34,9 @@ fun LazyListScope.slotActionsIndexedWithAlternatingModifier(
     }
 }
 
-fun formatCubicMeters(volume: Double): String {
+fun formatCubicMeters(volume: Double?): String {
+    if (volume == null) {
+        return "0.0 m³"
+    } else
     return String.format("%.3f m³", volume)
 }
