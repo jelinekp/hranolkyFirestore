@@ -58,20 +58,32 @@ class OverViewModel(
         _overviewScreenState.update { it.copy(sum = sumSlot) }
     }
 
-    fun onFilterChange(list: List<Any>) {
-        _overviewScreenState.update { it.copy(selectedFilters = list) }
-    }
-
     override fun onCleared() {
         super.onCleared()
         allSlotsListener?.remove()
+    }
+
+    fun onQualityFilterChange(strings: List<String>) {
+        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(qualityFilters = strings)) }
+    }
+
+    fun onThicknessFilterChange(floats: List<Float>) {
+        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(thicknessFilters = floats)) }
+    }
+
+    fun onWidthFilterChange(floats: List<Float>) {
+        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(widthFilters = floats)) }
+    }
+
+    fun onLengthFilterChange(mms: List<IntervalMm>) {
+        _overviewScreenState.update { it.copy(selectedFilters = it.selectedFilters.copy(lengthFilters = mms)) }
     }
 }
 
 data class OverviewUiState(
     val allSlots: List<WarehouseSlot?> = emptyList(),
     val sum: SlotSum = SlotSum.EMPTY,
-    val selectedFilters: List<Any> = emptyList(),
+    val selectedFilters: SlotFilters = SlotFilters.EMPTY,
 )
 
 data class SlotSum(
@@ -88,7 +100,7 @@ data class SlotFilters(
     val qualityFilters: List<String>,
     val thicknessFilters: List<Float>,
     val widthFilters: List<Float>,
-    val lengthFilters: List<Pair<Int, Int>>,
+    val lengthFilters: List<IntervalMm>,
 ) {
     companion object {
         val EMPTY = SlotFilters(
@@ -101,7 +113,20 @@ data class SlotFilters(
             qualityFilters = listOf("DUB-A", "DUB-R"),
             thicknessFilters = listOf(20f, 27.4f, 42.4f),
             widthFilters = listOf(42.4f, 50f, 70f),
-            lengthFilters = listOf(Pair(0, 999), Pair(1000, 1999), Pair(2000, 2999))
+            lengthFilters = listOf(IntervalMm(0, 999), IntervalMm(1000, 1999), IntervalMm(2000, 2999))
         )
+    }
+}
+
+data class IntervalMm(
+    val start: Int,
+    val end: Int,
+) {
+    fun contains(value: Int): Boolean {
+        return value in start..end
+    }
+
+    override fun toString(): String {
+        return "$start-$end"
     }
 }

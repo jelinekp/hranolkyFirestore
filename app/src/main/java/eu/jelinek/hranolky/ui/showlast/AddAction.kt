@@ -107,7 +107,7 @@ fun QuantityInput(
         }),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier
-            .widthIn(max = 156.dp)
+            .widthIn(max = 180.dp)
             .focusRequester(quantityFocusRequester)
             .padding(bottom = 8.dp), // Apply padding here
         singleLine = true

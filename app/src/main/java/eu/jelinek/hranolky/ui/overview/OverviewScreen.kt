@@ -1,6 +1,5 @@
 package eu.jelinek.hranolky.ui.overview
 
-import android.util.Log
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -37,10 +36,10 @@ fun OverviewScreen(
             FilterSlots(
                 modifier = Modifier.weight(3f),
                 selectedFilters = screenState.selectedFilters,
-                onFilterChange = { filterValues ->
-                    Log.d("OverviewScreen", "onFilterChanged: $filterValues")
-                    viewModel.onFilterChange(filterValues)
-                },
+                onQualityFilterChange = { viewModel.onQualityFilterChange(it) },
+                onThicknessFilterChange = { viewModel.onThicknessFilterChange(it) },
+                onWidthFilterChange = { viewModel.onWidthFilterChange(it) },
+                onLengthFilterChange = { viewModel.onLengthFilterChange(it) },
             )
             AllSlotsContent(screenState.allSlots, screenState.sum, navigateToShowLastActions, modifier = Modifier.weight(7f))
         }

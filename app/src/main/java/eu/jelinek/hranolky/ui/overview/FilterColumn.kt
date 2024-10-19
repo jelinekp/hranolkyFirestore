@@ -19,11 +19,16 @@ import androidx.compose.ui.unit.dp
 fun FilterSlots(
     modifier: Modifier = Modifier,
     allFilters: SlotFilters = SlotFilters.ALL,
-    selectedFilters: List<Any>,
-    onFilterChange: (List<Any>) -> Unit
+    selectedFilters: SlotFilters,
+    onQualityFilterChange: (List<String>) -> Unit,
+    onThicknessFilterChange: (List<Float>) -> Unit,
+    onWidthFilterChange: (List<Float>) -> Unit,
+    onLengthFilterChange: (List<IntervalMm>) -> Unit
 ) {
     Column (
-        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
     ) {
         Text(
             text = "Filtrování:",
@@ -33,28 +38,28 @@ fun FilterSlots(
         FilterChipGroup(
             label = "Filtr kvality",
             filters = allFilters.qualityFilters,
-            selectedFilters = selectedFilters,
-            onFilterChange = onFilterChange
+            selectedFilters = selectedFilters.qualityFilters,
+            onFilterChange = onQualityFilterChange as (List<Any>) -> Unit
         )
         FilterChipGroup(
             label = "Filtr tloušťky",
             filters = allFilters.thicknessFilters,
             suffix = " mm",
-            selectedFilters = selectedFilters,
-            onFilterChange = onFilterChange
+            selectedFilters = selectedFilters.thicknessFilters,
+            onFilterChange = onThicknessFilterChange as (List<Any>) -> Unit
         )
         FilterChipGroup(
             label = "Filtr šířky",
             filters = allFilters.widthFilters,
             suffix = " mm",
-            selectedFilters = selectedFilters,
-            onFilterChange = onFilterChange
+            selectedFilters = selectedFilters.widthFilters,
+            onFilterChange = onWidthFilterChange as (List<Any>) -> Unit
         )
         FilterChipGroup(
             label = "Filtr délky",
             filters = allFilters.lengthFilters,
-            selectedFilters = selectedFilters,
-            onFilterChange = onFilterChange
+            selectedFilters = selectedFilters.lengthFilters,
+            onFilterChange = onLengthFilterChange as (List<Any>) -> Unit
         )
     }
 }
