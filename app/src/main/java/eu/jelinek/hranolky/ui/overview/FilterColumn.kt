@@ -5,8 +5,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -26,7 +31,7 @@ fun FilterSlots(
     onLengthFilterChange: (List<IntervalMm>) -> Unit,
     onFilterClear: () -> Unit
 ) {
-    Column (
+    Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp)
@@ -73,7 +78,6 @@ fun FilterSlots(
 }
 
 
-
 @Composable
 fun FilterChipGroup(
     label: String,
@@ -85,28 +89,55 @@ fun FilterChipGroup(
     HorizontalDivider(
         // modifier = Modifier.fillMaxWidth()
     )
+
     Column(
         modifier = Modifier.padding(vertical = 14.dp)
     ) {
         Text(text = label, Modifier.padding(bottom = 2.dp))
         Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            filters.forEach { filter ->
-                val isSelected = selectedFilters.contains(filter)
-                FilterChip(
-                    selected = isSelected,
-                    onClick = {
-                        val newSelection = if (isSelected) {
-                            selectedFilters - filter
-                        } else {
-                            selectedFilters + filter
+            Row(
+                horizontalArrangement = Arrangement
+                    .spacedBy(10.dp),
+                modifier = Modifier.weight(8f)
+            ) {
+                filters.forEach { filter ->
+                    val isSelected = selectedFilters.contains(filter)
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            val newSelection = if (isSelected) {
+                                selectedFilters - filter
+                            } else {
+                                selectedFilters + filter
+                            }
+                            onFilterChange(newSelection)
+                        },
+                        label = { Text(filter.toString() + suffix) },
+                        leadingIcon = {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null
+                                )
+                            }
                         }
-                        onFilterChange(newSelection)
-                    },
-                    label = { Text(filter.toString() + suffix) }
+                    )
+                }
+            }
+            IconButton(
+                onClick = { onFilterChange(listOf()) },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Resetovat filtry"
                 )
             }
         }
+
     }
 }

@@ -10,7 +10,6 @@ import eu.jelinek.hranolky.model.WarehouseSlot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,9 +32,7 @@ class OverViewModel(
                 .also { onFilterClear() } // Call onFilterClear after collecting the first non-empty value
         }
         viewModelScope.launch {
-            overviewScreenState
-                .filter { it.selectedFilters == SlotFilters.EMPTY }
-                .collect { onFilterClear() }
+            applyAllFilters()
         }
     }
 
@@ -57,7 +54,6 @@ class OverViewModel(
                     _overviewScreenState.update {
                         it.copy(allSlots = allSlots.filterNotNull())
                     }
-                    //onFilterClear()
                 }
             }
     }
@@ -79,85 +75,66 @@ class OverViewModel(
     }
 
     fun onQualityFilterChange(qualitiesFilters: List<String>) {
-        val slotsToFilter = _overviewScreenState.value.selectedSlots
-        val selectedSlots = slotsToFilter.filter { slot ->
-            qualitiesFilters.contains(slot.quality)
-        }
-
         _overviewScreenState.update { state ->
             state.copy(
                 selectedFilters = state.selectedFilters.copy(qualityFilters = qualitiesFilters),
-                selectedSlots = selectedSlots,
-                sum = calculateSumSlotInline(selectedSlots),
             )
         }
     }
 
     fun onThicknessFilterChange(thicknessFilters: List<Float>) {
-        val slotsToFilter = _overviewScreenState.value.selectedSlots
-        val selectedSlots = slotsToFilter.filter { slot ->
-            thicknessFilters.contains(slot.thickness?.toFloat())
-        }
-
         _overviewScreenState.update {
             it.copy(
-                selectedFilters = it.selectedFilters.copy(
-                    thicknessFilters = thicknessFilters
-                ),
-                selectedSlots = selectedSlots,
-                sum = calculateSumSlotInline(selectedSlots)
+                selectedFilters = it.selectedFilters.copy(thicknessFilters = thicknessFilters),
             )
         }
     }
 
     fun onWidthFilterChange(widthFilters: List<Float>) {
-        val slotsToFilter = _overviewScreenState.value.selectedSlots
-        val selectedSlots = slotsToFilter.filter { slot ->
-            widthFilters.contains(slot.width?.toFloat())
-        }
-
         _overviewScreenState.update {
             it.copy(
                 selectedFilters = it.selectedFilters.copy(widthFilters = widthFilters),
-                selectedSlots = selectedSlots,
-                sum = calculateSumSlotInline(selectedSlots)
             )
         }
     }
 
     fun onLengthFilterChange(mmsFilters: List<IntervalMm>) {
-        val slotsToFilter = _overviewScreenState.value.selectedSlots
-        val selectedSlots = slotsToFilter.filter { slot ->
-            mmsFilters.any { it.contains(slot.length) }
-        }
-
         _overviewScreenState.update {
             it.copy(
                 selectedFilters = it.selectedFilters.copy(lengthFilters = mmsFilters),
-                selectedSlots = selectedSlots,
-                sum = calculateSumSlotInline(selectedSlots)
             )
         }
     }
 
     suspend fun applyAllFilters() {
-        val selectedFilters = overviewScreenState.distinctUntilChanged { old, new ->
-            old.selectedFilters == new.selectedFilters
+        overviewScreenState.distinctUntilChanged { old, new ->
+            old.selectedFilters == new.selectedFilters // every time selected filters changes
         }.collect { state ->
-            val latestSelectedFilters = state.selectedFilters // here we have the latest screenState with latest filters
+            val lsf =
+                state.selectedFilters // here we have the latest screenState with latest selected filters (lsf)
 
-            val selectedSlots = state.allSlots.filter { slot ->
-                latestSelectedFilters.qualityFilters.contains(slot.quality)
-                        && latestSelectedFilters.thicknessFilters.contains(slot.thickness?.toFloat())
-                        && latestSelectedFilters.widthFilters.contains(slot.width?.toFloat())
-                        && latestSelectedFilters.lengthFilters.any { it.contains(slot.length) }
+            if (lsf.isEmpty()) {
+                onFilterClear()
+            } else {
+                val selectedSlots = state.allSlots.filter { slot ->
+                    (!lsf.hasQualityFilters()
+                            || lsf.qualityFilters.contains(slot.quality))
+                            &&
+                            (!lsf.hasThicknessFilters() || lsf.thicknessFilters.contains(slot.thickness?.toFloat()))
+                            &&
+                            (!lsf.hasWidthFilters() || lsf.widthFilters.contains(slot.width?.toFloat()))
+                            &&
+                            (!lsf.hasLengthFilters() || lsf.lengthFilters.any {
+                                it.contains(slot.length)
+                            })
+                }
+                _overviewScreenState.update {
+                    it.copy(
+                        selectedSlots = selectedSlots,
+                        sum = calculateSumSlotInline(selectedSlots)
+                    )
+                }
             }
-
-            _overviewScreenState.update {
-                it.copy(
-                    selectedSlots = selectedSlots,
-                    sum = calculateSumSlotInline(selectedSlots)
-                )
         }
     }
 
