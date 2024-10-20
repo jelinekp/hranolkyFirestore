@@ -68,9 +68,8 @@ fun LastActions(
 fun HeaderRowContent() {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primaryContainer)
             .widthIn(max = 550.dp)
+            .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {

@@ -77,6 +77,17 @@ class ShowLastActionsViewModel(
 
                     if (slotSnapshot != null) {
                         if (slotSnapshot.exists()) {
+
+                            if (slotSnapshot.metadata.isFromCache) {
+                                _screenStateStream.update {
+                                    it.copy(isOnline = true) // offline cache handling
+                                }
+                            } else {
+                                _screenStateStream.update {
+                                    it.copy(isOnline = true)
+                                }
+                            }
+
                             Log.d(TAG, "DocumentSnapshot data: ${slotSnapshot.data}")
                             val firestoreSlot =
                                 slotSnapshot.toObject(FirestoreSlot::class.java)
@@ -86,7 +97,6 @@ class ShowLastActionsViewModel(
                                 lastModified = firestoreSlot?.lastModified,
                                 slotActions = listOf(),
                             )
-
                             fetchSlotActionsInRealtime(id, slot) //Fetch actions passing the slot
                         } else {
                             Log.w(TAG, "Document not found creating a new one")
@@ -122,6 +132,9 @@ class ShowLastActionsViewModel(
                     Log.d(TAG, "Last actions received: $lastActions")
 
                     updateSlot(slot, lastActions) // Update with both slot and actions
+                } else {
+                    Log.d(TAG, "No last actions found")
+                    updateSlot(slot, listOf())
                 }
             }
     }
@@ -257,6 +270,7 @@ data class ShowLastActionsScreenState(
     val slot: WarehouseSlot? = null,
     val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,
+    val isOnline: Boolean = true,
 )
 
 
