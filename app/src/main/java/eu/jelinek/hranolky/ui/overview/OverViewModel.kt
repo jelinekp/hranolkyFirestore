@@ -42,7 +42,7 @@ class OverViewModel(
     }
 
     private fun fetchAllSlots() {
-        firestoreDb.collection("WarehouseSlots")
+        allSlotsListener = firestoreDb.collection("WarehouseSlots")
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
                     Log.e("Firestore", "Error receiving all slots from Firestore", error)
@@ -113,7 +113,7 @@ class OverViewModel(
 
     private suspend fun applyAllFilters() {
         overviewScreenState.distinctUntilChanged { old, new ->
-            old.selectedFilters == new.selectedFilters // every time selected filters changes
+            old.selectedFilters == new.selectedFilters && old.allSlots == new.allSlots // every time selected filters or all slots changes
         }.collect { state ->
             val lsf =
                 state.selectedFilters // here we have the latest screenState with latest selected filters (lsf)
@@ -301,6 +301,10 @@ data class SlotFilters(
 
     fun hasLengthFilters(): Boolean {
         return lengthFilters.isNotEmpty()
+    }
+
+    fun getNumberOfActiveFilters(): Int {
+        return qualityFilters.size + thicknessFilters.size + widthFilters.size + lengthFilters.size
     }
 }
 

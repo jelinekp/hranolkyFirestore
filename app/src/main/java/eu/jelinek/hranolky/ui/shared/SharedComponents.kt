@@ -40,3 +40,10 @@ fun formatCubicMeters(volume: Double?): String {
     } else
     return String.format("%.3f m³", volume)
 }
+
+fun formatCubicMetersTwo(volume: Double?): String {
+    return if (volume == null) {
+        "0.0"
+    } else
+        String.format("%.2f", volume)
+}

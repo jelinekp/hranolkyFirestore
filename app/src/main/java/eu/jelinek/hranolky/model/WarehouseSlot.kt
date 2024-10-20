@@ -1,5 +1,7 @@
 package eu.jelinek.hranolky.model
 
+import android.util.Log
+
 data class WarehouseSlot(
     val productId: String,
     val quantity: Int,
@@ -13,30 +15,37 @@ data class WarehouseSlot(
     fun parsePropertiesFromProductId(): WarehouseSlot {
         val quality = this.productId.take(5)
         val parts = this.productId.split("-")
-        val rawThickness = parts[2].toFloat()
 
-        val thickness = when (rawThickness) {
-            20.0f -> 20.0f
-            27.0f -> 27.4f
-            42.0f -> 42.4f
-            else -> rawThickness
-        }
+        if (parts.size < 5) {
+            Log.d("Parsed parts", "Parsed parts: ${parts.size}")
+        } else {
 
-        val rawWidth = parts[3].toFloat()
+            val rawThickness = parts[2].toFloat()
 
-        val width = when (rawWidth) {
-            42.0f -> 42.4f
-            else -> rawWidth
-        }
+            val thickness = when (rawThickness) {
+                20.0f -> 20.0f
+                27.0f -> 27.4f
+                42.0f -> 42.4f
+                else -> rawThickness
+            }
 
-        val length = parts[4].toInt()
+            val rawWidth = parts[3].toFloat()
 
-        return this.copy(
-            quality = quality,
-            thickness = thickness,
-            width = width,
-            length = length,
+            val width = when (rawWidth) {
+                42.0f -> 42.4f
+                else -> rawWidth
+            }
+
+            val length = parts[4].toInt()
+
+            return this.copy(
+                quality = quality,
+                thickness = thickness,
+                width = width,
+                length = length,
             )
+        }
+        return this
     }
 
     fun getVolume(): Double? {
@@ -47,6 +56,10 @@ data class WarehouseSlot(
         val volume = ((quantity * length).toDouble() * thickness * width) / 1_000_000_000.0
 
         return volume
+    }
+
+    fun hasAllProperties(): Boolean {
+        return this.quality != null && this.width != null && this.thickness != null && this.length != null
     }
 /*
     override fun equals(other: Any?): Boolean {

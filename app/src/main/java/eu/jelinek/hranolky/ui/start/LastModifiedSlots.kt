@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -46,26 +47,30 @@ fun SlotTable(
     navigateToShowLastActions: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Text(
-        "Položky s posledními pohyby:",
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.padding(top = 24.dp)
-    )
-
-
-    val alternateRowModifier =
-        Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-    LazyColumn(
-        modifier = Modifier.widthIn(max = 500.dp)
+    Column(
+        modifier = modifier.padding(top = 24.dp)
     ) {
-        stickyHeader { // Makes the header sticky
-            HeaderLastSlotsContent() // Your header row composable function
-        }
-        itemsIndexedWithAlternatingModifier(
-            lastModifiedSlots,
-            alternateRowModifier
-        ) { index, slot, modifier ->
-            SlotRow(slot, navigateToShowLastActions, modifier)
+        Text(
+            "Položky s posledními pohyby:",
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+        )
+        val alternateRowModifier =
+            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = 500.dp)
+                .padding(top = 4.dp)
+        ) {
+            stickyHeader { // Makes the header sticky
+                HeaderLastSlotsContent() // Your header row composable function
+            }
+            itemsIndexedWithAlternatingModifier(
+                lastModifiedSlots,
+                alternateRowModifier
+            ) { index, slot, modifier ->
+                SlotRow(slot, navigateToShowLastActions, modifier)
+            }
         }
     }
 }
@@ -80,9 +85,6 @@ fun SlotRow(
         // extract and make it clickable
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
-            .clickable {
-                navigateToShowLastActions(slot.productId)
-            }
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
@@ -92,12 +94,19 @@ fun SlotRow(
         Text(
             readableDate,
             modifier = Modifier.weight(4f),
-            fontSize = 14.sp
+            //fontSize = 14.sp
         )
+
         Text(
-            slot.productId, modifier = Modifier.weight(6f),
-            fontSize = 14.sp
+            text = slot.productId,
+            fontSize = 14.sp,
+            modifier = modifier.weight(6f).clickable {
+                navigateToShowLastActions(slot.productId)
+            },
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
         )
+
         Text(
             slot.quantity.toString(),
             modifier = Modifier.weight(4f),
@@ -119,6 +128,11 @@ fun HeaderLastSlotsContent(
     ) {
         Text("Datum", modifier = Modifier.weight(4f), fontWeight = FontWeight.Bold)
         Text("Hranolky", modifier = Modifier.weight(6f), fontWeight = FontWeight.Bold)
-        Text("Množství", modifier = Modifier.weight(4f), textAlign = TextAlign.End, fontWeight = FontWeight.Bold)
+        Text(
+            "Množství",
+            modifier = Modifier.weight(4f),
+            textAlign = TextAlign.End,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

@@ -56,7 +56,11 @@ class ShowLastActionsViewModel(
             val parsedSlot = slot.parsePropertiesFromProductId()
                 .copy(slotActions = slotActions)  // Assign slotActions here
             _screenStateStream.update {
-                it.copy(slot = parsedSlot)
+                it.copy(slot = parsedSlot, resultStatus = ResultStatus.SUCCESS)
+            }
+        } else {
+            _screenStateStream.update {
+                it.copy(resultStatus = ResultStatus.DATA_ERROR)
             }
         }
     }
@@ -84,13 +88,15 @@ class ShowLastActionsViewModel(
                             )
 
                             fetchSlotActionsInRealtime(id, slot) //Fetch actions passing the slot
-
                         } else {
                             Log.w(TAG, "Document not found creating a new one")
                             sendNewSlotToFirestore(0)
                         }
                     } else {
                         Log.d(TAG, "Not connected to the internet")
+                        _screenStateStream.update {
+                            it.copy(resultStatus = ResultStatus.NETWORK_ERROR)
+                        }
                     }
                 }
         }
@@ -121,30 +127,36 @@ class ShowLastActionsViewModel(
     }
 
     fun sendNewSlotToFirestore(quantity: Int) {
-        val slot = WarehouseSlot(
-            productId = slotId!!,
-            quantity = quantity,
-        )
+        val slot =
+            WarehouseSlot(productId = slotId!!, quantity = quantity).parsePropertiesFromProductId()
 
-        val slotToSend = hashMapOf(
-            "quantity" to slot.quantity,
-        )
+        if (slot.hasAllProperties()) {
+            val slotToSend = hashMapOf(
+                "quantity" to slot.quantity,
+            )
 
-        Log.d(TAG, "Sending data to Firestore: $slotToSend")
+            Log.d(TAG, "Sending data to Firestore: $slotToSend")
 
-        viewModelScope.launch {
-            try {
-                firestoreDb.collection("WarehouseSlots")
-                    .document(slot.productId)
-                    .set(slotToSend) // TODO replace .set with something that does not overwrite data!
-                    .addOnSuccessListener {
-                        Log.d(TAG, "DocumentSnapshot added with ID: ${slot.productId}")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.w(TAG, "Error adding document", e)
-                    }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error sending data to Firestore", e)
+            viewModelScope.launch {
+                try {
+                    firestoreDb.collection("WarehouseSlots")
+                        .document(slot.productId)
+                        .set(slotToSend) // TODO replace .set with something that does not overwrite data!
+                        .addOnSuccessListener {
+                            Log.d(TAG, "DocumentSnapshot added with ID: ${slot.productId}")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.w(TAG, "Error adding document", e)
+                        }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sending data to Firestore", e)
+                }
+            }
+        } else {
+            _screenStateStream.update {
+                it.copy(
+                    resultStatus = ResultStatus.DATA_ERROR,
+                )
             }
         }
     }
@@ -243,7 +255,7 @@ class ShowLastActionsViewModel(
 
 data class ShowLastActionsScreenState(
     val slot: WarehouseSlot? = null,
-    val loading: Boolean = false,
+    val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,
 )
 
@@ -254,7 +266,7 @@ data class AddActionValidationState(
 )
 
 enum class ResultStatus {
-    LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR,
+    LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR
 }
 
 enum class ActionType {
