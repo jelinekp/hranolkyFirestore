@@ -1,6 +1,5 @@
 package eu.jelinek.hranolky.ui.overview
 
-import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +25,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.model.WarehouseSlot
+import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.formatCubicMeters
+import eu.jelinek.hranolky.ui.shared.formatCubicMetersTwo
 import eu.jelinek.hranolky.ui.start.itemsIndexedWithAlternatingModifier
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -38,14 +39,13 @@ fun AllSlotsContent(
     sortingDirection: SortingDirection,
     updateSorting: (String) -> Unit,
     navigateToShowLastActions: (String) -> Unit,
+    screenSize: ScreenSize = ScreenSize.TABLET,
     modifier: Modifier = Modifier
 ) {
     val alternateRowModifier =
         Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
 
     val fontWeight = FontWeight.Bold
-
-    Log.d("AllSlotsContent", "slots: ${slots.size}")
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -62,20 +62,28 @@ fun AllSlotsContent(
                     sortingBy = sortingBy,
                     sortingDirection = sortingDirection,
                     updateSorting = updateSorting,
+                    screenSize = screenSize,
                 )
             }
             itemsIndexedWithAlternatingModifier(
                 slots,
                 alternateModifier = alternateRowModifier
             ) { index, slot, modifier ->
-                OverviewRow(slot, navigateToShowLastActions, modifier)
+                OverviewRow(slot, navigateToShowLastActions, screenSize = screenSize, modifier)
             }
         }
 
-        SumRow(
-            slotSum = slotSum,
-            fontWeight = fontWeight
-        )
+        if (screenSize.isTablet()) {
+            SumRow(
+                slotSum = slotSum,
+                fontWeight = fontWeight
+            )
+        } else {
+            SumoMobileRow(
+                slotSum = slotSum,
+                fontWeight = fontWeight
+            )
+        }
     }
 
 
@@ -87,7 +95,8 @@ fun OverviewRowHeader(
     sortingBy: String,
     sortingDirection: SortingDirection,
     updateSorting: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    screenSize: ScreenSize = ScreenSize.TABLET
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -108,12 +117,12 @@ fun OverviewRowHeader(
             modifier = Modifier.weight(6f)
         )*/
         Text(
-            text = "Kvalita",
+            text = if (screenSize.isTablet()) "Kvalita" else "K",
             fontWeight = fontWeight,
-            modifier = Modifier.weight(2f)
+            modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(1f)
         )
         HeaderItem(
-            text = "Tloušťka",
+            text = if (screenSize.isTablet()) "Tloušťka" else "T",
             fontWeight = fontWeight,
             isSorteredBy = sortingBy == "thickness",
             sortingDirection = sortingDirection,
@@ -127,7 +136,7 @@ fun OverviewRowHeader(
             textAlign = TextAlign.End
         )
         HeaderItem(
-            text = "Šířka",
+            text = if (screenSize.isTablet()) "Šířka" else "Š",
             fontWeight = fontWeight,
             isSorteredBy = sortingBy == "width",
             sortingDirection = sortingDirection,
@@ -141,7 +150,7 @@ fun OverviewRowHeader(
             textAlign = TextAlign.End
         )
         HeaderItem(
-            text = "Délka",
+            text = if (screenSize.isTablet()) "Délka" else "D",
             fontWeight = fontWeight,
             isSorteredBy = sortingBy == "length",
             sortingDirection = sortingDirection,
@@ -155,7 +164,7 @@ fun OverviewRowHeader(
             textAlign = TextAlign.End
         )
         HeaderItem(
-            text = "Na skladě",
+            text = if (screenSize.isTablet()) "Na skladě" else "#",
             fontWeight = fontWeight,
             isSorteredBy = sortingBy == "quantity",
             sortingDirection = sortingDirection,
@@ -169,7 +178,7 @@ fun OverviewRowHeader(
             textAlign = TextAlign.End
         )
         Text(
-            text = "Objem",
+            text = if (screenSize.isTablet()) "Objem" else "m³",
             fontWeight = fontWeight,
             modifier = Modifier.weight(3f),
             textAlign = TextAlign.End
@@ -222,6 +231,7 @@ fun HeaderItem(
 fun OverviewRow(
     slot: WarehouseSlot,
     navigateToShowLastActions: (String) -> Unit,
+    screenSize: ScreenSize = ScreenSize.TABLET,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -248,8 +258,8 @@ fun OverviewRow(
             //style = MaterialTheme.typography.bodySmall
         )*/
         Text(
-            slot.quality.toString(),
-            modifier = Modifier.weight(2f)
+            text = if (screenSize.isTablet()) slot.quality.toString() else slot.quality?.getOrNull(4).toString(),
+            modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(1f)
         )
         Text(
             slot.thickness.toString(),
@@ -274,7 +284,8 @@ fun OverviewRow(
             fontWeight = FontWeight.Bold, // quantity is crucial for warehouse workers
         )
 
-        val formattedVolume = formatCubicMeters(slot.getVolume())
+        val volume = slot.getVolume()
+        val formattedVolume = if (screenSize.isTablet()) formatCubicMeters(volume) else formatCubicMetersTwo(volume)
         Text(
             formattedVolume,
             modifier = Modifier.weight(3f),
@@ -315,6 +326,45 @@ fun SumRow(
         )
         Text(
             formatCubicMeters(slotSum.volumeSum),
+            modifier = Modifier.weight(3f),
+            textAlign = TextAlign.End,
+            fontWeight = fontWeight,
+        )
+    }
+}
+
+@Composable
+fun SumoMobileRow(
+    slotSum: SlotSum = SlotSum.EMPTY,
+    fontWeight: FontWeight,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Text(
+            slotSum.count.toString(), modifier = Modifier.weight(3f),
+            fontWeight = fontWeight,
+        )
+        Text(
+            "Součet: ", modifier = Modifier.weight(4f),
+            fontWeight = fontWeight,
+        )
+        Spacer(
+            modifier = Modifier.weight(3f)
+        )
+        Text(
+            slotSum.quantitySum.toString(),
+            modifier = Modifier.weight(3f),
+            textAlign = TextAlign.End,
+            fontWeight = fontWeight,
+        )
+        Text(
+            formatCubicMetersTwo(slotSum.volumeSum),
             modifier = Modifier.weight(3f),
             textAlign = TextAlign.End,
             fontWeight = fontWeight,

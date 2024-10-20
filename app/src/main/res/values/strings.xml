@@ -24,4 +24,5 @@
     <string name="prijem">Příjem</string>
     <string name="vydej">Výdej −</string>
     <string name="naskenuj_kod">Naskenuj nebo napiš kód</string>
+    <string name="forward_icon">Ikona vpřed\n</string>
 </resources>

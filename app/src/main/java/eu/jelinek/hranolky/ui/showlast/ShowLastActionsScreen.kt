@@ -20,15 +20,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
+import eu.jelinek.hranolky.ui.shared.ScreenSize
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun ShowLastActionsScreen(
     modifier: Modifier = Modifier,
     navigateUp: () -> Unit,
+    screenSize: ScreenSize,
     viewModel: ShowLastActionsViewModel = koinViewModel()
 ) {
     val slotId = viewModel.slotId
@@ -52,16 +55,42 @@ fun ShowLastActionsScreen(
                 .padding(padding)
                 .fillMaxWidth()
         ) {
-            if (screenState.slot == null) {
-                CircularProgressIndicator(
-                    color = MaterialTheme.colorScheme.primary, // Custom color
-                    strokeWidth = 4.dp, // Custom stroke width
-                )
-            } else {
-                val slot = screenState.slot!!
-                SlotData(slot = slot)
-                AddAction(viewModel = viewModel)
-                LastActions(slot.slotActions)
+            when (screenState.resultStatus) {
+                ResultStatus.LOADING -> {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary, // Custom color
+                        strokeWidth = 4.dp, // Custom stroke width
+                    )
+                }
+
+                ResultStatus.SUCCESS -> {
+                    if (screenState.slot != null) {
+                        val slot = screenState.slot!!
+                        SlotData(slot = slot)
+                        AddAction(viewModel = viewModel)
+                        LastActions(slot.slotActions)
+                    }
+                }
+
+                ResultStatus.DATA_ERROR -> {
+                    Text(
+                        "Nesprávný formát dat, položka musí být ve formátu\n\"AAA-A-XX-XX-XXXX\"\n(16 znaků, A jsou písmena, X jsou číslice)",
+                        modifier = Modifier.padding(32.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                ResultStatus.NETWORK_ERROR -> {
+                    Text("Chyba sítě", modifier = Modifier.padding(32.dp), textAlign = TextAlign.Center,)
+                }
+
+                ResultStatus.OTHER_ERROR -> {
+                    Text(
+                        "Neznámá chyba, kontaktuj Pavla Jelínka",
+                        modifier = Modifier.padding(32.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

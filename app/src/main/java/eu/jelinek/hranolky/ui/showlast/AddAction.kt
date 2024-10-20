@@ -52,7 +52,7 @@ fun AddAction(viewModel: ShowLastActionsViewModel, modifier: Modifier = Modifier
     )
 
     Column(
-        verticalArrangement = Arrangement.Top,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .widthIn(max = 360.dp)
