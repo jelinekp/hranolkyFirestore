@@ -3,17 +3,21 @@ package eu.jelinek.hranolky.ui.showlast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.model.SlotAction
@@ -28,29 +32,33 @@ fun LastActions(
     lastActions: List<SlotAction>,
     modifier: Modifier = Modifier
 ) {
-
-    val alternateRowModifier =
-        Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-
-    Text(
-        text = "Poslední akce",
-        style = MaterialTheme.typography.headlineSmall,
-    )
-    LazyColumn(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
         modifier = modifier
-            .widthIn(max = 550.dp)
             .fillMaxWidth()
-            .padding(
-                // horizontal = 16.dp
-            )
-            .heightIn(min = 100.dp),
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        stickyHeader { // Makes the header sticky
-            HeaderRowContent() // Your header row composable function
-        }
-        slotActionsIndexedWithAlternatingModifier(lastActions, alternateRowModifier) { index, slotAction, modifier ->
-            LastActionRow(slotAction, modifier)
+        val alternateRowModifier =
+            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+        Text(
+            text = "Poslední akce",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        HeaderRowContent()
+        LazyColumn(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .widthIn(max = 550.dp)
+                .fillMaxSize()
+        ) {
+            slotActionsIndexedWithAlternatingModifier(
+                lastActions,
+                alternateRowModifier
+            ) { index, slotAction, modifier ->
+                LastActionRow(slotAction, modifier)
+            }
         }
     }
 }
@@ -62,32 +70,34 @@ fun HeaderRowContent() {
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(
-                vertical = 4.dp,
-                horizontal = 8.dp
-            ),
+            .widthIn(max = 550.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = "Datum a čas",
             modifier = Modifier.weight(8f),
+            fontWeight = FontWeight.Bold,
             //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Pohyb",
             modifier = Modifier.weight(3f),
+            fontWeight = FontWeight.Bold,
             //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Změna",
             textAlign = TextAlign.End,
             modifier = Modifier.weight(3f),
+            fontWeight = FontWeight.Bold,
             //style = MaterialTheme.typography.bodySmall
         )
         Text(
             text = "Stav",
             textAlign = TextAlign.End,
             modifier = Modifier.weight(3f),
+            fontWeight = FontWeight.Bold,
             //style = MaterialTheme.typography.bodySmall
         )
     }
@@ -112,7 +122,7 @@ fun LastActionRow(
             .fillMaxWidth()
             .padding(
                 horizontal = 8.dp,
-                vertical = 2.dp
+                vertical = 3.dp
             ),
     ) {
         Text(

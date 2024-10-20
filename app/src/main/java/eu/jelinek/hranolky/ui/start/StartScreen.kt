@@ -2,13 +2,18 @@ package eu.jelinek.hranolky.ui.start
 
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
@@ -16,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -28,9 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
@@ -90,20 +100,25 @@ fun StartScreen(
 
                 OverviewButton(navigateToOverview)
 
-                SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                SlotTable(screenState.lastModifiedSlots, screenSize = screenSize, navigateToShowLastActions = navigateToShowLastActions)
             }
         } else {
             Row(
                 modifier = modifier.padding(padding).fillMaxSize(),
             ) {
-                SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions, modifier = Modifier.weight(5f))
+                SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions, screenSize, modifier = Modifier.weight(5f).padding(16.dp))
                 Column(
-                    modifier = Modifier.weight(5f).padding(horizontal = 32.dp),
+                    modifier = Modifier.fillMaxSize().padding(16.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer).weight(5f).padding(horizontal = 64.dp).padding(top = 32.dp).widthIn(max = 220.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Zobrazit detail, přidat pohyb, zobrazit poslední pohyby:"
+                        text = "Zobrazit detail, přidat pohyb, zobrazit poslední pohyby:",
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
                     AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
@@ -134,7 +149,7 @@ fun StartScreen(
             }
         }
     }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { if (screenSize.isPhone()) focusRequester.requestFocus() }
 }
 
 // Extracted composables:
@@ -172,7 +187,11 @@ fun ScannedCodeInput(
         label = { Text(stringResource(R.string.naskenuj_kod)) },
         modifier = Modifier.focusRequester(focusRequester),
         isError = isError,
-        singleLine = true
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        )
     )
 }
 
@@ -205,7 +224,7 @@ fun ManualScanButton(scannedText: String, navigateToShowLastActions: (String) ->
 fun OverviewButton(navigateToOverview: () -> Unit) {
     Button(
         onClick = navigateToOverview,
-        modifier = Modifier.padding(top = 16.dp)
+        modifier = Modifier.padding(top = 16.dp, end = 16.dp)
     ) {
         Text("Přehled všech hranolků")
         Icon(
@@ -221,6 +240,14 @@ fun StartScreenTopBar(modifier: Modifier = Modifier, navigateToOverview: () -> U
     TopAppBar(
         title = { Text("Hranolky") },
         modifier = modifier,
+        navigationIcon = {
+            Icon(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "ikona aplikace",
+                modifier = Modifier.padding(start = 8.dp).size(48.dp),
+                tint = Color.Unspecified
+            )
+        },
         actions = { OverviewButton(navigateToOverview) }
     )
 }

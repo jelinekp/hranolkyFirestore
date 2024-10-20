@@ -66,7 +66,7 @@ fun AddAction(viewModel: ShowLastActionsViewModel, modifier: Modifier = Modifier
             Text(
                 "Přidat pohyb:",
                 fontSize = 20.sp,
-                modifier = Modifier.padding(end = 8.dp)
+                modifier = Modifier.padding(top = 8.dp, end = 8.dp)
             )
             val quantityInputData = QuantityInputData(
                 quantity = viewModel.quantityState.value,
@@ -108,8 +108,7 @@ fun QuantityInput(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier
             .widthIn(max = 180.dp)
-            .focusRequester(quantityFocusRequester)
-            .padding(bottom = 8.dp), // Apply padding here
+            .focusRequester(quantityFocusRequester),
         singleLine = true
     )
 }
@@ -120,9 +119,9 @@ fun ActionButtons(
     keyboardController: SoftwareKeyboardController?
 ) {
     Row(
-        verticalAlignment = Alignment.Bottom,
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier.width(280.dp)
+        modifier = Modifier.width(280.dp).padding(vertical = 6.dp)
     ) {
         ActionButton(
             text = stringResource(R.string.prijem),

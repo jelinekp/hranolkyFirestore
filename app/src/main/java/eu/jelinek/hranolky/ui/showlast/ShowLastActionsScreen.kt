@@ -47,10 +47,6 @@ fun ShowLastActionsScreen(
     ) { padding ->
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(
-                // 16.dp for bigger screens, 8.dp for smaller screens
-                8.dp
-            ),
             modifier = modifier
                 .padding(padding)
                 .fillMaxWidth()

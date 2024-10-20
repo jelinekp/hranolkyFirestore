@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -51,20 +52,18 @@ fun AllSlotsContent(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,
     ) {
+        OverviewRowHeader(
+            fontWeight = fontWeight,
+            sortingBy = sortingBy,
+            sortingDirection = sortingDirection,
+            updateSorting = updateSorting,
+            screenSize = screenSize,
+        )
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 44.dp)
+                .padding(vertical = 44.dp)
         ) {
-            stickyHeader {
-                OverviewRowHeader(
-                    fontWeight = fontWeight,
-                    sortingBy = sortingBy,
-                    sortingDirection = sortingDirection,
-                    updateSorting = updateSorting,
-                    screenSize = screenSize,
-                )
-            }
             itemsIndexedWithAlternatingModifier(
                 slots,
                 alternateModifier = alternateRowModifier
@@ -304,6 +303,7 @@ fun SumRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
+            .height(44.dp)
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
@@ -343,6 +343,7 @@ fun SumoMobileRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
+            .height(44.dp)
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
