@@ -139,13 +139,14 @@ class ShowLastActionsViewModel(
             }
     }
 
-    fun sendNewSlotToFirestore(quantity: Int) {
+    private fun sendNewSlotToFirestore(quantity: Int = 0) {
         val slot =
             WarehouseSlot(productId = slotId!!, quantity = quantity).parsePropertiesFromProductId()
 
         if (slot.hasAllProperties()) {
             val slotToSend = hashMapOf(
                 "quantity" to slot.quantity,
+                "lastModified" to FieldValue.serverTimestamp(),
             )
 
             Log.d(TAG, "Sending data to Firestore: $slotToSend")
