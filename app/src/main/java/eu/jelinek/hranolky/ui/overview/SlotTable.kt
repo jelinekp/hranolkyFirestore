@@ -1,6 +1,5 @@
 package eu.jelinek.hranolky.ui.overview
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +30,6 @@ import eu.jelinek.hranolky.ui.shared.formatCubicMeters
 import eu.jelinek.hranolky.ui.shared.formatCubicMetersTwo
 import eu.jelinek.hranolky.ui.start.itemsIndexedWithAlternatingModifier
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AllSlotsContent(
     slots: List<WarehouseSlot>,
@@ -67,7 +65,7 @@ fun AllSlotsContent(
             itemsIndexedWithAlternatingModifier(
                 slots,
                 alternateModifier = alternateRowModifier
-            ) { index, slot, modifier ->
+            ) { _, slot, modifier ->
                 OverviewRow(slot, navigateToShowLastActions, screenSize = screenSize, modifier)
             }
         }
