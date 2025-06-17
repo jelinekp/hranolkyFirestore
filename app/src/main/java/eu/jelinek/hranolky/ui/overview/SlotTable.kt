@@ -1,6 +1,5 @@
 package eu.jelinek.hranolky.ui.overview
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -30,7 +30,6 @@ import eu.jelinek.hranolky.ui.shared.formatCubicMeters
 import eu.jelinek.hranolky.ui.shared.formatCubicMetersTwo
 import eu.jelinek.hranolky.ui.start.itemsIndexedWithAlternatingModifier
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AllSlotsContent(
     slots: List<WarehouseSlot>,
@@ -51,24 +50,22 @@ fun AllSlotsContent(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,
     ) {
+        OverviewRowHeader(
+            fontWeight = fontWeight,
+            sortingBy = sortingBy,
+            sortingDirection = sortingDirection,
+            updateSorting = updateSorting,
+            screenSize = screenSize,
+        )
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 44.dp)
+                .padding(vertical = 44.dp)
         ) {
-            stickyHeader {
-                OverviewRowHeader(
-                    fontWeight = fontWeight,
-                    sortingBy = sortingBy,
-                    sortingDirection = sortingDirection,
-                    updateSorting = updateSorting,
-                    screenSize = screenSize,
-                )
-            }
             itemsIndexedWithAlternatingModifier(
                 slots,
                 alternateModifier = alternateRowModifier
-            ) { index, slot, modifier ->
+            ) { _, slot, modifier ->
                 OverviewRow(slot, navigateToShowLastActions, screenSize = screenSize, modifier)
             }
         }
@@ -304,6 +301,7 @@ fun SumRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
+            .height(44.dp)
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
@@ -343,6 +341,7 @@ fun SumoMobileRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .fillMaxWidth()
+            .height(44.dp)
             .background(MaterialTheme.colorScheme.primaryContainer)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {

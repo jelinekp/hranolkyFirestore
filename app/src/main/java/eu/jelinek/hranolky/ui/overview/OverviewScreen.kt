@@ -27,6 +27,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,7 +84,8 @@ fun OverviewScreen(
 
                 Row(
                     modifier = Modifier
-                        .padding(start = 16.dp, bottom = 8.dp, end = 4.dp).fillMaxWidth(),
+                        .padding(start = 16.dp, bottom = 8.dp, end = 4.dp)
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -98,7 +101,7 @@ fun OverviewScreen(
                         }
 
                         Text(
-                            text =  "$filterText (${screenState.selectedFilters.getNumberOfActiveFilters()})",
+                            text = "$filterText (${screenState.selectedFilters.getNumberOfActiveFilters()})",
                         )
                         val icon = if (expanded) {
                             Icons.Default.KeyboardArrowUp
@@ -171,6 +174,13 @@ fun OverviewTopBar(
                         contentDescription = stringResource(R.string.back_icon)
                     )
                 }
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = "ikona aplikace",
+                    modifier = Modifier.padding(start = 8.dp).size(48.dp),
+                    tint = Color.Unspecified
+                )
             }
         },
         actions = {

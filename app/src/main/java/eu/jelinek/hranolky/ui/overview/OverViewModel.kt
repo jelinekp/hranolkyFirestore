@@ -179,9 +179,11 @@ class OverViewModel(
                 "length" -> {
                     _overviewScreenState.update {
                         it.copy(
-                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.length }
-                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.length }
-                            else it.selectedSlots,
+                            sortedSlots = when (state.sortingDirection) {
+                                SortingDirection.ASC -> it.selectedSlots.sortedBy { it.length }
+                                SortingDirection.DESC -> it.selectedSlots.sortedByDescending { it.length }
+                                else -> it.selectedSlots
+                            },
                         )
                     }
                 }
@@ -189,9 +191,11 @@ class OverViewModel(
                 "width" -> {
                     _overviewScreenState.update {
                         it.copy(
-                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.width }
-                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.width }
-                            else it.selectedSlots,
+                            sortedSlots = when (state.sortingDirection) {
+                                SortingDirection.ASC -> it.selectedSlots.sortedBy { it.width }
+                                SortingDirection.DESC -> it.selectedSlots.sortedByDescending { it.width }
+                                else -> it.selectedSlots
+                            },
                         )
                     }
                 }
@@ -199,9 +203,11 @@ class OverViewModel(
                 "thickness" -> {
                     _overviewScreenState.update {
                         it.copy(
-                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.thickness }
-                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.thickness }
-                            else it.selectedSlots,
+                            sortedSlots = when (state.sortingDirection) {
+                                SortingDirection.ASC -> it.selectedSlots.sortedBy { it.thickness }
+                                SortingDirection.DESC -> it.selectedSlots.sortedByDescending { it.thickness }
+                                else -> it.selectedSlots
+                            },
                         )
                     }
                 }
@@ -209,9 +215,11 @@ class OverViewModel(
                 "quantity" -> {
                     _overviewScreenState.update {
                         it.copy(
-                            sortedSlots = if (state.sortingDirection == SortingDirection.ASC) it.selectedSlots.sortedBy { it.quantity }
-                            else if (state.sortingDirection == SortingDirection.DESC) it.selectedSlots.sortedByDescending { it.quantity }
-                            else it.selectedSlots,
+                            sortedSlots = when (state.sortingDirection) {
+                                SortingDirection.ASC -> it.selectedSlots.sortedBy { it.quantity }
+                                SortingDirection.DESC -> it.selectedSlots.sortedByDescending { it.quantity }
+                                else -> it.selectedSlots
+                            },
                         )
                     }
                 }

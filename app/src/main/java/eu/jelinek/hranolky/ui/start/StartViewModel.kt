@@ -2,6 +2,7 @@ package eu.jelinek.hranolky.ui.start
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
@@ -10,6 +11,7 @@ import eu.jelinek.hranolky.model.WarehouseSlot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class StartViewModel(
     private val firestoreDb: FirebaseFirestore,
@@ -28,11 +30,13 @@ class StartViewModel(
     }
 
     init {
-        fetchLastModifiedSlots()
+        viewModelScope.launch {
+            fetchLastModifiedSlots()
+        }
     }
 
-    fun fetchLastModifiedSlots() {
-        firestoreDb.collection("WarehouseSlots")
+    private fun fetchLastModifiedSlots() {
+        lastSlotListener = firestoreDb.collection("WarehouseSlots")
             .orderBy("lastModified", Query.Direction.DESCENDING)
             .limit(10)
             .addSnapshotListener { querySnapshot, error ->

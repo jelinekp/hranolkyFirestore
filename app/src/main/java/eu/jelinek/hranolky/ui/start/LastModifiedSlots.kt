@@ -8,19 +8,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.jelinek.hranolky.model.WarehouseSlot
+import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.formatShortDate
 import java.util.Date
 
@@ -32,7 +35,7 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
 ) {
     itemsIndexed(items) { index, item ->
         val modifier = if (index % 2 == 0) {
-            Modifier
+            Modifier.background(color = MaterialTheme.colorScheme.surface)
         } else {
             alternateModifier
         }
@@ -45,26 +48,30 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
 fun SlotTable(
     lastModifiedSlots: List<WarehouseSlot>,
     navigateToShowLastActions: (String) -> Unit,
+    screenSize: ScreenSize,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.padding(top = 24.dp)
+        modifier = modifier.clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer).padding(top = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            "Položky s posledními pohyby:",
-            style = MaterialTheme.typography.headlineSmall,
+            "Hranolky s posledními pohyby:",
+            style = if (screenSize.isPhone()) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.headlineSmall,
             textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 6.dp),
+            color = MaterialTheme.colorScheme.onPrimaryContainer
         )
         val alternateRowModifier =
             Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
+
+        val topPadding = if (screenSize.isPhone()) 4.dp else 12.dp
+
+        HeaderLastSlotsContent()
+
         LazyColumn(
             modifier = Modifier
-                .widthIn(max = 500.dp)
-                .padding(top = 4.dp)
         ) {
-            stickyHeader { // Makes the header sticky
-                HeaderLastSlotsContent() // Your header row composable function
-            }
             itemsIndexedWithAlternatingModifier(
                 lastModifiedSlots,
                 alternateRowModifier
