@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 
 class OverViewModel(
@@ -38,6 +39,42 @@ class OverViewModel(
         }
         viewModelScope.launch {
             applySorting()
+        }
+        // resetAllFirestoreQuantitiesAndClearSlotActions()
+    }
+
+    /**
+     * Helper function to perform wipe of all firestore data. Use with caution.
+     */
+    private fun resetAllFirestoreQuantitiesAndClearSlotActions() {
+        viewModelScope.launch {
+            try {
+                val warehouseSlotsCollection = firestoreDb.collection("WarehouseSlots")
+                val batch = firestoreDb.batch()
+
+                // Get all documents in the WarehouseSlots collection
+                val querySnapshot = warehouseSlotsCollection.get().await()
+
+                for (documentSnapshot in querySnapshot.documents) {
+                    // 1. Reset quantity to 0 for the current WarehouseSlot document
+                    batch.update(documentSnapshot.reference, "quantity", 0)
+
+                    // 2. Delete all documents in the SlotActions subcollection
+                    val slotActionsCollection = documentSnapshot.reference.collection("SlotActions")
+                    val slotActionsSnapshot = slotActionsCollection.get().await()
+                    for (slotActionDoc in slotActionsSnapshot.documents) {
+                        batch.delete(slotActionDoc.reference)
+                    }
+                }
+
+                // Commit all batched operations
+                batch.commit().await()
+                Log.d("Firestore", "All quantities reset to 0 and SlotActions cleared successfully.")
+
+            } catch (e: Exception) {
+                Log.e("Firestore", "Error resetting quantities and clearing SlotActions", e)
+                // Handle error appropriately, e.g., show a message to the user
+            }
         }
     }
 
