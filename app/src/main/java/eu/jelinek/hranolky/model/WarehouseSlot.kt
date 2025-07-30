@@ -6,6 +6,7 @@ data class WarehouseSlot(
     val productId: String,
     val quantity: Int,
     val slotActions: List<SlotAction> = emptyList(),
+    val slotType: SlotType? = null,
     val quality: String? = null,
     val width: Float? = null,
     val thickness: Float? = null,
@@ -13,8 +14,19 @@ data class WarehouseSlot(
     val lastModified: com.google.firebase.Timestamp? = null
 ) {
     fun parsePropertiesFromProductId(): WarehouseSlot {
-        val quality = this.productId.take(5)
-        val parts = this.productId.split("-")
+
+        val initialProductId = this.productId // Use a consistent name for the original product ID
+
+        // Determine the type and update productId using a 'let' block for scope
+        val (type, processedProductId) = if (initialProductId.startsWith("H") || initialProductId.startsWith("S")) {
+            initialProductId.take(1) to initialProductId.substring(2)
+        } else {
+            "" to initialProductId // No type prefix, so type is empty and product ID remains unchanged
+        }
+
+        // Extract quality and split parts from the potentially modified product ID
+        val quality = processedProductId.take(5)
+        val parts = processedProductId.split("-")
 
         if (parts.size < 5) {
             Log.d("Parsed parts", "Parsed parts: ${parts.size}")
@@ -39,6 +51,12 @@ data class WarehouseSlot(
             val length = parts[4].toInt()
 
             return this.copy(
+                slotType = when (type) {
+                    "H" -> SlotType.Beam
+                    "S" -> SlotType.Jointer
+                    else -> {
+                        SlotType.Beam}
+                },
                 quality = quality,
                 thickness = thickness,
                 width = width,

@@ -38,6 +38,10 @@ fun ShowLastActionsScreen(
 ) {
     val slotId = viewModel.slotId
     val screenState by viewModel.screenStateStream.collectAsStateWithLifecycle()
+    val quantity = viewModel.quantityState.value
+    val validationState by viewModel.validationSharedFlowStream.collectAsStateWithLifecycle(
+        initialValue = AddActionValidationState()
+    )
 
     Scaffold(
         topBar = {
@@ -68,7 +72,14 @@ fun ShowLastActionsScreen(
                         if (screenSize.isPhone()) {
                             ShowOffline(screenState.isOnline)
                             SlotData(slot = slot)
-                            AddAction(viewModel = viewModel)
+                            AddAction(
+                                quantity = quantity,
+                                onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
+                                validationState = validationState,
+                                onAddActionClick = { actionType ->
+                                    viewModel.addActionToTheSlot(actionType)
+                                },
+                            )
                             LastActions(slot.slotActions)
                         } else {
                             Row(
@@ -88,7 +99,12 @@ fun ShowLastActionsScreen(
                                         .weight(5f)
                                         .padding(horizontal = 64.dp), forceExpanded = true, fontSize = 18.sp)
                                     Spacer(modifier = Modifier.weight(1f))
-                                    AddAction(viewModel = viewModel, modifier = Modifier.weight(10f))
+                                    AddAction(quantity = quantity,
+                                        onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
+                                        validationState = validationState,
+                                        onAddActionClick = { actionType ->
+                                            viewModel.addActionToTheSlot(actionType)
+                                        }, modifier = Modifier.weight(10f))
                                 }
                             }
                         }

@@ -1,5 +1,6 @@
 package eu.jelinek.hranolky.ui.overview
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
@@ -100,6 +103,7 @@ fun FilterMobileSlots(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 8.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         FilterMobileChipGroup<String>(
             label = "Filtr kvality",
@@ -151,7 +155,7 @@ fun <T> FilterChipGroup(
             Row(
                 horizontalArrangement = Arrangement
                     .spacedBy(10.dp),
-                modifier = Modifier.weight(8f)
+                modifier = Modifier.weight(8f).horizontalScroll(rememberScrollState())
             ) {
                 filters.forEach { filter ->
                     val isSelected = selectedFilters.contains(filter)
@@ -231,6 +235,7 @@ fun <T> FilterMobileChipGroup(
         Row(
             horizontalArrangement = Arrangement
                 .spacedBy(10.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState())
         ) {
             filters.forEach { filter ->
                 val isSelected = selectedFilters.contains(filter)

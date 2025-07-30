@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -100,15 +101,28 @@ fun StartScreen(
 
                 OverviewButton(navigateToOverview)
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                SlotTable(screenState.lastModifiedSlots, screenSize = screenSize, navigateToShowLastActions = navigateToShowLastActions)
+                SlotTable(screenState.lastModifiedSlots, screenSize = screenSize, navigateToShowLastActions = navigateToShowLastActions, modifier = Modifier.weight(1f))
+
+                Text(
+                    text = "Terminál: " + viewModel.getDeviceId(),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(all = 2.dp)
+                )
             }
         } else {
             Row(
                 modifier = modifier.padding(padding).fillMaxSize(),
             ) {
-                SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions, screenSize, modifier = Modifier.weight(5f).padding(16.dp))
+                Column(modifier = Modifier.weight(5f).padding(16.dp)) {
+                    SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions, screenSize, modifier = Modifier)
+                    Text(
+                        text = "Terminál: " + viewModel.getDeviceId(),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(all = 6.dp)
+                    )
+                }
                 Column(
                     modifier = Modifier.fillMaxSize().padding(16.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer).weight(5f).padding(horizontal = 64.dp).padding(top = 32.dp).widthIn(max = 220.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
