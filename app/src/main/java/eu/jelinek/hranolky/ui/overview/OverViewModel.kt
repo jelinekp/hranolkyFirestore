@@ -319,7 +319,7 @@ data class SlotFilters(
         val ALL = SlotFilters(
             qualityFilters = listOf("DUB-A", "DUB-R"),
             thicknessFilters = listOf(20f, 27.4f, 42.4f),
-            widthFilters = listOf(42.4f, 50f, 70f),
+            widthFilters = listOf(38f, 40f, 42.4f, 50f, 70f),
             lengthFilters = listOf(
                 IntervalMm(0, 999),
                 IntervalMm(1000, 1999),

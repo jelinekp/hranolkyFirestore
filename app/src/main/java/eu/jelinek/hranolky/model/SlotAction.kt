@@ -4,5 +4,7 @@ data class SlotAction(
     val action: String? = null,
     val quantityChange: Int = 0,
     val newQuantity: Int = 0,
+    val userId: String = "",
+    val userName: String = "",
     val timestamp: com.google.firebase.Timestamp? = null
 )

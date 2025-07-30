@@ -20,7 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,9 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
-
 
 data class QuantityInputData(
     val quantity: String,
@@ -44,12 +41,15 @@ data class QuantityInputData(
 )
 
 @Composable
-fun AddAction(viewModel: ShowLastActionsViewModel, modifier: Modifier = Modifier) {
+fun AddAction(
+    quantity: String,
+    onQuantityChanged: (String) -> Unit,
+    validationState: AddActionValidationState,
+    onAddActionClick: (ActionType) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val quantityFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    val validationFlow by viewModel.validationSharedFlowStream.collectAsStateWithLifecycle(
-        initialValue = AddActionValidationState()
-    )
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -57,28 +57,31 @@ fun AddAction(viewModel: ShowLastActionsViewModel, modifier: Modifier = Modifier
         modifier = modifier
             .widthIn(max = 360.dp)
             .fillMaxWidth()
-            .padding(16.dp) // Apply padding to the Column
+            .padding(16.dp)
     ) {
-        Row (
+        Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
             Text(
-                "Přidat pohyb:",
+                "Přidat pohyb:", // Consider making this a parameter if it needs to change
                 fontSize = 20.sp,
                 modifier = Modifier.padding(top = 8.dp, end = 8.dp)
             )
             val quantityInputData = QuantityInputData(
-                quantity = viewModel.quantityState.value,
-                isError = validationFlow.isQuantityError,
-                onQuantityChanged = viewModel::onQuantityChanged // Pass the callback
+                quantity = quantity,
+                isError = validationState.isQuantityError,
+                onQuantityChanged = onQuantityChanged
             )
-            QuantityInput(quantityInputData, quantityFocusRequester, keyboardController)
+            QuantityInput(
+                inputData = quantityInputData,
+                quantityFocusRequester = quantityFocusRequester,
+                keyboardController = keyboardController
+            )
         }
 
-        // Error message (conditional)
-        if (validationFlow.isQuantityError || validationFlow.isRemovedError) {
-            val errorText = if (validationFlow.isQuantityError) {
+        if (validationState.isQuantityError || validationState.isRemovedError) {
+            val errorText = if (validationState.isQuantityError) {
                 stringResource(R.string.zadej_platn_mno_stv)
             } else {
                 stringResource(R.string.vydej_nemuze_byt_vetsi_nez_aktualni_stav)
@@ -86,7 +89,10 @@ fun AddAction(viewModel: ShowLastActionsViewModel, modifier: Modifier = Modifier
             ErrorText(text = errorText)
         }
 
-        ActionButtons(viewModel, keyboardController)
+        ActionButtons(
+            onAddActionClick = onAddActionClick,
+            keyboardController = keyboardController
+        )
     }
 }
 
@@ -98,7 +104,7 @@ fun QuantityInput(
 ) {
     OutlinedTextField(
         value = inputData.quantity,
-        onValueChange = inputData.onQuantityChanged, // Use the callback
+        onValueChange = inputData.onQuantityChanged,
         label = { Text(stringResource(R.string.zadej_mno_stv)) },
         isError = inputData.isError,
         keyboardActions = KeyboardActions(onDone = {
@@ -115,20 +121,22 @@ fun QuantityInput(
 
 @Composable
 fun ActionButtons(
-    viewModel: ShowLastActionsViewModel,
+    onAddActionClick: (ActionType) -> Unit,
     keyboardController: SoftwareKeyboardController?
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier.width(280.dp).padding(vertical = 6.dp)
+        modifier = Modifier
+            .width(280.dp)
+            .padding(vertical = 6.dp)
     ) {
         ActionButton(
             text = stringResource(R.string.prijem),
             icon = Icons.Default.Add,
             onClick = {
                 keyboardController?.hide()
-                viewModel.addActionToTheSlot(ActionType.ADD)
+                onAddActionClick(ActionType.ADD)
             }
         )
 
@@ -136,10 +144,10 @@ fun ActionButtons(
 
         ActionButton(
             text = stringResource(R.string.vydej),
-            icon = null, // No icon for "Výdej"
+            icon = null,
             onClick = {
                 keyboardController?.hide()
-                viewModel.addActionToTheSlot(ActionType.REMOVE)
+                onAddActionClick(ActionType.REMOVE)
             }
         )
     }
@@ -168,7 +176,7 @@ fun ActionButton(text: String, icon: ImageVector?, onClick: () -> Unit, modifier
 @Composable
 fun ErrorText(text: String, modifier: Modifier = Modifier) {
     Text(
-        text = text, // This holds the error message
+        text = text,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall,
         modifier = modifier.padding(top = 4.dp)

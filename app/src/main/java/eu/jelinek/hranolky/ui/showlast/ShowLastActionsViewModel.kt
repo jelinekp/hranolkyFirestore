@@ -1,14 +1,18 @@
 package eu.jelinek.hranolky.ui.showlast
 
+import android.annotation.SuppressLint
+import android.app.Application
+import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.WarehouseSlot
@@ -21,9 +25,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ShowLastActionsViewModel(
+    application: Application,
     savedStateHandle: SavedStateHandle,
     private val firestoreDb: FirebaseFirestore,
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     val slotId: String? = savedStateHandle[Screen.ShowLastActionsScreen.ID]
     private val _screenStateStream =
@@ -49,6 +54,11 @@ class ShowLastActionsViewModel(
         viewModelScope.launch {
             fetchSlotFromFirestoreInRealTime()
         }
+    }
+
+    @SuppressLint("HardwareIds")
+    private fun getDeviceId(): String {
+        return Settings.Secure.getString(getApplication<Application>().contentResolver, Settings.Secure.ANDROID_ID)
     }
 
     private fun updateSlot(slot: WarehouseSlot?, slotActions: List<SlotAction>) {
@@ -155,7 +165,7 @@ class ShowLastActionsViewModel(
                 try {
                     firestoreDb.collection("WarehouseSlots")
                         .document(slot.productId)
-                        .set(slotToSend) // TODO replace .set with something that does not overwrite data!
+                        .set(slotToSend, SetOptions.merge())
                         .addOnSuccessListener {
                             Log.d(TAG, "DocumentSnapshot added with ID: ${slot.productId}")
                         }
@@ -191,6 +201,7 @@ class ShowLastActionsViewModel(
 
             val slotAction = hashMapOf(
                 "action" to actionType.toString(),
+                "userId" to getDeviceId(),
                 "quantityChange" to quantityChange,
                 "newQuantity" to (screenStateStream.value.slot?.quantity?.plus(quantityChange)
                     ?: 0),
