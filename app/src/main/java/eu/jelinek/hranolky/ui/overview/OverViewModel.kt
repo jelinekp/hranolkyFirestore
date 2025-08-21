@@ -3,9 +3,7 @@ package eu.jelinek.hranolky.ui.overview
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import eu.jelinek.hranolky.model.FirestoreSlot
+import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.model.WarehouseSlot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,26 +11,25 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 
 class OverViewModel(
-    private val firestoreDb: FirebaseFirestore
+    private val slotRepository: SlotRepository
 ) : ViewModel() {
     private val _overviewScreenState = MutableStateFlow(OverviewUiState())
     val overviewScreenState get() = _overviewScreenState.asStateFlow()
 
-    private var allSlotsListener: ListenerRegistration? = null
-
     init {
         viewModelScope.launch {
-            fetchAllSlots()
+            slotRepository.getAllSlots().collect { slots ->
+                _overviewScreenState.update { it.copy(allSlots = slots) }
+            }
         }
         viewModelScope.launch {
             overviewScreenState.first { it.allSlots.isNotEmpty() }
                 .also {
                     onFilterClear()
-                } // Call onFilterClear after collecting the first non-empty value
+                }
         }
         viewModelScope.launch {
             applyAllFilters()
@@ -40,80 +37,17 @@ class OverViewModel(
         viewModelScope.launch {
             applySorting()
         }
-        // resetAllFirestoreQuantitiesAndClearSlotActions()
-    }
-
-    /**
-     * Helper function to perform wipe of all firestore data. Use with caution.
-     */
-    private fun resetAllFirestoreQuantitiesAndClearSlotActions() {
-        viewModelScope.launch {
-            try {
-                val warehouseSlotsCollection = firestoreDb.collection("WarehouseSlots")
-                val batch = firestoreDb.batch()
-
-                // Get all documents in the WarehouseSlots collection
-                val querySnapshot = warehouseSlotsCollection.get().await()
-
-                for (documentSnapshot in querySnapshot.documents) {
-                    // 1. Reset quantity to 0 for the current WarehouseSlot document
-                    batch.update(documentSnapshot.reference, "quantity", 0)
-
-                    // 2. Delete all documents in the SlotActions subcollection
-                    val slotActionsCollection = documentSnapshot.reference.collection("SlotActions")
-                    val slotActionsSnapshot = slotActionsCollection.get().await()
-                    for (slotActionDoc in slotActionsSnapshot.documents) {
-                        batch.delete(slotActionDoc.reference)
-                    }
-                }
-
-                // Commit all batched operations
-                batch.commit().await()
-                Log.d("Firestore", "All quantities reset to 0 and SlotActions cleared successfully.")
-
-            } catch (e: Exception) {
-                Log.e("Firestore", "Error resetting quantities and clearing SlotActions", e)
-                // Handle error appropriately, e.g., show a message to the user
-            }
-        }
-    }
-
-    private fun fetchAllSlots() {
-        allSlotsListener = firestoreDb.collection("WarehouseSlots")
-            .addSnapshotListener { querySnapshot, error ->
-                if (error != null) {
-                    Log.e("Firestore", "Error receiving all slots from Firestore", error)
-                    return@addSnapshotListener
-                }
-
-                if (querySnapshot != null && !querySnapshot.isEmpty) {
-                    val allSlots = querySnapshot.documents.map {
-                        val firestoreSlot = it.toObject(FirestoreSlot::class.java)
-                        firestoreSlot?.toWarehouseSlot(it.id)
-                    }
-
-                    // Update the UI state with the new actions
-                    _overviewScreenState.update {
-                        it.copy(allSlots = allSlots.filterNotNull())
-                    }
-                }
-            }
     }
 
     private fun calculateSumSlotInline(slotsToSum: List<WarehouseSlot>): SlotSum {
         return slotsToSum
-            .fold(SlotSum.EMPTY) { acc, slot -> // Accumulate sums using fold
+            .fold(SlotSum.EMPTY) { acc, slot ->
                 SlotSum(
                     count = acc.count + 1,
                     quantitySum = acc.quantitySum + slot.quantity,
                     volumeSum = acc.volumeSum + (slot.getVolume() ?: 0.0)
                 )
             }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        allSlotsListener?.remove()
     }
 
     fun onQualityFilterChange(qualitiesFilters: List<String>) {
@@ -150,10 +84,10 @@ class OverViewModel(
 
     private suspend fun applyAllFilters() {
         overviewScreenState.distinctUntilChanged { old, new ->
-            old.selectedFilters == new.selectedFilters && old.allSlots == new.allSlots // every time selected filters or all slots changes
+            old.selectedFilters == new.selectedFilters && old.allSlots == new.allSlots
         }.collect { state ->
             val lsf =
-                state.selectedFilters // here we have the latest screenState with latest selected filters (lsf)
+                state.selectedFilters
 
             if (lsf.isEmpty()) {
                 onFilterClear()
@@ -188,8 +122,7 @@ class OverViewModel(
             if (currentDirection == SortingDirection.DESC) {
                 sortingDirection = SortingDirection.ASC
                 sortingBy = by
-            }
-            else {
+            } else {
                 sortingDirection = SortingDirection.NONE
                 sortingBy = ""
             }
@@ -210,7 +143,7 @@ class OverViewModel(
 
     private suspend fun applySorting() {
         overviewScreenState.distinctUntilChanged { old, new ->
-            old.sortingBy == new.sortingBy && old.selectedSlots == new.selectedSlots && old.sortingDirection == new.sortingDirection // every time sortingBy or selected changes
+            old.sortingBy == new.sortingBy && old.selectedSlots == new.selectedSlots && old.sortingDirection == new.sortingDirection
         }.collect { state ->
             when (state.sortingBy) {
                 "length" -> {

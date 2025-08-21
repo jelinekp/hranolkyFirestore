@@ -3,31 +3,25 @@ package eu.jelinek.hranolky.ui.showlast
 import android.annotation.SuppressLint
 import android.app.Application
 import android.provider.Settings
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
-import eu.jelinek.hranolky.model.FirestoreSlot
-import eu.jelinek.hranolky.model.SlotAction
+import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ShowLastActionsViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
-    private val firestoreDb: FirebaseFirestore,
+    private val slotRepository: SlotRepository,
 ) : AndroidViewModel(application) {
 
     val slotId: String? = savedStateHandle[Screen.ShowLastActionsScreen.ID]
@@ -47,12 +41,9 @@ class ShowLastActionsViewModel(
 
     val TAG = "Firestore"
 
-    private var slotListener: ListenerRegistration? = null
-    private var actionsListener: ListenerRegistration? = null
-
     init {
         viewModelScope.launch {
-            fetchSlotFromFirestoreInRealTime()
+            fetchSlotData()
         }
     }
 
@@ -61,186 +52,40 @@ class ShowLastActionsViewModel(
         return Settings.Secure.getString(getApplication<Application>().contentResolver, Settings.Secure.ANDROID_ID)
     }
 
-    private fun updateSlot(slot: WarehouseSlot?, slotActions: List<SlotAction>) {
-        if (slot != null) {
-            val parsedSlot = slot.parsePropertiesFromProductId()
-                .copy(slotActions = slotActions)  // Assign slotActions here
-            _screenStateStream.update {
-                it.copy(slot = parsedSlot, resultStatus = ResultStatus.SUCCESS)
-            }
-        } else {
-            _screenStateStream.update {
-                it.copy(resultStatus = ResultStatus.DATA_ERROR)
-            }
-        }
-    }
-
-    private fun fetchSlotFromFirestoreInRealTime() {
+    private fun fetchSlotData() {
         slotId?.let { id ->
-            slotListener = firestoreDb.collection("WarehouseSlots")
-                .document(id)
-                .addSnapshotListener { slotSnapshot, error ->
-                    if (error != null) {
-                        Log.w(TAG, "Listen to slot download failed", error)
-                        return@addSnapshotListener
-                    }
-
-                    if (slotSnapshot != null) {
-                        if (slotSnapshot.exists()) {
-
-                            if (slotSnapshot.metadata.isFromCache) {
-                                _screenStateStream.update {
-                                    it.copy(isOnline = true) // offline cache handling
-                                }
-                            } else {
-                                _screenStateStream.update {
-                                    it.copy(isOnline = true)
-                                }
-                            }
-
-                            Log.d(TAG, "DocumentSnapshot data: ${slotSnapshot.data}")
-                            val firestoreSlot =
-                                slotSnapshot.toObject(FirestoreSlot::class.java)
-                            var slot = WarehouseSlot(
-                                productId = id,
-                                quantity = firestoreSlot?.quantity ?: 0,
-                                lastModified = firestoreSlot?.lastModified,
-                                slotActions = listOf(),
-                            )
-                            fetchSlotActionsInRealtime(id, slot) //Fetch actions passing the slot
-                        } else {
-                            Log.w(TAG, "Document not found creating a new one")
-                            sendNewSlotToFirestore(0)
+            viewModelScope.launch {
+                combine(
+                    slotRepository.getSlot(id),
+                    slotRepository.getSlotActions(id)
+                ) { slot, actions ->
+                    if (slot != null) {
+                        val parsedSlot = slot.parsePropertiesFromProductId().copy(slotActions = actions)
+                        _screenStateStream.update {
+                            it.copy(slot = parsedSlot, resultStatus = ResultStatus.SUCCESS)
                         }
                     } else {
-                        Log.d(TAG, "Not connected to the internet")
-                        _screenStateStream.update {
-                            it.copy(resultStatus = ResultStatus.NETWORK_ERROR)
-                        }
+                        slotRepository.createNewSlot(id, 0)
                     }
-                }
-        }
-    }
-
-    private fun fetchSlotActionsInRealtime(slotId: String, slot: WarehouseSlot) {
-        firestoreDb.collection("WarehouseSlots")
-            .document(slotId)
-            .collection("SlotActions")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(10)
-            .addSnapshotListener { querySnapshot, error ->
-                if (error != null) {
-                    Log.e(TAG, "Error receiving last slot actions from Firestore", error)
-                    return@addSnapshotListener
-                }
-
-                if (querySnapshot != null && !querySnapshot.isEmpty) {
-                    val lastActions = querySnapshot.documents.map { document ->
-                        document.toObject(SlotAction::class.java) ?: SlotAction()
-                    }
-
-                    Log.d(TAG, "Last actions received: $lastActions")
-
-                    updateSlot(slot, lastActions) // Update with both slot and actions
-                } else {
-                    Log.d(TAG, "No last actions found")
-                    updateSlot(slot, listOf())
-                }
-            }
-    }
-
-    private fun sendNewSlotToFirestore(quantity: Int = 0) {
-        val slot =
-            WarehouseSlot(productId = slotId!!, quantity = quantity).parsePropertiesFromProductId()
-
-        if (slot.hasAllProperties()) {
-            val slotToSend = hashMapOf(
-                "quantity" to slot.quantity,
-                "lastModified" to FieldValue.serverTimestamp(),
-            )
-
-            Log.d(TAG, "Sending data to Firestore: $slotToSend")
-
-            viewModelScope.launch {
-                try {
-                    firestoreDb.collection("WarehouseSlots")
-                        .document(slot.productId)
-                        .set(slotToSend, SetOptions.merge())
-                        .addOnSuccessListener {
-                            Log.d(TAG, "DocumentSnapshot added with ID: ${slot.productId}")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.w(TAG, "Error adding document", e)
-                        }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error sending data to Firestore", e)
-                }
-            }
-        } else {
-            _screenStateStream.update {
-                it.copy(
-                    resultStatus = ResultStatus.DATA_ERROR,
-                )
+                }.collect { }
             }
         }
     }
 
     fun addActionToTheSlot(actionType: ActionType) {
         if (validateInputs(actionType)) {
-
-            val quantityChange = when (actionType) {
-                ActionType.ADD -> quantityState.value.toLong()
-                ActionType.REMOVE -> -quantityState.value.toLong()
-                else -> return
-            }
-
-            val updateSlot = mapOf(
-                "quantity" to FieldValue.increment(quantityChange), // crucial part - updating by increment, possible inconsistency with newQuantity which is based on last downloaded quantity, but THIS is the truth maker
-                "lastModified" to FieldValue.serverTimestamp(),
-            )
-
-            val slotAction = hashMapOf(
-                "action" to actionType.toString(),
-                "userId" to getDeviceId(),
-                "quantityChange" to quantityChange,
-                "newQuantity" to (screenStateStream.value.slot?.quantity?.plus(quantityChange)
-                    ?: 0),
-                "timestamp" to FieldValue.serverTimestamp(),
-            )
-
             viewModelScope.launch {
-                try {
-                    firestoreDb.collection("WarehouseSlots")
-                        .document(slotId!!)
-                        .update(updateSlot)
-                        .addOnSuccessListener {
-                            Log.d(TAG, "Updated slot with ID: $slotId")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.w(TAG, "Error adding document", e)
-                        }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error updating data in Firestore", e)
+                slotId?.let {
+                    slotRepository.addSlotAction(
+                        it,
+                        actionType,
+                        quantityState.value.toLong(),
+                        screenStateStream.value.slot?.quantity ?: 0,
+                        getDeviceId()
+                    )
                 }
-
-                try {
-                    firestoreDb.collection("WarehouseSlots")
-                        .document(slotId!!)
-                        .collection("SlotActions")
-                        .add(slotAction)
-                        .addOnSuccessListener {
-                            Log.d(TAG, "Added slot action to slot $slotId with: $slotAction")
-                        }
-                        .addOnFailureListener { e ->
-                            Log.w(TAG, "Error adding slot Action", e)
-                        }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error sending slot Action to Firestore", e)
-                }
-                // updateSlot(fetchSlotFromFirestore())
+                resetFields()
             }
-
-            resetFields()
         }
     }
 
@@ -269,13 +114,6 @@ class ShowLastActionsViewModel(
 
         return true
     }
-
-    override fun onCleared() {
-        super.onCleared()
-        slotListener?.remove()
-        actionsListener?.remove()
-    }
-
 }
 
 data class ShowLastActionsScreenState(
