@@ -1,6 +1,5 @@
 package eu.jelinek.hranolky.data
 
-
 import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore

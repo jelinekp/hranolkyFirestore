@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import eu.jelinek.hranolky.data.SlotRepository
+import eu.jelinek.hranolky.domain.AddSlotActionUseCase
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,6 +23,7 @@ class ShowLastActionsViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val slotRepository: SlotRepository,
+    private val addSlotActionUseCase: AddSlotActionUseCase
 ) : AndroidViewModel(application) {
 
     val slotId: String? = savedStateHandle[Screen.ShowLastActionsScreen.ID]
@@ -38,8 +40,6 @@ class ShowLastActionsViewModel(
     fun onQuantityChanged(newQuantity: String) {
         quantityState.value = newQuantity
     }
-
-    val TAG = "Firestore"
 
     init {
         viewModelScope.launch {
@@ -73,18 +73,23 @@ class ShowLastActionsViewModel(
     }
 
     fun addActionToTheSlot(actionType: ActionType) {
-        if (validateInputs(actionType)) {
-            viewModelScope.launch {
-                slotId?.let {
-                    slotRepository.addSlotAction(
-                        it,
-                        actionType,
-                        quantityState.value.toLong(),
-                        screenStateStream.value.slot?.quantity ?: 0,
-                        getDeviceId()
-                    )
-                }
+        viewModelScope.launch {
+            val result = addSlotActionUseCase(
+                slotId = slotId!!,
+                actionType = actionType,
+                quantity = quantityState.value,
+                currentQuantity = screenStateStream.value.slot?.quantity ?: 0,
+                deviceId = getDeviceId()
+            )
+            if (result.isSuccess) {
                 resetFields()
+            } else {
+                val validationState = when (result.exceptionOrNull()) {
+                    is IllegalArgumentException -> AddActionValidationState(isQuantityError = true)
+                    is IllegalStateException -> AddActionValidationState(isRemovedError = true)
+                    else -> AddActionValidationState()
+                }
+                _validationSharedFlowStream.emit(validationState)
             }
         }
     }
@@ -95,24 +100,6 @@ class ShowLastActionsViewModel(
         viewModelScope.launch {
             _validationSharedFlowStream.emit(AddActionValidationState())
         }
-    }
-
-    private fun validateInputs(actionType: ActionType): Boolean {
-
-        val quantity = quantityState.value.toDoubleOrNull()
-        if (quantity == null || quantity <= 0 || quantity > 9_999) {
-            viewModelScope.launch {
-                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
-            }
-            return false
-        } else if (actionType == ActionType.REMOVE && quantity > screenStateStream.value.slot!!.quantity) {
-            viewModelScope.launch {
-                _validationSharedFlowStream.emit(AddActionValidationState(isRemovedError = true))
-            }
-            return false
-        }
-
-        return true
     }
 }
 
