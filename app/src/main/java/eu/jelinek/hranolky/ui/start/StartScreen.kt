@@ -99,11 +99,11 @@ fun StartScreen(
                     ManualScanButton(scannedText, navigateToShowLastActions, onWrongLength = { isWrongLength = it })
                 }
 
-                OverviewButton(navigateToOverview)
-
                 Spacer(modifier = Modifier.height(8.dp))
 
-                SlotTable(screenState.lastModifiedSlots, screenSize = screenSize, navigateToShowLastActions = navigateToShowLastActions, modifier = Modifier.weight(1f))
+                SlotTable(screenState.lastModifiedBeamSlots, screenState.lastModifiedJointerSlots, screenSize = screenSize, navigateToShowLastActions = navigateToShowLastActions, modifier = Modifier.weight(1f))
+
+                OverviewButton(navigateToOverview)
 
                 Text(
                     text = "Terminál: " + viewModel.getDeviceId(),
@@ -116,7 +116,7 @@ fun StartScreen(
                 modifier = modifier.padding(padding).fillMaxSize(),
             ) {
                 Column(modifier = Modifier.weight(5f).padding(16.dp)) {
-                    SlotTable(screenState.lastModifiedSlots, navigateToShowLastActions, screenSize, modifier = Modifier)
+                    SlotTable(screenState.lastModifiedBeamSlots, screenState.lastModifiedJointerSlots, navigateToShowLastActions, screenSize, modifier = Modifier)
                     Text(
                         text = "Terminál: " + viewModel.getDeviceId(),
                         textAlign = TextAlign.Center,

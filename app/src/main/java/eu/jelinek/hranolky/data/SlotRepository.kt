@@ -10,6 +10,15 @@ interface SlotRepository {
     fun getSlotActions(slotId: String): Flow<List<SlotAction>>
     suspend fun addSlotAction(slotId: String, actionType: ActionType, quantity: Long, currentQuantity: Int, deviceId: String)
     suspend fun createNewSlot(slotId: String, quantity: Int)
-    fun getLastModifiedSlots(): Flow<List<WarehouseSlot>>
+    fun getLastModifiedSlots(): Flow<LastModifiedSlots>
     fun getAllSlots(): Flow<List<WarehouseSlot>>
+}
+
+data class LastModifiedSlots(
+    val beamSlots: List<WarehouseSlot>,
+    val jointerSlots: List<WarehouseSlot>
+) {
+    companion object {
+        val EMPTY = LastModifiedSlots(emptyList(), emptyList())
+    }
 }

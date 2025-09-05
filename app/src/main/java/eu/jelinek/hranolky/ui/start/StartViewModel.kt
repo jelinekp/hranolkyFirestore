@@ -31,8 +31,8 @@ class StartViewModel(
         }
 
         viewModelScope.launch {
-            slotRepository.getLastModifiedSlots().collect { slots ->
-                _startScreenState.update { it.copy(lastModifiedSlots = slots) }
+            slotRepository.getLastModifiedSlots().collect { lastModifiedSlots ->
+                _startScreenState.update { it.copy(lastModifiedBeamSlots = lastModifiedSlots.beamSlots, lastModifiedJointerSlots = lastModifiedSlots.jointerSlots) }
             }
         }
     }
@@ -68,5 +68,6 @@ class StartViewModel(
 
 data class StartUiState(
     val scannedCode: String = "",
-    val lastModifiedSlots: List<WarehouseSlot> = emptyList(),
+    val lastModifiedBeamSlots: List<WarehouseSlot> = emptyList(),
+    val lastModifiedJointerSlots: List<WarehouseSlot> = emptyList(),
 )

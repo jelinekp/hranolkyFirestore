@@ -134,10 +134,10 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         }
     }
 
-    override fun getLastModifiedSlots(): Flow<List<WarehouseSlot>> = callbackFlow {
+    override fun getLastModifiedSlots(): Flow<LastModifiedSlots> = callbackFlow {
         val listener = firestoreDb.collection("WarehouseSlots")
             .orderBy("lastModified", Query.Direction.DESCENDING)
-            .limit(10)
+            .limit(20)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
                     Log.e("Firestore", "Error receiving last slots from Firestore", error)
@@ -146,13 +146,23 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                 }
 
                 if (querySnapshot != null && !querySnapshot.isEmpty) {
-                    val lastModifiedSlots = querySnapshot.documents.mapNotNull { document ->
+                    val lastModifiedBeamSlots = querySnapshot.documents.filter { document ->
+                        // Filter: only include documents whose ID does NOT start with "S"
+                        !document.id.startsWith("S")
+                    }.mapNotNull { document ->
                         val firestoreSlot = document.toObject(FirestoreSlot::class.java)
                         firestoreSlot?.toWarehouseSlot(document.id)
                     }
-                    trySend(lastModifiedSlots).isSuccess
+                    val lastModifiedJointerSlots = querySnapshot.documents.filter { document ->
+                        // Filter: only include documents whose ID starts with "S"
+                        document.id.startsWith("S")
+                    }.mapNotNull { document ->
+                        val firestoreSlot = document.toObject(FirestoreSlot::class.java)
+                        firestoreSlot?.toWarehouseSlot(document.id)
+                    }
+                    trySend(LastModifiedSlots(lastModifiedBeamSlots, lastModifiedJointerSlots)).isSuccess
                 } else {
-                    trySend(emptyList()).isSuccess
+                    trySend(LastModifiedSlots.EMPTY).isSuccess
                 }
             }
         awaitClose { listener.remove() }
