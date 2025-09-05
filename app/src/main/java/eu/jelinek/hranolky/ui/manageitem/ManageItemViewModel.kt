@@ -54,10 +54,17 @@ class ShowLastActionsViewModel(
 
     private fun fetchSlotData() {
         slotId?.let { id ->
+
+            // fighting compatibility issues by preventing creating duplicity items in firestore (old beams did not have "H-" prefixes)
+            val normalizedId = if (id.length > 16 && id.startsWith('H') && id[1] == '-')
+                id.substring(2)
+            else
+                id
+
             viewModelScope.launch {
                 combine(
-                    slotRepository.getSlot(id),
-                    slotRepository.getSlotActions(id)
+                    slotRepository.getSlot(normalizedId),
+                    slotRepository.getSlotActions(normalizedId)
                 ) { slot, actions ->
                     if (slot != null) {
                         val parsedSlot = slot.parsePropertiesFromProductId().copy(slotActions = actions)

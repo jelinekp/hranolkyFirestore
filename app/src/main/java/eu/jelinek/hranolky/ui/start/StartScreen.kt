@@ -83,7 +83,7 @@ fun StartScreen(
                     scannedText,
                     onValueChange = { text ->
                         scannedText = text
-                        if (isAutoScanEnabled && text.length == 16) {
+                        if (isAutoScanEnabled && isValidScannedTextFormat(text)) {
                             navigateToShowLastActions(text)
                         }
                     },
@@ -212,7 +212,7 @@ fun ScannedCodeInput(
 @Composable
 fun WrongLengthError() {
     Text(
-        text = "Špatná délka kódu, kód musí být 16 znaků dlouhý.",
+        text = "Špatná délka kódu, kód musí začínat na \'H\' nebo \'S\' a být 18 znaků dlouhý, nebo být 16 znaků dlouhý.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error
     )
@@ -223,7 +223,7 @@ fun ManualScanButton(scannedText: String, navigateToShowLastActions: (String) ->
     Button(
         onClick = {
             Log.d("Scanned text", scannedText)
-            if (scannedText.length == 16) {
+            if (isValidScannedTextFormat(scannedText)) {
                 navigateToShowLastActions(scannedText)
             } else {
                 onWrongLength(true)

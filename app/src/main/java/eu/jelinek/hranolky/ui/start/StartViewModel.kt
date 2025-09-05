@@ -71,3 +71,41 @@ data class StartUiState(
     val lastModifiedBeamSlots: List<WarehouseSlot> = emptyList(),
     val lastModifiedJointerSlots: List<WarehouseSlot> = emptyList(),
 )
+
+fun isValidScannedTextFormat(text: String): Boolean {
+    val textLength = text.length
+
+    if (textLength == 16) {
+        if (text[1] != '-'
+            && text[textLength - 5] == '-'
+            && text.substring(textLength - 4).all(Char::isDigit)
+            ) {
+            return true // Valid universal beam
+        }
+    }
+
+    if (textLength == 18) {
+        if (text[0] == 'H'
+            && text[1] == '-'
+            && text[textLength - 5] == '-'
+            && text.substring(textLength - 4).all(Char::isDigit)
+            ) {
+            return true // Valid specified beam
+        }
+    }
+
+    if (textLength == 20) {
+        if (text[0] == 'S'
+            && text[1] == '-'
+            && text[textLength - 10] == '-'
+            && text.substring(textLength - 9, textLength - 5).all(Char::isDigit)
+            && text[textLength - 5] == '-'
+            && text.substring(textLength - 4).all(Char::isDigit)
+        ) {
+            return true // Valid specified jointer
+        }
+    }
+
+    // If neither rule matched, it's not a valid format
+    return false
+}
