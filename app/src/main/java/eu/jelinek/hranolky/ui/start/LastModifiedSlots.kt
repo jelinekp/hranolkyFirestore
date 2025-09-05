@@ -195,7 +195,7 @@ fun SlotRow(
             text = slot.productId,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier
-                .weight(6f)
+                .weight(8f)
                 .clickable { navigateToShowLastActions(slot.productId) },
             color = MaterialTheme.colorScheme.primary, // Keep primary for clickable
             fontWeight = FontWeight.Bold
@@ -224,10 +224,10 @@ fun HeaderLastSlotsContent(
     ) {
         val headerColor = MaterialTheme.colorScheme.onPrimaryContainer // Color for text on primaryContainer
         Text("Datum", modifier = Modifier.weight(4f), fontWeight = FontWeight.Bold, color = headerColor)
-        Text("Kód", modifier = Modifier.weight(6f), fontWeight = FontWeight.Bold, color = headerColor) // Changed from "Hranolky" to generic "Kód"
+        Text("Kód", modifier = Modifier.weight(7f), fontWeight = FontWeight.Bold, color = headerColor) // Changed from "Hranolky" to generic "Kód"
         Text(
             "Množství",
-            modifier = Modifier.weight(4f),
+            modifier = Modifier.weight(5f),
             textAlign = TextAlign.End,
             fontWeight = FontWeight.Bold,
             color = headerColor
