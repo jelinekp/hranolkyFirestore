@@ -75,9 +75,9 @@ fun SlotTable(
         // Main Title (Optional, if you want a title above the tabs)
         Text(
             "Položky s posledními pohyby:",
-            style = if (screenSize.isPhone()) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+            style = if (screenSize.isPhone()) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = Modifier.padding(vertical = 6.dp),
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -87,8 +87,9 @@ fun SlotTable(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.primary,
             indicator = { tabPositions ->
-                TabRowDefaults.Indicator(
+                TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                    height = 3.dp,
                     color = MaterialTheme.colorScheme.primary
                 )
             },
@@ -178,7 +179,7 @@ fun SlotRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier // Apply the alternating background modifier here
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val date = slot.lastModified?.toDate() ?: Date()

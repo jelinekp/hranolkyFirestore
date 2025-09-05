@@ -101,7 +101,11 @@ fun StartScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                SlotTable(screenState.lastModifiedBeamSlots, screenState.lastModifiedJointerSlots, screenSize = screenSize, navigateToShowLastActions = navigateToShowLastActions, modifier = Modifier.weight(1f))
+                SlotTable(screenState.lastModifiedBeamSlots,
+                    screenState.lastModifiedJointerSlots,
+                    screenSize = screenSize,
+                    navigateToShowLastActions = navigateToShowLastActions,
+                    modifier = Modifier.weight(1f))
 
                 OverviewButton(navigateToOverview)
 
@@ -238,9 +242,9 @@ fun ManualScanButton(scannedText: String, navigateToShowLastActions: (String) ->
 fun OverviewButton(navigateToOverview: () -> Unit) {
     Button(
         onClick = navigateToOverview,
-        modifier = Modifier.padding(top = 16.dp, end = 16.dp)
+        modifier = Modifier
     ) {
-        Text("Přehled všech hranolků")
+        Text("Přehled všech položek")
         Icon(
             Icons.AutoMirrored.Default.ArrowForward,
             contentDescription = stringResource(R.string.forward_icon)
