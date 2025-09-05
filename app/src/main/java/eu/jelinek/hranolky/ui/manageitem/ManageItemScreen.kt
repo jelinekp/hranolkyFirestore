@@ -1,4 +1,4 @@
-package eu.jelinek.hranolky.ui.showlast
+package eu.jelinek.hranolky.ui.manageitem
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,10 +43,15 @@ fun ShowLastActionsScreen(
         initialValue = AddActionValidationState()
     )
 
+    val header = if (slotId?.first() == 'S')
+        "Spárovka"
+    else
+        "Hranolek"
+
     Scaffold(
         topBar = {
             ShowLastActionsTopBar(
-                text = "$slotId",
+                text = "$header $slotId",
                 navigateUp = navigateUp,
             )
         }

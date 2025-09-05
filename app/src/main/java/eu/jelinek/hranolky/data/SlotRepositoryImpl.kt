@@ -4,11 +4,10 @@ import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
 import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.WarehouseSlot
-import eu.jelinek.hranolky.ui.showlast.ActionType
+import eu.jelinek.hranolky.ui.manageitem.ActionType
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -68,71 +67,94 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         slotId: String,
         actionType: ActionType,
         quantity: Long,
-        currentQuantity: Int,
+        currentQuantity: Long,            // ← Long
         deviceId: String
     ) {
-        val quantityChange = when (actionType) {
+        val change = when (actionType) {
             ActionType.ADD -> quantity
             ActionType.REMOVE -> -quantity
         }
 
+        val nextEst = currentQuantity + change
+        if (nextEst < 0L) throw IllegalStateException("Quantity cannot go negative")
+
+        val docRef = firestoreDb.collection("WarehouseSlots").document(slotId)
+
+        // 1) Stav skladu – výhradně increment + serverový timestamp
         val updateSlot = mapOf(
-            "quantity" to FieldValue.increment(quantityChange),
+            "quantity" to FieldValue.increment(change),
             "lastModified" to FieldValue.serverTimestamp(),
         )
 
+        // 2) Log akce – "newQuantityClientEst" jen jako klientský odhad
         val slotAction = hashMapOf(
             "action" to actionType.toString(),
             "userId" to deviceId,
-            "quantityChange" to quantityChange,
-            "newQuantity" to (currentQuantity + quantityChange),
+            "quantityChange" to change,
+            "newQuantityClientEst" to nextEst, // ← přejmenováno, aby bylo jasné, že je to odhad
             "timestamp" to FieldValue.serverTimestamp(),
         )
 
         try {
-            firestoreDb.collection("WarehouseSlots")
-                .document(slotId)
-                .update(updateSlot)
-                .await()
-            Log.d(TAG, "Updated slot with ID: $slotId")
+            docRef.update(updateSlot).await()
+            Log.d(TAG, "Updated slot $slotId (increment $change)")
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating data in Firestore", e)
+            Log.e(TAG, "Error updating slot quantity", e)
         }
 
         try {
-            firestoreDb.collection("WarehouseSlots")
-                .document(slotId)
-                .collection("SlotActions")
-                .add(slotAction)
-                .await()
-            Log.d(TAG, "Added slot action to slot $slotId with: $slotAction")
+            docRef.collection("SlotActions").add(slotAction).await()
+            Log.d(TAG, "Added slot action to $slotId: $slotAction")
         } catch (e: Exception) {
-            Log.e(TAG, "Error sending slot Action to Firestore", e)
+            Log.e(TAG, "Error logging slot action", e)
         }
     }
 
-    override suspend fun createNewSlot(slotId: String, quantity: Int) {
-        val slot = WarehouseSlot(productId = slotId, quantity = quantity).parsePropertiesFromProductId()
+    override suspend fun createNewSlot(slotId: String, quantity: Long) {
+        val slot = WarehouseSlot(productId = slotId, quantity = quantity)
+            .parsePropertiesFromProductId()
 
-        if (slot.hasAllProperties()) {
-            val slotToSend = hashMapOf(
-                "quantity" to slot.quantity,
-                "lastModified" to FieldValue.serverTimestamp(),
-            )
+        if (!slot.hasAllProperties()) {
+            Log.w(TAG, "Cannot create slot $slotId, missing properties after parsing.")
+            return
+        }
 
-            Log.d(TAG, "Sending data to Firestore: $slotToSend")
+        val docRef = firestoreDb.collection("WarehouseSlots").document(slot.productId)
+        val data = hashMapOf(
+            "quantity" to slot.quantity,
+            "lastModified" to FieldValue.serverTimestamp(),
+            // Add other static fields from the 'slot' object if necessary, e.g.,
+            // "propertyX" to slot.propertyX
+            // Ensure these are fields you want to initialize at creation.
+        )
 
-            try {
-                firestoreDb.collection("WarehouseSlots")
-                    .document(slot.productId)
-                    .set(slotToSend, SetOptions.merge())
-                    .await()
-                Log.d(TAG, "DocumentSnapshot added with ID: ${slot.productId}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error sending data to Firestore", e)
-            }
+        try {
+            firestoreDb.runTransaction { transaction ->
+                val snapshot = transaction.get(docRef)
+                if (snapshot.exists()) {
+                    // Document already exists, do nothing as per your requirement
+                    Log.d(TAG, "Slot ${slot.productId} already exists. No action taken.")
+                    // You might want to return something from the transaction to indicate success/failure/already_exists
+                    // For now, null implies success of the transaction itself.
+                    null
+                } else {
+                    // Document does not exist, create it
+                    transaction.set(docRef, data)
+                    Log.d(TAG, "Creating new slot with ID: ${slot.productId}")
+                    // Return something if needed, e.g., true for success
+                    null
+                }
+            }.await() // await the completion of the transaction
+            Log.d(TAG, "Transaction for creating slot ${slot.productId} completed.")
+
+        } catch (e: Exception) {
+            // This catch block will handle exceptions during the transaction itself,
+            // including if the transaction fails after multiple retries.
+            Log.e(TAG, "Error or conflict creating slot ${slot.productId}", e)
         }
     }
+
+
 
     override fun getLastModifiedSlots(): Flow<LastModifiedSlots> = callbackFlow {
         val listener = firestoreDb.collection("WarehouseSlots")

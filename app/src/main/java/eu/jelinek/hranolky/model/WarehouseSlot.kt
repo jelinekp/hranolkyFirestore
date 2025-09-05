@@ -4,7 +4,7 @@ import android.util.Log
 
 data class WarehouseSlot(
     val productId: String,
-    val quantity: Int,
+    val quantity: Long,
     val slotActions: List<SlotAction> = emptyList(),
     val slotType: SlotType? = null,
     val quality: String? = null,
@@ -94,7 +94,7 @@ data class WarehouseSlot(
 }
 
 data class FirestoreSlot(
-    val quantity: Int = 0,
+    val quantity: Long = 0L,
     val lastModified: com.google.firebase.Timestamp? = null,
 ) {
     fun toWarehouseSlot(productId: String): WarehouseSlot {

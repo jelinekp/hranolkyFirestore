@@ -1,4 +1,4 @@
-package eu.jelinek.hranolky.ui.showlast
+package eu.jelinek.hranolky.ui.manageitem
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring

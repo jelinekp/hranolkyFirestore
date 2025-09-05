@@ -1,4 +1,4 @@
-package eu.jelinek.hranolky.ui.showlast
+package eu.jelinek.hranolky.ui.manageitem
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

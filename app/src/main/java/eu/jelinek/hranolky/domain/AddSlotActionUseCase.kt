@@ -1,7 +1,7 @@
 package eu.jelinek.hranolky.domain
 
 import eu.jelinek.hranolky.data.SlotRepository
-import eu.jelinek.hranolky.ui.showlast.ActionType
+import eu.jelinek.hranolky.ui.manageitem.ActionType
 
 class AddSlotActionUseCase(
     private val slotRepository: SlotRepository,
@@ -11,7 +11,7 @@ class AddSlotActionUseCase(
         slotId: String,
         actionType: ActionType,
         quantity: String,
-        currentQuantity: Int,
+        currentQuantity: Long,
         deviceId: String
     ): Result<Unit> {
         val validationResult = inputValidator.validateQuantity(quantity, currentQuantity, actionType)

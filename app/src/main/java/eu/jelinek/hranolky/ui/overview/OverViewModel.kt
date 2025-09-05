@@ -228,11 +228,11 @@ data class OverviewUiState(
 
 data class SlotSum(
     val count: Int,
-    val quantitySum: Int,
+    val quantitySum: Long,
     val volumeSum: Double,
 ) {
     companion object {
-        val EMPTY = SlotSum(0, 0, 0.0)
+        val EMPTY = SlotSum(0, 0L, 0.0)
     }
 }
 

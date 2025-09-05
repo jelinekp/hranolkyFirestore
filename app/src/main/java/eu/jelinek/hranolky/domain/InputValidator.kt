@@ -1,9 +1,9 @@
 package eu.jelinek.hranolky.domain
 
-import eu.jelinek.hranolky.ui.showlast.ActionType
+import eu.jelinek.hranolky.ui.manageitem.ActionType
 
 class InputValidator {
-    fun validateQuantity(quantity: String, currentQuantity: Int, actionType: ActionType): Result<Long> {
+    fun validateQuantity(quantity: String, currentQuantity: Long, actionType: ActionType): Result<Long> {
         val quantityLong = quantity.toLongOrNull()
         if (quantityLong == null || quantityLong <= 0 || quantityLong > 9999) {
             return Result.failure(IllegalArgumentException("Invalid quantity"))

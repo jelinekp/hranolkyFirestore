@@ -11,7 +11,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import eu.jelinek.hranolky.ui.overview.OverviewScreen
 import eu.jelinek.hranolky.ui.shared.ScreenSize
-import eu.jelinek.hranolky.ui.showlast.ShowLastActionsScreen
+import eu.jelinek.hranolky.ui.manageitem.ShowLastActionsScreen
 import eu.jelinek.hranolky.ui.start.StartScreen
 
 @Composable

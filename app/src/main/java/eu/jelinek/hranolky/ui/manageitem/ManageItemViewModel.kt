@@ -1,4 +1,4 @@
-package eu.jelinek.hranolky.ui.showlast
+package eu.jelinek.hranolky.ui.manageitem
 
 import android.annotation.SuppressLint
 import android.app.Application
@@ -107,7 +107,7 @@ data class ShowLastActionsScreenState(
     val slot: WarehouseSlot? = null,
     val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,
-    val isOnline: Boolean = true,
+    val isOnline: Boolean = true, // TODO should be false implicitly
 )
 
 
