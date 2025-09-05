@@ -1,5 +1,6 @@
 package eu.jelinek.hranolky.ui.overview
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
+import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import org.koin.androidx.compose.koinViewModel
 
@@ -48,7 +50,11 @@ fun OverviewScreen(
     val screenState by viewModel.overviewScreenState.collectAsStateWithLifecycle()
 
     Scaffold(
-        topBar = { OverviewTopBar(navigateUp, screenSize) }
+        topBar = { OverviewTopBar(
+            navigateUp,
+            screenSize,
+            viewModel::onTypeChange,
+            screenState.slotType) }
     ) { paddingValues ->
         if (screenSize.isTablet()) {
             Row( // on tablet we want to have the filter area on the right side
@@ -158,11 +164,17 @@ fun OverviewScreen(
 fun OverviewTopBar(
     navigateToStart: () -> Unit,
     screenSize: ScreenSize,
-    modifier: Modifier = Modifier
+    changeType: () -> Unit,
+    currentType: SlotType,
+    modifier: Modifier = Modifier,
 ) {
     TopAppBar(
         title = {
-            Text("Přehled hranolků na skladě")
+            //Text(currentType.toLongName())
+            Image(
+                painter = painterResource(currentType.icon()),
+                contentDescription = "ikona ${currentType.toLongName()}"
+            )
         },
         navigationIcon = {
             if (screenSize.isPhone()) {
@@ -196,6 +208,16 @@ fun OverviewTopBar(
                         Icons.AutoMirrored.Default.ArrowForward,
                         contentDescription = stringResource(R.string.forward_icon)
                     )
+                }
+            } else {
+                Button(
+                    modifier = Modifier.padding(end = 8.dp),
+                    onClick = {
+                        changeType()
+                    },
+
+                ) {
+                    Text(text = "Přepnout na ${nextType(currentType).toLongName().lowercase()}")
                 }
             }
         },

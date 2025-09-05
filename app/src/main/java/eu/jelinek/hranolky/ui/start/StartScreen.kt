@@ -75,9 +75,9 @@ fun StartScreen(
                     .fillMaxSize()
                     .widthIn(max = 200.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                //verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
+                //AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
 
                 ScannedCodeInput(
                     scannedText,
@@ -88,7 +88,8 @@ fun StartScreen(
                         }
                     },
                     focusRequester = focusRequester,
-                    isError = isWrongLength
+                    isError = isWrongLength,
+                    modifier = Modifier.padding(vertical = 8.dp)
                 )
 
                 if (isWrongLength) {
@@ -110,7 +111,8 @@ fun StartScreen(
                 OverviewButton(navigateToOverview)
 
                 Text(
-                    text = "Terminál: " + viewModel.getDeviceId(),
+                    text = "Terminál: " + viewModel.getDeviceId().substring(0..2),
+                    style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().padding(all = 2.dp)
                 )
@@ -197,13 +199,14 @@ fun ScannedCodeInput(
     scannedText: String,
     onValueChange: (String) -> Unit,
     focusRequester: FocusRequester,
-    isError: Boolean
+    isError: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
         value = scannedText,
         onValueChange = onValueChange,
         label = { Text(stringResource(R.string.naskenuj_kod)) },
-        modifier = Modifier.focusRequester(focusRequester),
+        modifier = modifier.focusRequester(focusRequester),
         isError = isError,
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import eu.jelinek.hranolky.data.SlotRepository
+import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +49,16 @@ class OverViewModel(
                     volumeSum = acc.volumeSum + (slot.getVolume() ?: 0.0)
                 )
             }
+    }
+
+    fun onTypeChange() {
+        val newType = nextType(_overviewScreenState.value.slotType)
+
+        _overviewScreenState.update {
+            it.copy(
+                slotType = newType
+            )
+        }
     }
 
     fun onQualityFilterChange(qualitiesFilters: List<String>) {
@@ -224,6 +235,7 @@ data class OverviewUiState(
     val selectedFilters: SlotFilters = SlotFilters.EMPTY,
     val sortingBy: String = "",
     val sortingDirection: SortingDirection = SortingDirection.NONE,
+    val slotType: SlotType = SlotType.Beam,
 )
 
 data class SlotSum(
@@ -301,4 +313,9 @@ data class IntervalMm(
 
 enum class SortingDirection {
     ASC, DESC, NONE
+}
+
+fun nextType(type: SlotType) = when (type) {
+    SlotType.Beam -> SlotType.Jointer
+    SlotType.Jointer -> SlotType.Beam
 }

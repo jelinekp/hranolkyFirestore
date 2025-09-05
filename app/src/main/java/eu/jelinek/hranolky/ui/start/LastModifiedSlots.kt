@@ -45,7 +45,7 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
 ) {
     itemsIndexed(items) { index, item ->
         val modifier = if (index % 2 == 0) {
-            Modifier.background(color = MaterialTheme.colorScheme.surface)
+            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
         } else {
             alternateModifier
         }
@@ -68,16 +68,17 @@ fun SlotTable(
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)) // Clip only top corners for tabs
-            .background(MaterialTheme.colorScheme.surface), // Use surface for the whole tab container
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(16.dp)) // Clip only top corners for tabs
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Main Title (Optional, if you want a title above the tabs)
         Text(
             "Položky s posledními pohyby:",
-            style = if (screenSize.isPhone()) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleLarge,
+            style = if (screenSize.isPhone()) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 6.dp),
+            modifier = Modifier.padding(top = 6.dp),
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -132,7 +133,7 @@ fun SlotTable(
             ) {
                 HeaderLastSlotsContent() // Display header for each list
 
-                val alternateRowModifier = MaterialTheme.colorScheme.surfaceContainer
+                val alternateRowModifier = MaterialTheme.colorScheme.surfaceVariant
 
                 if (currentSlots.isEmpty()) {
                     Text(
@@ -196,7 +197,7 @@ fun SlotRow(
             text = slot.productId,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier
-                .weight(8f)
+                .weight(10f)
                 .clickable { navigateToShowLastActions(slot.productId) },
             color = MaterialTheme.colorScheme.primary, // Keep primary for clickable
             fontWeight = FontWeight.Bold
@@ -224,11 +225,12 @@ fun HeaderLastSlotsContent(
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         val headerColor = MaterialTheme.colorScheme.onPrimaryContainer // Color for text on primaryContainer
-        Text("Datum", modifier = Modifier.weight(4f), fontWeight = FontWeight.Bold, color = headerColor)
-        Text("Kód", modifier = Modifier.weight(7f), fontWeight = FontWeight.Bold, color = headerColor) // Changed from "Hranolky" to generic "Kód"
+        Text("Datum", modifier = Modifier.weight(4f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = headerColor)
+        Text("Kód", modifier = Modifier.weight(9f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = headerColor) // Changed from "Hranolky" to generic "Kód"
         Text(
             "Množství",
             modifier = Modifier.weight(5f),
+            style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.End,
             fontWeight = FontWeight.Bold,
             color = headerColor
