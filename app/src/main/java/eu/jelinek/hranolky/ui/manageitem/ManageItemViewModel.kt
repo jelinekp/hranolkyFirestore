@@ -114,7 +114,7 @@ data class ShowLastActionsScreenState(
     val slot: WarehouseSlot? = null,
     val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,
-    val isOnline: Boolean = true, // TODO should be false implicitly
+    val isOnline: Boolean = true,
 )
 
 

@@ -1,6 +1,8 @@
 package eu.jelinek.hranolky.ui.start // Assuming this is your package
 
 // Import Pager and Tab related components
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,6 +55,7 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class) // For PagerState
 @Composable
 fun SlotTable(
@@ -170,6 +173,7 @@ fun SlotTable(
 // SlotRow and HeaderLastSlotsContent can remain largely the same,
 // just ensure they don't have conflicting backgrounds if the parent provides one.
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SlotRow(
     slot: WarehouseSlot,
@@ -197,7 +201,7 @@ fun SlotRow(
             text = slot.productId,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier
-                .weight(10f)
+                .weight(11f)
                 .clickable { navigateToShowLastActions(slot.productId) },
             color = MaterialTheme.colorScheme.primary, // Keep primary for clickable
             fontWeight = FontWeight.Bold
@@ -205,7 +209,7 @@ fun SlotRow(
 
         Text(
             slot.quantity.toString(),
-            modifier = Modifier.weight(4f),
+            modifier = Modifier.weight(3f),
             textAlign = TextAlign.End,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface // Adjust color

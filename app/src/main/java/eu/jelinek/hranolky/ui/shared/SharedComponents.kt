@@ -1,5 +1,7 @@
 package eu.jelinek.hranolky.ui.shared
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -8,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import eu.jelinek.hranolky.model.SlotAction
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
@@ -16,9 +20,21 @@ fun formatDate(date: Date): String {
     return formatter.format(date)
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun formatShortDate(date: Date): String {
-    val formatter = SimpleDateFormat("dd.MM.", Locale.getDefault())
-    return formatter.format(date)
+    val inputLocalDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+
+    val today = LocalDate.now()
+    val yesterday = today.minusDays(1)
+
+    return when (inputLocalDate) {
+        today -> "dnes"
+        yesterday -> "včera"
+        else -> {
+            val formatter = SimpleDateFormat("dd.MM.", Locale.getDefault())
+            formatter.format(date)
+        }
+    }
 }
 
 fun LazyListScope.slotActionsIndexedWithAlternatingModifier(
@@ -32,15 +48,15 @@ fun LazyListScope.slotActionsIndexedWithAlternatingModifier(
         } else {
             alternateModifier
         }
-        itemContent(index, item, modifier) // Pass the modifier to itemContent
+        itemContent(index, item, modifier)
     }
 }
 
 fun formatCubicMeters(volume: Double?): String {
-    if (volume == null) {
-        return "0.0 m³"
+    return if (volume == null) {
+        "0.0 m³"
     } else
-    return String.format("%.3f m³", volume)
+        String.format("%.3f m³", volume)
 }
 
 fun formatCubicMetersTwo(volume: Double?): String {
