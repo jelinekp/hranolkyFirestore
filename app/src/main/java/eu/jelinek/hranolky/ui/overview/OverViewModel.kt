@@ -81,12 +81,10 @@ class OverViewModel(
             }
     }
 
-    fun onTypeChange() {
-        val newType = nextType(_overviewScreenState.value.slotType)
-
+    fun onTypeChange(slotType: SlotType) {
         viewModelScope.launch {
-            slotRepository.getAllSlots(slotType = newType).collect { slots ->
-                updateSlotsAndLoadAvailableFilters(slots, newType)
+            slotRepository.getAllSlots(slotType = slotType).collect { slots ->
+                updateSlotsAndLoadAvailableFilters(slots, slotType)
             }
         }
     }

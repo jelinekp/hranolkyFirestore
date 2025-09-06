@@ -1,12 +1,14 @@
 package eu.jelinek.hranolky.ui.overview
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -24,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
 import eu.jelinek.hranolky.model.SlotType
+import eu.jelinek.hranolky.ui.history.TabHeader
 import eu.jelinek.hranolky.ui.shared.ScreenSize
+import kotlinx.coroutines.CoroutineScope
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -48,13 +53,18 @@ fun OverviewScreen(
     viewModel: OverViewModel = koinViewModel()
 ) {
     val screenState by viewModel.overviewScreenState.collectAsStateWithLifecycle()
+    val pagerState = rememberPagerState(pageCount = { SlotType.entries.size })
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = { OverviewTopBar(
-            navigateUp,
-            screenSize,
-            viewModel::onTypeChange,
-            screenState.slotType) },
+        topBar = {
+            OverviewTopBar(
+                navigateToStart = navigateUp,
+                screenSize = screenSize,
+                pagerState = pagerState,
+                coroutineScope = coroutineScope,
+            )
+        },
         modifier = modifier,
     ) { paddingValues ->
         if (screenSize.isTablet()) {
@@ -83,82 +93,99 @@ fun OverviewScreen(
                 )
             }
         } else {
-            Column(
-                modifier = Modifier.padding(paddingValues)
-            ) {
-                var expanded by rememberSaveable {
-                    mutableStateOf(false)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.padding(paddingValues),
+            ) { pageIndex ->
+                when (pageIndex) {
+                    0 -> viewModel.onTypeChange(SlotType.Beam)
+                    1 -> viewModel.onTypeChange(SlotType.Jointer)
                 }
-
-                Row(
-                    modifier = Modifier
-                        .padding(start = 16.dp, bottom = 8.dp, end = 4.dp)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    TextButton(
-                        onClick = {
-                            expanded = !expanded
-                        }
-                    ) {
-                        val filterText = if (expanded) {
-                            "Použít filtry"
-                        } else {
-                            "Zobrazit filtry"
-                        }
-
-                        Text(
-                            text = "$filterText (${screenState.selectedFilters.getNumberOfActiveFilters()})",
-                        )
-                        val icon = if (expanded) {
-                            Icons.Default.KeyboardArrowUp
-                        } else {
-                            Icons.Default.KeyboardArrowDown
-                        }
-
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = "Zobrazit více",
-                            modifier = Modifier.size(32.dp) // Adjust icon size
-                        )
-                    }
-
-                    if (screenState.selectedFilters.getNumberOfActiveFilters() > 0) {
-                        TextButton(
-                            onClick = { viewModel.onFilterClear() },
-                        ) {
-                            Text(text = "Resetovat všechny")
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Resetovat filtry"
-                            )
-                        }
-                    }
-
-                }
-
-                if (expanded) {
-                    FilterMobileSlots(
-                        allFilters = screenState.allFilters,
-                        selectedFilters = screenState.selectedFilters,
-                        onQualityFilterChange = { viewModel.onQualityFilterChange(it) },
-                        onThicknessFilterChange = { viewModel.onThicknessFilterChange(it) },
-                        onWidthFilterChange = { viewModel.onWidthFilterChange(it) },
-                        onLengthFilterChange = { viewModel.onLengthFilterChange(it) },
-                    )
-                }
-                AllSlotsContent(
-                    slots = screenState.sortedSlots,
-                    slotSum = screenState.sum,
-                    sortingBy = screenState.sortingBy,
-                    sortingDirection = screenState.sortingDirection,
-                    updateSorting = { viewModel.updateSorting(it) },
-                    navigateToShowLastActions = navigateToShowLastActions,
-                    screenSize = screenSize,
-                )
+                FiltersAndTable(screenState, viewModel, navigateToShowLastActions, screenSize)
             }
         }
+    }
+}
+
+@Composable
+private fun FiltersAndTable(
+    screenState: OverviewUiState,
+    viewModel: OverViewModel,
+    navigateToShowLastActions: (String) -> Unit,
+    screenSize: ScreenSize
+) {
+    Column {
+        var expanded by rememberSaveable {
+            mutableStateOf(false)
+        }
+
+        Row(
+            modifier = Modifier
+                .padding(start = 16.dp, bottom = 8.dp, end = 4.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            TextButton(
+                onClick = {
+                    expanded = !expanded
+                }
+            ) {
+                val filterText = if (expanded) {
+                    "Použít filtry"
+                } else {
+                    "Zobrazit filtry"
+                }
+
+                Text(
+                    text = "$filterText (${screenState.selectedFilters.getNumberOfActiveFilters()})",
+                )
+                val icon = if (expanded) {
+                    Icons.Default.KeyboardArrowUp
+                } else {
+                    Icons.Default.KeyboardArrowDown
+                }
+
+                Icon(
+                    imageVector = icon,
+                    contentDescription = "Zobrazit více",
+                    modifier = Modifier.size(32.dp) // Adjust icon size
+                )
+            }
+
+            if (screenState.selectedFilters.getNumberOfActiveFilters() > 0) {
+                TextButton(
+                    onClick = { viewModel.onFilterClear() },
+                ) {
+                    Text(text = "Resetovat všechny")
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Resetovat filtry"
+                    )
+                }
+            }
+
+        }
+
+        if (expanded) {
+            FilterMobileSlots(
+                allFilters = screenState.allFilters,
+                selectedFilters = screenState.selectedFilters,
+                onQualityFilterChange = { viewModel.onQualityFilterChange(it) },
+                onThicknessFilterChange = { viewModel.onThicknessFilterChange(it) },
+                onWidthFilterChange = { viewModel.onWidthFilterChange(it) },
+                onLengthFilterChange = { viewModel.onLengthFilterChange(it) },
+            )
+        }
+        AllSlotsContent(
+            slots = screenState.sortedSlots,
+            slotSum = screenState.sum,
+            sortingBy = screenState.sortingBy,
+            sortingDirection = screenState.sortingDirection,
+            updateSorting = { viewModel.updateSorting(it) },
+            navigateToShowLastActions = navigateToShowLastActions,
+            screenSize = screenSize,
+        )
     }
 }
 
@@ -167,16 +194,15 @@ fun OverviewScreen(
 fun OverviewTopBar(
     navigateToStart: () -> Unit,
     screenSize: ScreenSize,
-    changeType: () -> Unit,
-    currentType: SlotType,
     modifier: Modifier = Modifier,
+    pagerState: PagerState,
+    coroutineScope: CoroutineScope
 ) {
     TopAppBar(
         title = {
-            //Text(currentType.toLongName())
-            Image(
-                painter = painterResource(currentType.icon()),
-                contentDescription = "ikona ${currentType.toLongName()}"
+            TabHeader(
+                pagerState = pagerState,
+                coroutineScope = coroutineScope,
             )
         },
         navigationIcon = {
@@ -193,7 +219,9 @@ fun OverviewTopBar(
                 Icon(
                     painter = painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = "ikona aplikace",
-                    modifier = Modifier.padding(start = 8.dp).size(48.dp),
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .size(48.dp),
                     tint = Color.Unspecified
                 )
             }
@@ -211,16 +239,6 @@ fun OverviewTopBar(
                         Icons.AutoMirrored.Default.ArrowForward,
                         contentDescription = stringResource(R.string.forward_icon)
                     )
-                }
-            } else {
-                Button(
-                    modifier = Modifier.padding(end = 8.dp),
-                    onClick = {
-                        changeType()
-                    },
-
-                ) {
-                    Text(text = "Přepnout na ${nextType(currentType).toLongName().lowercase()}")
                 }
             }
         },

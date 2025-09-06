@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,7 +78,7 @@ fun SlotTable(
 }
 
 @Composable
-private fun ColumnScope.TabContent(
+private fun TabContent(
     pagerState: PagerState,
     lastModifiedBeamSlots: List<WarehouseSlot>,
     lastModifiedJointerSlots: List<WarehouseSlot>,
@@ -87,7 +86,6 @@ private fun ColumnScope.TabContent(
 ) {
     HorizontalPager(
         state = pagerState,
-        modifier = Modifier.weight(1f) // Pager should take available space
     ) { pageIndex ->
         val currentSlots = when (pageIndex) {
             0 -> lastModifiedBeamSlots
@@ -134,7 +132,7 @@ private fun ColumnScope.TabContent(
 }
 
 @Composable
-private fun ColumnScope.TabHeader(
+fun TabHeader(
     pagerState: PagerState,
     coroutineScope: CoroutineScope
 ) {
@@ -159,7 +157,6 @@ private fun ColumnScope.TabHeader(
                         pagerState.animateScrollToPage(index)
                     }
                 },
-                modifier = Modifier.weight(1f),
                 text = {
                     Row() {
                         Icon(
