@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -39,6 +41,7 @@ import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.formatShortDate
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -70,89 +73,59 @@ fun SlotTable(
             color = MaterialTheme.colorScheme.onSurface
         )
 
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            modifier = Modifier.fillMaxWidth(), // Make the TabRow take the full width
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                    height = 3.dp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            },
-            divider = {} // No divider or a custom one if needed
-        ) {
-            SlotType.entries.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = {
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(index)
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    text = {
-                        Row () {
-                            Icon(
-                                painter = painterResource(title.smallIcon()),
-                                contentDescription = title.toLongName(),
-                                modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified
-                            )
-                            Text(
-                            text = title.toLongName(),
-                            style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center)
-                        }
-                    },
-                    selectedContentColor = MaterialTheme.colorScheme.primary,
-                    unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        TabHeader(pagerState, coroutineScope)
+        TabContent(pagerState, lastModifiedBeamSlots, lastModifiedJointerSlots, navigateToManageItem)
+    }
+}
+
+@Composable
+private fun ColumnScope.TabContent(
+    pagerState: PagerState,
+    lastModifiedBeamSlots: List<WarehouseSlot>,
+    lastModifiedJointerSlots: List<WarehouseSlot>,
+    navigateToManageItem: (String) -> Unit
+) {
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.weight(1f) // Pager should take available space
+    ) { pageIndex ->
+        val currentSlots = when (pageIndex) {
+            0 -> lastModifiedBeamSlots
+            1 -> lastModifiedJointerSlots
+            else -> emptyList()
         }
+        // Each page content will be a list
+        Column(
+            modifier = Modifier
+                .fillMaxSize() // Ensure column fills width
+                .background(MaterialTheme.colorScheme.primaryContainer) // Background for list content
+        ) {
+            HeaderLastSlotsContent() // Display header for each list
 
-        // Content of the tabs using HorizontalPager
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f) // Pager should take available space
-        ) { pageIndex ->
-            val currentSlots = when (pageIndex) {
-                0 -> lastModifiedBeamSlots
-                1 -> lastModifiedJointerSlots
-                else -> emptyList()
-            }
-            // Each page content will be a list
-            Column(
-                modifier = Modifier
-                    .fillMaxSize() // Ensure column fills width
-                    .background(MaterialTheme.colorScheme.primaryContainer) // Background for list content
-            ) {
-                HeaderLastSlotsContent() // Display header for each list
-
-                if (currentSlots.isEmpty()) {
-                    Text(
-                        text = "Žádné ${SlotType.entries[pageIndex].toLongName().lowercase()} s posledními pohyby.",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f) // LazyColumn takes remaining space in its parent Column
-                    ) {
-                        itemsIndexed(
-                            items = currentSlots,
-                        ) { index, slot ->
-                            SlotRow(
-                                slot = slot,
-                                navigateToShowLastActions = navigateToManageItem,
-                                backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        }
+            if (currentSlots.isEmpty()) {
+                Text(
+                    text = "Žádné ${
+                        SlotType.entries[pageIndex].toLongName().lowercase()
+                    } s posledními pohyby.",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f) // LazyColumn takes remaining space in its parent Column
+                ) {
+                    itemsIndexed(
+                        items = currentSlots,
+                    ) { index, slot ->
+                        SlotRow(
+                            slot = slot,
+                            navigateToShowLastActions = navigateToManageItem,
+                            backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
+                        )
                     }
                 }
             }
@@ -160,17 +133,63 @@ fun SlotTable(
     }
 }
 
+@Composable
+private fun ColumnScope.TabHeader(
+    pagerState: PagerState,
+    coroutineScope: CoroutineScope
+) {
+    TabRow(
+        selectedTabIndex = pagerState.currentPage,
+        modifier = Modifier.fillMaxWidth(), // Make the TabRow take the full width
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        indicator = { tabPositions ->
+            TabRowDefaults.SecondaryIndicator(
+                Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                height = 3.dp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        },
+        divider = {}
+    ) {
+        SlotType.entries.forEachIndexed { index, title ->
+            Tab(
+                selected = pagerState.currentPage == index,
+                onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                text = {
+                    Row() {
+                        Icon(
+                            painter = painterResource(title.smallIcon()),
+                            contentDescription = title.toLongName(),
+                            modifier = Modifier.size(24.dp),
+                            tint = Color.Unspecified
+                        )
+                        Text(
+                            text = title.toLongName(),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                },
+                selectedContentColor = MaterialTheme.colorScheme.primary,
+                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
 
-// SlotRow and HeaderLastSlotsContent can remain largely the same,
-// just ensure they don't have conflicting backgrounds if the parent provides one.
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun SlotRow(
     slot: WarehouseSlot,
     navigateToShowLastActions: (String) -> Unit,
+    modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
-    modifier: Modifier = Modifier, // This modifier will come from itemsIndexedWithAlternatingModifier
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
