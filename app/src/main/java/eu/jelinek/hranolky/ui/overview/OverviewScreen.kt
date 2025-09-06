@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,11 +25,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +44,7 @@ import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.ui.history.TabHeader
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -55,6 +59,21 @@ fun OverviewScreen(
     val screenState by viewModel.overviewScreenState.collectAsStateWithLifecycle()
     val pagerState = rememberPagerState(pageCount = { SlotType.entries.size })
     val coroutineScope = rememberCoroutineScope()
+
+    // Use LaunchedEffect to react to page changes
+    LaunchedEffect(pagerState) {
+        // snapshotFlow converts Composable state (pagerState.currentPage) into a Flow
+        snapshotFlow { pagerState.currentPage }
+            .distinctUntilChanged() // Only react when the page actually changes
+            .collect { pageIndex ->
+                val newType = when (pageIndex) {
+                    0 -> SlotType.Beam
+                    1 -> SlotType.Jointer
+                    else -> SlotType.Beam // Or handle error/default
+                }
+                viewModel.onTypeChange(newType)
+            }
+    }
 
     Scaffold(
         topBar = {
@@ -96,12 +115,14 @@ fun OverviewScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.padding(paddingValues),
-            ) { pageIndex ->
-                when (pageIndex) {
-                    0 -> viewModel.onTypeChange(SlotType.Beam)
-                    1 -> viewModel.onTypeChange(SlotType.Jointer)
-                }
-                FiltersAndTable(screenState, viewModel, navigateToShowLastActions, screenSize)
+            ) {
+                FiltersAndTable(
+                    screenState = screenState,
+                    viewModel = viewModel,
+                    navigateToShowLastActions = navigateToShowLastActions,
+                    screenSize = screenSize,
+                    loading = screenState.loading,
+                )
             }
         }
     }
@@ -112,7 +133,8 @@ private fun FiltersAndTable(
     screenState: OverviewUiState,
     viewModel: OverViewModel,
     navigateToShowLastActions: (String) -> Unit,
-    screenSize: ScreenSize
+    screenSize: ScreenSize,
+    loading: Boolean,
 ) {
     Column {
         var expanded by rememberSaveable {
@@ -152,6 +174,11 @@ private fun FiltersAndTable(
                     modifier = Modifier.size(32.dp) // Adjust icon size
                 )
             }
+
+            if (loading && screenState.selectedFilters.getNumberOfActiveFilters() == 0)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp)
+                )
 
             if (screenState.selectedFilters.getNumberOfActiveFilters() > 0) {
                 TextButton(

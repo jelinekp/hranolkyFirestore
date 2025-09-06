@@ -65,7 +65,8 @@ class OverViewModel(
                     thicknessFilters = distinctThicknessFilters,
                     widthFilters = distinctWidthFilters,
                     lengthFilters = uiState.allFilters.lengthFilters
-                )
+                ),
+                loading = false,
             )
         }
     }
@@ -83,6 +84,11 @@ class OverViewModel(
 
     fun onTypeChange(slotType: SlotType) {
         viewModelScope.launch {
+            _overviewScreenState.update {
+                it.copy(
+                    loading = true
+                )
+            }
             slotRepository.getAllSlots(slotType = slotType).collect { slots ->
                 updateSlotsAndLoadAvailableFilters(slots, slotType)
             }
@@ -265,6 +271,7 @@ data class OverviewUiState(
     val sortingBy: String = "quantity",
     val sortingDirection: SortingDirection = SortingDirection.DESC,
     val slotType: SlotType = SlotType.Beam,
+    val loading: Boolean = true,
 )
 
 data class SlotSum(
