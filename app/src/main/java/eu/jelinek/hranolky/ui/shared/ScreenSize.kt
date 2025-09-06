@@ -5,5 +5,4 @@ enum class ScreenSize {
 
     fun isTablet() = this == TABLET
     fun isPhone() = this == PHONE
-
 }

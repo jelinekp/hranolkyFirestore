@@ -76,7 +76,7 @@ fun AllSlotsContent(
                 fontWeight = fontWeight
             )
         } else {
-            SumoMobileRow(
+            SumMobileRow(
                 slotSum = slotSum,
                 fontWeight = fontWeight
             )
@@ -264,7 +264,7 @@ fun OverviewRow(
             textAlign = TextAlign.End
         )
         Text(
-            slot.width.toString(),
+            text = formatSlotDimension(slot.width ?: 0.0f),
             modifier = Modifier.weight(3f),
             textAlign = TextAlign.End
         )
@@ -332,7 +332,7 @@ fun SumRow(
 }
 
 @Composable
-fun SumoMobileRow(
+fun SumMobileRow(
     slotSum: SlotSum = SlotSum.EMPTY,
     fontWeight: FontWeight,
     modifier: Modifier = Modifier

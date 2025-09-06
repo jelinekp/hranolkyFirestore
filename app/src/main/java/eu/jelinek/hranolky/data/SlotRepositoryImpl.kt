@@ -1,11 +1,13 @@
 package eu.jelinek.hranolky.data
 
 import android.util.Log
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
+import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.manageitem.ActionType
 import kotlinx.coroutines.channels.awaitClose
@@ -190,25 +192,54 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         awaitClose { listener.remove() }
     }
 
-    override fun getAllSlots(): Flow<List<WarehouseSlot>> = callbackFlow {
-        val listener = firestoreDb.collection("WarehouseSlots")
-            .addSnapshotListener { querySnapshot, error ->
-                if (error != null) {
-                    Log.e("Firestore", "Error receiving all slots from Firestore", error)
-                    close(error)
-                    return@addSnapshotListener
+
+    override fun getAllSlots(slotType: SlotType): Flow<List<WarehouseSlot>> = callbackFlow {
+        var query: Query = firestoreDb.collection("WarehouseSlots")
+
+        // Example based on ID prefix, assuming:
+        // SlotType.JOINTER means ID starts with "S"
+        // SlotType.BEAM means ID does NOT start with "S" (requires client-side filtering)
+
+        // Note: If SlotType.BEAM needs server-side filtering, you'd need a different data model
+        // (like a boolean field `isJointerType`) for efficient server-side "not S" filtering.
+
+        if (slotType == SlotType.Jointer) {
+            // Query for documents where ID starts with "S"
+            // This range query works if your IDs are structured like Sxxxx
+            query = query.whereGreaterThanOrEqualTo(FieldPath.documentId(), "S")
+                .whereLessThan(
+                    FieldPath.documentId(),
+                    "T"
+                ) // Assumes no valid IDs start with T, U, V etc. that are > "S" but not "Sxxxx"
+        }
+        // No direct server-side query for "ID does NOT start with S" for SlotType.BEAM
+        // It would require client-side filtering if you don't add another field to your documents.
+
+        val listener = query.addSnapshotListener { querySnapshot, error ->
+            if (error != null) {
+                Log.e("Firestore", "Error receiving all slots from Firestore", error)
+                close(error)
+                return@addSnapshotListener
+            }
+
+            if (querySnapshot != null && !querySnapshot.isEmpty) {
+                var allSlots = querySnapshot.documents.mapNotNull {
+                    val firestoreSlot = it.toObject(FirestoreSlot::class.java)
+                    firestoreSlot?.toWarehouseSlot(it.id)
                 }
 
-                if (querySnapshot != null && !querySnapshot.isEmpty) {
-                    val allSlots = querySnapshot.documents.mapNotNull {
-                        val firestoreSlot = it.toObject(FirestoreSlot::class.java)
-                        firestoreSlot?.toWarehouseSlot(it.id)
+                // Client-side filtering if needed (e.g., for BEAM type)
+                if (slotType == SlotType.Beam) {
+                    allSlots = allSlots.filter { warehouseSlot ->
+                        !warehouseSlot.productId.startsWith("S")
                     }
-                    trySend(allSlots).isSuccess
-                } else {
-                    trySend(emptyList()).isSuccess
                 }
+
+                trySend(allSlots).isSuccess
+            } else {
+                trySend(emptyList()).isSuccess
             }
+        }
         awaitClose { listener.remove() }
     }
 }

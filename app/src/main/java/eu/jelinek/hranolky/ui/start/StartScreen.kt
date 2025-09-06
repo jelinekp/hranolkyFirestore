@@ -1,6 +1,8 @@
 package eu.jelinek.hranolky.ui.start
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
@@ -41,6 +45,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +55,7 @@ import eu.jelinek.hranolky.R
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import org.koin.androidx.compose.koinViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StartScreen(
@@ -61,7 +69,16 @@ fun StartScreen(
     val focusRequester = remember { FocusRequester() }
     var scannedText by remember { mutableStateOf("") }
     var isAutoScanEnabled by remember { mutableStateOf(true) }
-    var isWrongLength by remember { mutableStateOf(false) }
+    var isFormatError by remember { mutableStateOf(false) }
+
+    val onSubmit = {
+        if (isValidScannedTextFormat(scannedText)) {
+            navigateToShowLastActions(scannedText)
+        } else {
+            Log.d("Scanned", "Invalid format $scannedText") // S-DUB-A-27-0-5225
+            isFormatError = true
+        }
+    }
 
     Scaffold(
         topBar = { if (screenSize.isTablet()) StartScreenTopBar(
@@ -88,16 +105,17 @@ fun StartScreen(
                         }
                     },
                     focusRequester = focusRequester,
-                    isError = isWrongLength,
+                    isError = isFormatError,
+                    onDoneAction = onSubmit,
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
-                if (isWrongLength) {
+                if (isFormatError) {
                     WrongLengthError()
                 }
 
                 if (!isAutoScanEnabled) {
-                    ManualScanButton(scannedText, navigateToShowLastActions, onWrongLength = { isWrongLength = it })
+                    ManualScanButton(onClicked = {onSubmit})
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -114,23 +132,39 @@ fun StartScreen(
                     text = "Terminál: " + viewModel.getDeviceId().substring(0..2),
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(all = 2.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(all = 2.dp)
                 )
             }
         } else {
             Row(
-                modifier = modifier.padding(padding).fillMaxSize(),
+                modifier = modifier
+                    .padding(padding)
+                    .fillMaxSize(),
             ) {
-                Column(modifier = Modifier.weight(5f).padding(16.dp)) {
+                Column(modifier = Modifier
+                    .weight(5f)
+                    .padding(16.dp)) {
                     SlotTable(screenState.lastModifiedBeamSlots, screenState.lastModifiedJointerSlots, navigateToShowLastActions, screenSize, modifier = Modifier)
                     Text(
                         text = "Terminál: " + viewModel.getDeviceId(),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(all = 6.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(all = 6.dp)
                     )
                 }
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.primaryContainer).weight(5f).padding(horizontal = 64.dp).padding(top = 32.dp).widthIn(max = 220.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .weight(5f)
+                        .padding(horizontal = 64.dp)
+                        .padding(top = 32.dp)
+                        .widthIn(max = 220.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -152,15 +186,16 @@ fun StartScreen(
                             }
                         },
                         focusRequester = focusRequester,
-                        isError = isWrongLength
+                        isError = isFormatError,
+                        onDoneAction = onSubmit,
                     )
 
-                    if (isWrongLength) {
+                    if (isFormatError) {
                         WrongLengthError()
                     }
 
                     if (!isAutoScanEnabled) {
-                        ManualScanButton(scannedText, navigateToShowLastActions, onWrongLength = { isWrongLength = it })
+                        ManualScanButton(onClicked = {onSubmit})
                     }
 
                     // OverviewButton(navigateToOverview)
@@ -200,11 +235,14 @@ fun ScannedCodeInput(
     onValueChange: (String) -> Unit,
     focusRequester: FocusRequester,
     isError: Boolean,
+    onDoneAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
         value = scannedText,
-        onValueChange = onValueChange,
+        onValueChange = { newValue ->
+            onValueChange(newValue.uppercase())
+        },
         label = { Text(stringResource(R.string.naskenuj_kod)) },
         modifier = modifier.focusRequester(focusRequester),
         isError = isError,
@@ -212,6 +250,17 @@ fun ScannedCodeInput(
         colors = OutlinedTextFieldDefaults.colors(
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
             focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Characters,
+            keyboardType = KeyboardType.Text,
+            imeAction = ImeAction.Done
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onDoneAction()
+                focusRequester.freeFocus()
+            }
         )
     )
 }
@@ -221,21 +270,17 @@ fun WrongLengthError() {
     Text(
         text = "Špatná délka kódu, kód musí začínat na \'H\' nebo \'S\' a být 18 znaků dlouhý, nebo být 16 znaků dlouhý.",
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.error
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(horizontal = 16.dp)
     )
 }
 
 @Composable
-fun ManualScanButton(scannedText: String, navigateToShowLastActions: (String) -> Unit, onWrongLength: (Boolean) -> Unit) {
+fun ManualScanButton(
+    onClicked: () -> Unit = {}
+) {
     Button(
-        onClick = {
-            Log.d("Scanned text", scannedText)
-            if (isValidScannedTextFormat(scannedText)) {
-                navigateToShowLastActions(scannedText)
-            } else {
-                onWrongLength(true)
-            }
-        }
+        onClick = { onClicked() }
     ) {
         Text("Zobrazit stav a poslední pohyby")
     }
@@ -265,7 +310,9 @@ fun StartScreenTopBar(modifier: Modifier = Modifier, navigateToOverview: () -> U
             Icon(
                 painter = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "ikona aplikace",
-                modifier = Modifier.padding(start = 8.dp).size(48.dp),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(48.dp),
                 tint = Color.Unspecified
             )
         },

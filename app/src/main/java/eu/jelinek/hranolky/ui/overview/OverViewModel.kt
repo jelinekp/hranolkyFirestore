@@ -22,7 +22,7 @@ class OverViewModel(
 
     init {
         viewModelScope.launch {
-            slotRepository.getAllSlots().collect { slots ->
+            slotRepository.getAllSlots(slotType = _overviewScreenState.value.slotType).collect { slots ->
                 _overviewScreenState.update { it.copy(allSlots = slots) }
             }
         }
@@ -54,10 +54,13 @@ class OverViewModel(
     fun onTypeChange() {
         val newType = nextType(_overviewScreenState.value.slotType)
 
-        _overviewScreenState.update {
-            it.copy(
-                slotType = newType
-            )
+        viewModelScope.launch {
+            slotRepository.getAllSlots(slotType = newType).collect { slots ->
+                _overviewScreenState.update { it.copy(
+                    allSlots = slots,
+                    slotType = newType,
+                ) }
+            }
         }
     }
 
@@ -233,8 +236,8 @@ data class OverviewUiState(
     val sortedSlots: List<WarehouseSlot> = emptyList(),
     val sum: SlotSum = SlotSum.EMPTY,
     val selectedFilters: SlotFilters = SlotFilters.EMPTY,
-    val sortingBy: String = "",
-    val sortingDirection: SortingDirection = SortingDirection.NONE,
+    val sortingBy: String = "quantity",
+    val sortingDirection: SortingDirection = SortingDirection.DESC,
     val slotType: SlotType = SlotType.Beam,
 )
 
@@ -313,9 +316,4 @@ data class IntervalMm(
 
 enum class SortingDirection {
     ASC, DESC, NONE
-}
-
-fun nextType(type: SlotType) = when (type) {
-    SlotType.Beam -> SlotType.Jointer
-    SlotType.Jointer -> SlotType.Beam
 }
