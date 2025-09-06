@@ -22,9 +22,10 @@ class OverViewModel(
 
     init {
         viewModelScope.launch {
-            slotRepository.getAllSlots(slotType = _overviewScreenState.value.slotType).collect { slots ->
-                _overviewScreenState.update { it.copy(allSlots = slots) }
-            }
+            slotRepository.getAllSlots(slotType = _overviewScreenState.value.slotType)
+                .collect { slots ->
+                    updateSlotsAndLoadAvailableFilters(slots, _overviewScreenState.value.slotType)
+                }
         }
         viewModelScope.launch {
             overviewScreenState.first { it.allSlots.isNotEmpty() }
@@ -37,6 +38,35 @@ class OverViewModel(
         }
         viewModelScope.launch {
             applySorting()
+        }
+    }
+
+    private fun updateSlotsAndLoadAvailableFilters(slots: List<WarehouseSlot>, slotType: SlotType) {
+        _overviewScreenState.update { uiState ->
+            // When allSlots changes, also recalculate allFilters
+            val distinctQualityFilters = slots
+                .mapNotNull { it.quality }
+                .filter { it.isNotBlank() }
+                .toSet().sorted().toList()
+            val distinctThicknessFilters = slots
+                .mapNotNull { it.thickness }
+                .filter { it != 0f }
+                .toSet().sorted().toList()
+            val distinctWidthFilters = slots
+                .mapNotNull { it.width }
+                .filter { it != 0f }
+                .toSet().sorted().toList()
+
+            uiState.copy(
+                slotType = slotType,
+                allSlots = slots,
+                allFilters = SlotFilters(
+                    qualityFilters = distinctQualityFilters,
+                    thicknessFilters = distinctThicknessFilters,
+                    widthFilters = distinctWidthFilters,
+                    lengthFilters = uiState.allFilters.lengthFilters
+                )
+            )
         }
     }
 
@@ -56,10 +86,7 @@ class OverViewModel(
 
         viewModelScope.launch {
             slotRepository.getAllSlots(slotType = newType).collect { slots ->
-                _overviewScreenState.update { it.copy(
-                    allSlots = slots,
-                    slotType = newType,
-                ) }
+                updateSlotsAndLoadAvailableFilters(slots, newType)
             }
         }
     }
@@ -235,6 +262,7 @@ data class OverviewUiState(
     val selectedSlots: List<WarehouseSlot> = emptyList(),
     val sortedSlots: List<WarehouseSlot> = emptyList(),
     val sum: SlotSum = SlotSum.EMPTY,
+    val allFilters: SlotFilters = SlotFilters.LENGTH_INTERVALS,
     val selectedFilters: SlotFilters = SlotFilters.EMPTY,
     val sortingBy: String = "quantity",
     val sortingDirection: SortingDirection = SortingDirection.DESC,
@@ -264,7 +292,7 @@ data class SlotFilters(
             widthFilters = emptyList(),
             lengthFilters = emptyList(),
         )
-        val ALL = SlotFilters(
+        /*val ALL = SlotFilters(
             qualityFilters = listOf("DUB-A", "DUB-R"),
             thicknessFilters = listOf(20f, 27.4f, 42.4f),
             widthFilters = listOf(38f, 40f, 42.4f, 50f, 70f),
@@ -273,7 +301,20 @@ data class SlotFilters(
                 IntervalMm(1000, 1999),
                 IntervalMm(2000, 2999)
             )
-        )
+        )*/
+
+        val LENGTH_INTERVALS = SlotFilters(
+                qualityFilters = emptyList(),
+                thicknessFilters = emptyList(),
+                widthFilters = emptyList(),
+                lengthFilters = listOf(
+                    IntervalMm(0, 599),
+                    IntervalMm(600, 1199),
+                    IntervalMm(1200, 1799),
+                    IntervalMm(1800, 2399),
+                    IntervalMm(2400, 2999)
+                )
+            )
     }
 
     fun isEmpty(): Boolean {

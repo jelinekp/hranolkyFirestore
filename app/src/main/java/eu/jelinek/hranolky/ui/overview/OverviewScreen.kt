@@ -54,7 +54,8 @@ fun OverviewScreen(
             navigateUp,
             screenSize,
             viewModel::onTypeChange,
-            screenState.slotType) }
+            screenState.slotType) },
+        modifier = modifier,
     ) { paddingValues ->
         if (screenSize.isTablet()) {
             Row( // on tablet we want to have the filter area on the right side
@@ -72,6 +73,7 @@ fun OverviewScreen(
 
                 FilterSlots(
                     modifier = Modifier.weight(15f),
+                    allFilters = screenState.allFilters,
                     selectedFilters = screenState.selectedFilters,
                     onQualityFilterChange = { viewModel.onQualityFilterChange(it) },
                     onThicknessFilterChange = { viewModel.onThicknessFilterChange(it) },
@@ -138,6 +140,7 @@ fun OverviewScreen(
 
                 if (expanded) {
                     FilterMobileSlots(
+                        allFilters = screenState.allFilters,
                         selectedFilters = screenState.selectedFilters,
                         onQualityFilterChange = { viewModel.onQualityFilterChange(it) },
                         onThicknessFilterChange = { viewModel.onThicknessFilterChange(it) },

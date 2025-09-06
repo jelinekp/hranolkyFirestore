@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun FilterSlots(
     modifier: Modifier = Modifier,
-    allFilters: SlotFilters = SlotFilters.ALL,
+    allFilters: SlotFilters,
     selectedFilters: SlotFilters,
     onQualityFilterChange: (List<String>) -> Unit,
     onThicknessFilterChange: (List<Float>) -> Unit,
@@ -92,7 +92,7 @@ fun FilterSlots(
 @Composable
 fun FilterMobileSlots(
     modifier: Modifier = Modifier,
-    allFilters: SlotFilters = SlotFilters.ALL,
+    allFilters: SlotFilters,
     selectedFilters: SlotFilters,
     onQualityFilterChange: (List<String>) -> Unit,
     onThicknessFilterChange: (List<Float>) -> Unit,
