@@ -30,11 +30,11 @@ import eu.jelinek.hranolky.ui.shared.ScreenSize
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun ShowLastActionsScreen(
+fun ManageItemScreen(
     modifier: Modifier = Modifier,
     navigateUp: () -> Unit,
     screenSize: ScreenSize,
-    viewModel: ShowLastActionsViewModel = koinViewModel()
+    viewModel: ManageItemViewModel = koinViewModel()
 ) {
     val slotId = viewModel.slotId
     val screenState by viewModel.screenStateStream.collectAsStateWithLifecycle()

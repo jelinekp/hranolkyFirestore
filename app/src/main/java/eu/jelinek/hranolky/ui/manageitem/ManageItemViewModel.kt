@@ -19,16 +19,16 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ShowLastActionsViewModel(
+class ManageItemViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val slotRepository: SlotRepository,
     private val addSlotActionUseCase: AddSlotActionUseCase
 ) : AndroidViewModel(application) {
 
-    val slotId: String? = savedStateHandle[Screen.ShowLastActionsScreen.ID]
+    val slotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
     private val _screenStateStream =
-        MutableStateFlow<ShowLastActionsScreenState>(ShowLastActionsScreenState())
+        MutableStateFlow<ManageItemScreenState>(ManageItemScreenState())
     val screenStateStream get() = _screenStateStream.asStateFlow()
 
     private val _validationSharedFlowStream = MutableSharedFlow<AddActionValidationState>()
@@ -110,7 +110,7 @@ class ShowLastActionsViewModel(
     }
 }
 
-data class ShowLastActionsScreenState(
+data class ManageItemScreenState(
     val slot: WarehouseSlot? = null,
     val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,

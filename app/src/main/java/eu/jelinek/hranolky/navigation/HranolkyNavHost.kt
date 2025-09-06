@@ -1,6 +1,8 @@
 package eu.jelinek.hranolky.navigation
 
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -9,11 +11,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import eu.jelinek.hranolky.ui.history.HistoryScreen
+import eu.jelinek.hranolky.ui.manageitem.ManageItemScreen
 import eu.jelinek.hranolky.ui.overview.OverviewScreen
 import eu.jelinek.hranolky.ui.shared.ScreenSize
-import eu.jelinek.hranolky.ui.manageitem.ShowLastActionsScreen
 import eu.jelinek.hranolky.ui.start.StartScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HranolkyNavHost(
     screenSize: ScreenSize,
@@ -31,23 +35,24 @@ fun HranolkyNavHost(
     ) {
         composable(route = Screen.StartScreen.route) {
             StartScreen(
-                navigateToShowLastActions = {
-                    navController.navigate(Screen.ShowLastActionsScreen(it).route)
+                navigateToManageItem = {
+                    navController.navigate(Screen.ManageItemScreen(it).route)
                 },
                 navigateToOverview = { navController.navigate(ScreenNames.OVERVIEW.name) },
+                navigateToHistory = { navController.navigate(ScreenNames.HISTORY.name) },
                 screenSize = screenSize,
             )
         }
 
         composable(
-            route = Screen.ShowLastActionsScreen("{${Screen.ShowLastActionsScreen.ID}}").route,
+            route = Screen.ManageItemScreen("{${Screen.ManageItemScreen.ID}}").route,
             arguments = listOf(
-                navArgument(name = Screen.ShowLastActionsScreen.ID) {
+                navArgument(name = Screen.ManageItemScreen.ID) {
                     type = NavType.StringType
                 },
             )
         ) {
-            ShowLastActionsScreen(
+            ManageItemScreen(
                 navigateUp = { navController.navigateUp() },
                 screenSize = screenSize,
             )
@@ -57,7 +62,17 @@ fun HranolkyNavHost(
             OverviewScreen(
                 navigateUp = { navController.navigate(Screen.StartScreen.route) },
                 navigateToShowLastActions = {
-                    navController.navigate(Screen.ShowLastActionsScreen(it).route)
+                    navController.navigate(Screen.ManageItemScreen(it).route)
+                },
+                screenSize = screenSize,
+            )
+        }
+
+        composable(route = ScreenNames.HISTORY.name) {
+            HistoryScreen(
+                navigateUp = { navController.navigate(Screen.StartScreen.route) },
+                navigateToManageItem = {
+                    navController.navigate(Screen.ManageItemScreen(it).route)
                 },
                 screenSize = screenSize,
             )

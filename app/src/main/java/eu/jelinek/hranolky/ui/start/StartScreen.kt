@@ -4,6 +4,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
+import eu.jelinek.hranolky.ui.history.TabletSlotTable
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import org.koin.androidx.compose.koinViewModel
 
@@ -60,8 +63,9 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun StartScreen(
     modifier: Modifier = Modifier,
-    navigateToShowLastActions: (String) -> Unit,
+    navigateToManageItem: (String) -> Unit,
     navigateToOverview: () -> Unit,
+    navigateToHistory: () -> Unit,
     viewModel: StartViewModel = koinViewModel(),
     screenSize: ScreenSize = ScreenSize.PHONE
 ) {
@@ -73,7 +77,7 @@ fun StartScreen(
 
     val onSubmit = {
         if (isValidScannedTextFormat(scannedText)) {
-            navigateToShowLastActions(scannedText)
+            navigateToManageItem(scannedText)
         } else {
             Log.d("Scanned", "Invalid format $scannedText") // S-DUB-A-27-0-5225
             isFormatError = true
@@ -94,14 +98,20 @@ fun StartScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 //verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                //AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
+                Image(
+                    painter = painterResource(R.drawable.logo_jelinek),
+                    contentDescription = "Logo JELÍNEK",
+                    modifier = Modifier.padding(horizontal = 64.dp)
+                )
+
+                AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
 
                 ScannedCodeInput(
                     scannedText,
                     onValueChange = { text ->
                         scannedText = text
                         if (isAutoScanEnabled && isValidScannedTextFormat(text)) {
-                            navigateToShowLastActions(text)
+                            navigateToManageItem(text)
                         }
                     },
                     focusRequester = focusRequester,
@@ -120,16 +130,30 @@ fun StartScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                SlotTable(screenState.lastModifiedBeamSlots,
-                    screenState.lastModifiedJointerSlots,
-                    screenSize = screenSize,
-                    navigateToShowLastActions = navigateToShowLastActions,
-                    modifier = Modifier.weight(1f))
+                NavigationActionButton(
+                    text = "Historie pohybů",
+                    iconPainter = painterResource(R.drawable.outline_history_24),
+                    contentDescription = "Ikona historie",
+                    onClick = navigateToHistory,
+                )
 
-                OverviewButton(navigateToOverview)
+                NavigationActionButton(
+                    text = "Přehled všech položek",
+                    iconPainter = painterResource(R.drawable.outline_lists_24),
+                    contentDescription = "Ikona položek",
+                    onClick = navigateToOverview,
+                )
 
                 Text(
-                    text = "Terminál: " + viewModel.getDeviceId().substring(0..2),
+                    text = "Terminál: " + screenState.shortenedDeviceId,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(all = 2.dp)
+                )
+                Text(
+                    text = "Verze aplikace: " + screenState.appVersion,
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
@@ -146,9 +170,11 @@ fun StartScreen(
                 Column(modifier = Modifier
                     .weight(5f)
                     .padding(16.dp)) {
-                    SlotTable(screenState.lastModifiedBeamSlots, screenState.lastModifiedJointerSlots, navigateToShowLastActions, screenSize, modifier = Modifier)
+                    TabletSlotTable(
+                        navigateToManageItem = { navigateToManageItem },
+                    )
                     Text(
-                        text = "Terminál: " + viewModel.getDeviceId(),
+                        text = "Terminál: " + screenState.shortenedDeviceId,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -182,7 +208,7 @@ fun StartScreen(
                         onValueChange = { text ->
                             scannedText = text
                             if (isAutoScanEnabled && text.length == 16) {
-                                navigateToShowLastActions(text)
+                                navigateToManageItem(text)
                             }
                         },
                         focusRequester = focusRequester,
@@ -215,7 +241,7 @@ fun AutoScanToggle(isAutoScanEnabled: Boolean, onAutoScanToggleChange: (Boolean)
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .width(280.dp)
-            .padding(top = 16.dp)
+            .padding(top = 4.dp)
     ) {
         Text(
             text = "Automatický mód",
@@ -282,21 +308,36 @@ fun ManualScanButton(
     Button(
         onClick = { onClicked() }
     ) {
-        Text("Zobrazit stav a poslední pohyby")
+        Text("Přejít na položku")
+        Icon(
+            Icons.AutoMirrored.Default.ArrowForward,
+            contentDescription = stringResource(R.string.forward_icon),
+            modifier = Modifier.padding(all = 4.dp)
+        )
     }
 }
 
 @Composable
-fun OverviewButton(navigateToOverview: () -> Unit) {
+fun NavigationActionButton(
+    text: String,
+    iconPainter: Painter,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier // Allow passing additional modifiers
+) {
     Button(
-        onClick = navigateToOverview,
+        onClick = onClick,
+        // Apply a common modifier first, then any additional specific modifiers
         modifier = Modifier
+            .padding(vertical = 16.dp)
+            .then(modifier) // Chain any passed-in modifier
     ) {
-        Text("Přehled všech položek")
         Icon(
-            Icons.AutoMirrored.Default.ArrowForward,
-            contentDescription = stringResource(R.string.forward_icon)
+            painter = iconPainter,
+            contentDescription = contentDescription,
+            modifier = Modifier.padding(all = 4.dp) // Common padding for the icon
         )
+        Text(text)
     }
 }
 
@@ -316,6 +357,13 @@ fun StartScreenTopBar(modifier: Modifier = Modifier, navigateToOverview: () -> U
                 tint = Color.Unspecified
             )
         },
-        actions = { OverviewButton(navigateToOverview) }
+        actions = {
+            NavigationActionButton(
+                text = "Přehled všech položek",
+                iconPainter = painterResource(R.drawable.outline_lists_24),
+                contentDescription = "Ikona položek",
+                onClick = navigateToOverview,
+            )
+        }
     )
 }

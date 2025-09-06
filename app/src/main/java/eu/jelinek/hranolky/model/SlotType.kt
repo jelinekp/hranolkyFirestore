@@ -22,6 +22,13 @@ enum class SlotType {
     fun icon() : Int {
         return when (this) {
             Beam -> R.drawable.ic_launcher_foreground
+            Jointer -> R.drawable.sparovky_foreground
+        }
+    }
+
+    fun smallIcon() : Int {
+        return when (this) {
+            Beam -> R.drawable.ic_launcher_foreground
             Jointer -> R.drawable.jointer
         }
     }

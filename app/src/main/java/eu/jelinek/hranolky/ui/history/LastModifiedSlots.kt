@@ -1,4 +1,4 @@
-package eu.jelinek.hranolky.ui.start // Assuming this is your package
+package eu.jelinek.hranolky.ui.history // Assuming this is your package
 
 // Import Pager and Tab related components
 import android.os.Build
@@ -12,12 +12,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -29,31 +30,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.formatShortDate
 import kotlinx.coroutines.launch
 import java.util.Date
-
-
-// Your itemsIndexedWithAlternatingModifier can remain the same
-fun LazyListScope.itemsIndexedWithAlternatingModifier(
-    items: List<WarehouseSlot>,
-    alternateModifier: Modifier,
-    itemContent: @Composable (index: Int, item: WarehouseSlot, modifier: Modifier) -> Unit
-) {
-    itemsIndexed(items) { index, item ->
-        val modifier = if (index % 2 == 0) {
-            Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-        } else {
-            alternateModifier
-        }
-        itemContent(index, item, modifier)
-    }
-}
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalFoundationApi::class) // For PagerState
@@ -61,17 +48,15 @@ fun LazyListScope.itemsIndexedWithAlternatingModifier(
 fun SlotTable(
     lastModifiedBeamSlots: List<WarehouseSlot>,
     lastModifiedJointerSlots: List<WarehouseSlot>,
-    navigateToShowLastActions: (String) -> Unit,
+    navigateToManageItem: (String) -> Unit,
     screenSize: ScreenSize,
     modifier: Modifier = Modifier,
 ) {
-    val tabTitles = listOf("Hranolky", "Spárovky")
-    val pagerState = rememberPagerState(pageCount = { tabTitles.size })
+    val pagerState = rememberPagerState(pageCount = { SlotType.entries.size })
     val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
-            .padding(bottom = 8.dp)
             .clip(RoundedCornerShape(16.dp)) // Clip only top corners for tabs
             .background(MaterialTheme.colorScheme.surfaceVariant),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -79,7 +64,7 @@ fun SlotTable(
         // Main Title (Optional, if you want a title above the tabs)
         Text(
             "Položky s posledními pohyby:",
-            style = if (screenSize.isPhone()) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+            style = if (screenSize.isPhone()) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 6.dp),
             color = MaterialTheme.colorScheme.onSurface
@@ -89,7 +74,6 @@ fun SlotTable(
             selectedTabIndex = pagerState.currentPage,
             modifier = Modifier.fillMaxWidth(), // Make the TabRow take the full width
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.primary,
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
@@ -99,7 +83,7 @@ fun SlotTable(
             },
             divider = {} // No divider or a custom one if needed
         ) {
-            tabTitles.forEachIndexed { index, title ->
+            SlotType.entries.forEachIndexed { index, title ->
                 Tab(
                     selected = pagerState.currentPage == index,
                     onClick = {
@@ -108,10 +92,20 @@ fun SlotTable(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    text = { Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center) },
+                    text = {
+                        Row () {
+                            Icon(
+                                painter = painterResource(title.smallIcon()),
+                                contentDescription = title.toLongName(),
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified
+                            )
+                            Text(
+                            text = title.toLongName(),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center)
+                        }
+                    },
                     selectedContentColor = MaterialTheme.colorScheme.primary,
                     unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -136,11 +130,9 @@ fun SlotTable(
             ) {
                 HeaderLastSlotsContent() // Display header for each list
 
-                val alternateRowModifier = MaterialTheme.colorScheme.surfaceVariant
-
                 if (currentSlots.isEmpty()) {
                     Text(
-                        text = "Žádné ${tabTitles[pageIndex].lowercase()} s posledními pohyby.",
+                        text = "Žádné ${SlotType.entries[pageIndex].toLongName().lowercase()} s posledními pohyby.",
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
@@ -152,14 +144,13 @@ fun SlotTable(
                     LazyColumn(
                         modifier = Modifier.weight(1f) // LazyColumn takes remaining space in its parent Column
                     ) {
-                        itemsIndexedWithAlternatingModifier(
+                        itemsIndexed(
                             items = currentSlots,
-                            alternateModifier = Modifier.background(color = alternateRowModifier)
-                        ) { _, slot, itemModifier ->
+                        ) { index, slot ->
                             SlotRow(
                                 slot = slot,
-                                navigateToShowLastActions = navigateToShowLastActions,
-                                modifier = itemModifier
+                                navigateToShowLastActions = navigateToManageItem,
+                                backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
                             )
                         }
                     }
@@ -178,13 +169,15 @@ fun SlotTable(
 fun SlotRow(
     slot: WarehouseSlot,
     navigateToShowLastActions: (String) -> Unit,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
     modifier: Modifier = Modifier, // This modifier will come from itemsIndexedWithAlternatingModifier
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = modifier // Apply the alternating background modifier here
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(color = backgroundColor)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val date = slot.lastModified?.toDate() ?: Date()
@@ -193,13 +186,13 @@ fun SlotRow(
         Text(
             readableDate,
             modifier = Modifier.weight(4f),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface // Adjust color as per row background
         )
 
         Text(
             text = slot.productId,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .weight(11f)
                 .clickable { navigateToShowLastActions(slot.productId) },
@@ -211,7 +204,7 @@ fun SlotRow(
             slot.quantity.toString(),
             modifier = Modifier.weight(3f),
             textAlign = TextAlign.End,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface // Adjust color
         )
     }

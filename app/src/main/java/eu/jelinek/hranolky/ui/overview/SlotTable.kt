@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -21,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -28,7 +30,6 @@ import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.formatCubicMeters
 import eu.jelinek.hranolky.ui.shared.formatCubicMetersTwo
-import eu.jelinek.hranolky.ui.start.itemsIndexedWithAlternatingModifier
 
 @Composable
 fun AllSlotsContent(
@@ -38,12 +39,9 @@ fun AllSlotsContent(
     sortingDirection: SortingDirection,
     updateSorting: (String) -> Unit,
     navigateToShowLastActions: (String) -> Unit,
-    screenSize: ScreenSize = ScreenSize.TABLET,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    screenSize: ScreenSize = ScreenSize.TABLET
 ) {
-    val alternateRowModifier =
-        Modifier.background(color = MaterialTheme.colorScheme.surfaceContainer)
-
     val fontWeight = FontWeight.Bold
 
     Box(
@@ -62,11 +60,16 @@ fun AllSlotsContent(
                 .fillMaxSize()
                 .padding(vertical = 44.dp)
         ) {
-            itemsIndexedWithAlternatingModifier(
+            itemsIndexed(
                 slots,
-                alternateModifier = alternateRowModifier
-            ) { _, slot, modifier ->
-                OverviewRow(slot, navigateToShowLastActions, screenSize = screenSize, modifier)
+            ) { index, slot ->
+                OverviewRow(
+                    slot = slot,
+                    navigateToShowLastActions = navigateToShowLastActions,
+                    modifier = modifier,
+                    screenSize = screenSize,
+                    backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
 
@@ -188,9 +191,9 @@ fun HeaderItem(
     text: String,
     fontWeight: FontWeight,
     textAlign: TextAlign,
+    modifier: Modifier = Modifier,
     isSorteredBy: Boolean = false,
-    sortingDirection: SortingDirection = SortingDirection.NONE,
-    modifier: Modifier = Modifier
+    sortingDirection: SortingDirection = SortingDirection.NONE
 ) {
     Row(
         modifier = modifier.fillMaxSize(),
@@ -228,8 +231,9 @@ fun HeaderItem(
 fun OverviewRow(
     slot: WarehouseSlot,
     navigateToShowLastActions: (String) -> Unit,
-    screenSize: ScreenSize = ScreenSize.TABLET,
     modifier: Modifier = Modifier,
+    screenSize: ScreenSize = ScreenSize.TABLET,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
 ) {
     Row(
         // extract and make it clickable
@@ -239,6 +243,7 @@ fun OverviewRow(
                 navigateToShowLastActions(slot.productId)
             }
             .fillMaxWidth()
+            .background(color = backgroundColor)
             .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         /*
@@ -293,9 +298,9 @@ fun OverviewRow(
 
 @Composable
 fun SumRow(
-    slotSum: SlotSum = SlotSum.EMPTY,
     fontWeight: FontWeight,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    slotSum: SlotSum = SlotSum.EMPTY
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -333,9 +338,9 @@ fun SumRow(
 
 @Composable
 fun SumMobileRow(
-    slotSum: SlotSum = SlotSum.EMPTY,
     fontWeight: FontWeight,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    slotSum: SlotSum = SlotSum.EMPTY
 ) {
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,

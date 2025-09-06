@@ -10,17 +10,13 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import eu.jelinek.hranolky.data.SlotRepository
-import eu.jelinek.hranolky.model.WarehouseSlot
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class StartViewModel(
     application: Application,
     private val firestoreDb: FirebaseFirestore,
-    private val slotRepository: SlotRepository
 ) : AndroidViewModel(application) {
     private val _startScreenState = MutableStateFlow(StartUiState())
     val startScreenState get() = _startScreenState.asStateFlow()
@@ -29,16 +25,10 @@ class StartViewModel(
         viewModelScope.launch {
             logDeviceId()
         }
-
-        viewModelScope.launch {
-            slotRepository.getLastModifiedSlots().collect { lastModifiedSlots ->
-                _startScreenState.update { it.copy(lastModifiedBeamSlots = lastModifiedSlots.beamSlots, lastModifiedJointerSlots = lastModifiedSlots.jointerSlots) }
-            }
-        }
     }
 
     @SuppressLint("HardwareIds")
-    fun getDeviceId(): String {
+    private fun getDeviceId(): String {
         return Settings.Secure.getString(getApplication<Application>().contentResolver, Settings.Secure.ANDROID_ID)
     }
 
@@ -54,6 +44,11 @@ class StartViewModel(
             "Unknown"
         }
 
+        _startScreenState.value = _startScreenState.value.copy(
+            shortenedDeviceId = deviceId.substring(0..2),
+            appVersion = appVersion ?: "Neznámá verze"
+        )
+
         val deviceData = hashMapOf(
             "lastSeen" to FieldValue.serverTimestamp(),
             "appVersion" to appVersion
@@ -68,11 +63,11 @@ class StartViewModel(
 
 data class StartUiState(
     val scannedCode: String = "",
-    val lastModifiedBeamSlots: List<WarehouseSlot> = emptyList(),
-    val lastModifiedJointerSlots: List<WarehouseSlot> = emptyList(),
+    val shortenedDeviceId: String = "",
+    val appVersion: String = "",
 )
 
-fun isValidScannedTextFormat(text: String): Boolean {
+fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class
     val textLength = text.length
 
     if (textLength == 16) {
