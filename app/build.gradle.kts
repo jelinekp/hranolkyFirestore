@@ -13,8 +13,8 @@ android {
         applicationId = "eu.jelinek.hranolky"
         minSdk = 23
         targetSdk = 36
-        versionCode = 5
-        versionName = "2.1"
+        versionCode = 6
+        versionName = "2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

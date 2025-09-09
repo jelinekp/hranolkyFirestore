@@ -118,7 +118,7 @@ fun ManageItemScreen(
 
                 ResultStatus.DATA_ERROR -> {
                     Text(
-                        "Nesprávný formát dat, položka musí být ve formátu\n\"AAA-A-XX-XX-XXXX\"\n(16 znaků, A jsou písmena, X jsou číslice)",
+                        "Nesprávný formát dat, položka musí být ve formátu\n\"S/H-AAA-A-XX-XX(XX)-XXXX\"\n(18-20 znaků, A jsou písmena, X jsou číslice)",
                         modifier = Modifier.padding(32.dp),
                         textAlign = TextAlign.Center,
                     )

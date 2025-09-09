@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
@@ -20,24 +21,66 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
     private val TAG = "SlotRepository"
 
     override fun getSlot(slotId: String): Flow<WarehouseSlot?> = callbackFlow {
-        val listener = firestoreDb.collection("WarehouseSlots")
-            .document(slotId)
-            .addSnapshotListener { slotSnapshot, error ->
-                if (error != null) {
-                    Log.w(TAG, "Listen to slot download failed", error)
-                    close(error)
-                    return@addSnapshotListener
-                }
+        Log.d(TAG, "getSlot: Fetching slot $slotId")
 
-                if (slotSnapshot != null && slotSnapshot.exists()) {
-                    val firestoreSlot = slotSnapshot.toObject(FirestoreSlot::class.java)
-                    val slot = firestoreSlot?.toWarehouseSlot(slotId)
-                    trySend(slot).isSuccess
-                } else {
-                    trySend(null).isSuccess
+        var listenerRegistration: ListenerRegistration? = null
+
+        fun fetchActualSlot(idToFetch: String, isFallback: Boolean) {
+            // Remove previous listener if any (important for fallback)
+            listenerRegistration?.remove()
+
+            listenerRegistration = firestoreDb.collection("WarehouseSlots")
+                .document(idToFetch)
+                .addSnapshotListener { slotSnapshot, error ->
+                    if (error != null) {
+                        Log.w(TAG, "getSlot (id: $idToFetch): Listen to slot download failed", error)
+                        // If it's a fallback attempt and it fails, we might still want to signal null
+                        // or close with error depending on desired behavior.
+                        // For now, if any fetch attempt errors out, we close the flow.
+                        close(error)
+                        return@addSnapshotListener
+                    }
+
+                    if (slotSnapshot != null && slotSnapshot.exists()) {
+                        val firestoreSlot = slotSnapshot.toObject(FirestoreSlot::class.java)
+                        val slot = firestoreSlot?.toWarehouseSlot(idToFetch)
+                        Log.d(TAG, "getSlot (id: $idToFetch): Received slot $slot")
+                        trySend(slot).isSuccess
+                    } else {
+                        Log.d(TAG, "getSlot (id: $idToFetch): Slot not found.")
+                        if (!isFallback) {
+                            // Original ID not found, try the normalized ID
+                            val normalizedId = if (slotId.length > 16 && slotId.startsWith('H') && slotId[1] == '-') {
+                                slotId.substring(2)
+                            } else {
+                                // If normalization doesn't change the ID, and it wasn't found,
+                                // we've already tried, so send null.
+                                slotId
+                            }
+
+                            if (normalizedId != idToFetch) { // Important: Only try fallback if ID is different
+                                Log.d(TAG, "getSlot: Original ID $slotId not found, trying fallback $normalizedId")
+                                fetchActualSlot(normalizedId, true)
+                            } else {
+                                // Normalization didn't change ID, or it's already the fallback, and it wasn't found
+                                trySend(null).isSuccess
+                            }
+                        } else {
+                            // Fallback ID also not found
+                            Log.d(TAG, "getSlot: Fallback ID $idToFetch also not found.")
+                            trySend(null).isSuccess
+                        }
+                    }
                 }
-            }
-        awaitClose { listener.remove() }
+        }
+
+        // Start fetching with the original slotId
+        fetchActualSlot(slotId, false)
+
+        awaitClose {
+            Log.d(TAG, "getSlot: Closing listener for $slotId")
+            listenerRegistration?.remove()
+        }
     }
 
     override fun getSlotActions(slotId: String): Flow<List<SlotAction>> = callbackFlow {
@@ -48,7 +91,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             .limit(10)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
-                    Log.e(TAG, "Error receiving last slot actions from Firestore", error)
+                    Log.e(TAG, "getSlotActions: Error receiving last slot actions from Firestore", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -87,13 +130,12 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             "quantity" to FieldValue.increment(change),
             "lastModified" to FieldValue.serverTimestamp(),
         )
-
-        // 2) Log akce – "newQuantityClientEst" jen jako klientský odhad
+        
         val slotAction = hashMapOf(
             "action" to actionType.toString(),
             "userId" to deviceId,
             "quantityChange" to change,
-            "newQuantityClientEst" to nextEst, // ← přejmenováno, aby bylo jasné, že je to odhad
+            "newQuantity" to nextEst,
             "timestamp" to FieldValue.serverTimestamp(),
         )
 
@@ -106,9 +148,9 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
 
         try {
             docRef.collection("SlotActions").add(slotAction).await()
-            Log.d(TAG, "Added slot action to $slotId: $slotAction")
+            Log.d(TAG, "addSlotAction: Added slot action to $slotId: $slotAction")
         } catch (e: Exception) {
-            Log.e(TAG, "Error logging slot action", e)
+            Log.e(TAG, "addSlotAction: Error logging slot action", e)
         }
     }
 
@@ -117,7 +159,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             .parsePropertiesFromProductId()
 
         if (!slot.hasAllProperties()) {
-            Log.w(TAG, "Cannot create slot $slotId, missing properties after parsing.")
+            Log.w(TAG, "createNewSlot: Cannot create slot $slotId, missing properties after parsing.")
             return
         }
 
@@ -135,24 +177,24 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                 val snapshot = transaction.get(docRef)
                 if (snapshot.exists()) {
                     // Document already exists, do nothing as per your requirement
-                    Log.d(TAG, "Slot ${slot.productId} already exists. No action taken.")
+                    Log.d(TAG, "createNewSlot: Slot ${slot.productId} already exists. No action taken.")
                     // You might want to return something from the transaction to indicate success/failure/already_exists
                     // For now, null implies success of the transaction itself.
                     null
                 } else {
                     // Document does not exist, create it
                     transaction.set(docRef, data)
-                    Log.d(TAG, "Creating new slot with ID: ${slot.productId}")
+                    Log.d(TAG, "createNewSlot: Creating new slot with ID: ${slot.productId}")
                     // Return something if needed, e.g., true for success
                     null
                 }
             }.await() // await the completion of the transaction
-            Log.d(TAG, "Transaction for creating slot ${slot.productId} completed.")
+            Log.d(TAG, "createNewSlot: Transaction for creating slot ${slot.productId} completed.")
 
         } catch (e: Exception) {
             // This catch block will handle exceptions during the transaction itself,
             // including if the transaction fails after multiple retries.
-            Log.e(TAG, "Error or conflict creating slot ${slot.productId}", e)
+            Log.e(TAG, "createNewSlot: Error or conflict creating slot ${slot.productId}", e)
         }
     }
 
@@ -164,7 +206,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             .limit(20)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
-                    Log.e("Firestore", "Error receiving last slots from Firestore", error)
+                    Log.e("Firestore", "getLastModifiedSlots: Error receiving last slots from Firestore", error)
                     close(error)
                     return@addSnapshotListener
                 }
@@ -222,7 +264,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
 
         val listener = query.addSnapshotListener { querySnapshot, error ->
             if (error != null) {
-                Log.e("Firestore", "Error receiving all slots from Firestore", error)
+                Log.e("Firestore", "getAllSlots: Error receiving all slots from Firestore", error)
                 close(error)
                 return@addSnapshotListener
             }
