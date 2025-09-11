@@ -28,8 +28,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.ScreenSize
-import eu.jelinek.hranolky.ui.shared.formatCubicMeters
-import eu.jelinek.hranolky.ui.shared.formatCubicMetersTwo
+import eu.jelinek.hranolky.data.helpers.formatCubicMeters
+import eu.jelinek.hranolky.data.helpers.formatCubicMetersTwo
 
 @Composable
 fun AllSlotsContent(

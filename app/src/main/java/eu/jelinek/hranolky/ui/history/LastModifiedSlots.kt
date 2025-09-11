@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.ScreenSize
-import eu.jelinek.hranolky.ui.shared.formatShortDate
+import eu.jelinek.hranolky.data.helpers.formatShortDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Date

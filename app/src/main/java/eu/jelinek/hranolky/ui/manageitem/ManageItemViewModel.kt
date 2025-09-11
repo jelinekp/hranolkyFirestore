@@ -76,6 +76,7 @@ class ManageItemViewModel(
         viewModelScope.launch {
             val result = addSlotActionUseCase(
                 slotId = slotId!!,
+                slot = screenStateStream.value.slot!!,
                 actionType = actionType,
                 quantity = quantityState.value,
                 currentQuantity = screenStateStream.value.slot?.quantity ?: 0,

@@ -3,7 +3,9 @@ package eu.jelinek.hranolky.domain
 import android.util.Log
 import eu.jelinek.hranolky.data.SheetDbRepository
 import eu.jelinek.hranolky.data.SlotRepository
+import eu.jelinek.hranolky.data.helpers.toCustomCommaDecimalString
 import eu.jelinek.hranolky.data.network.JointerReportingRow
+import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.manageitem.ActionType
 
 class AddSlotActionUseCase(
@@ -13,6 +15,7 @@ class AddSlotActionUseCase(
 ) {
     suspend operator fun invoke(
         slotId: String,
+        slot: WarehouseSlot,
         actionType: ActionType,
         quantity: String,
         currentQuantity: Long,
@@ -26,11 +29,11 @@ class AddSlotActionUseCase(
 
                 if (slotId.first() == 'S') {
                     val sampleRowData = JointerReportingRow(
-                        quality = "DUB RUSTIK",
-                        thickness = "42,4",
-                        width = "860",
-                        length = "1860",
-                        quantityChange = "2",
+                        quality = slot.getFullQualityName(),
+                        thickness = slot.thickness.toCustomCommaDecimalString(),
+                        width = slot.width?.toInt().toString(),
+                        length = slot.length.toString(),
+                        quantityChange = quantity,
                         madeBy = "Petr",
                     )
 

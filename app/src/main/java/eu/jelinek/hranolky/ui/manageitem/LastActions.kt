@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.model.SlotAction
-import eu.jelinek.hranolky.ui.shared.formatDate
+import eu.jelinek.hranolky.data.helpers.formatDate
 import eu.jelinek.hranolky.ui.shared.slotActionsIndexedWithAlternatingModifier
 import java.util.Date
 

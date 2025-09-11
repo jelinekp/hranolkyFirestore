@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.jelinek.hranolky.model.WarehouseSlot
-import eu.jelinek.hranolky.ui.shared.formatCubicMeters
+import eu.jelinek.hranolky.data.helpers.formatCubicMeters
 
 @Composable
 fun SlotData(

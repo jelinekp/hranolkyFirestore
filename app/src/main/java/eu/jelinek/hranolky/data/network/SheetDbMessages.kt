@@ -1,6 +1,6 @@
 package eu.jelinek.hranolky.data.network
 
-import eu.jelinek.hranolky.ui.shared.formatDate
+import eu.jelinek.hranolky.data.helpers.formatOnlyDate
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.util.Date
@@ -19,7 +19,7 @@ data class SheetDbPostJointerReportingBody(
 data class JointerReportingRow(
     // Properties that match the Google Sheet columns
     @SerialName("Datum")
-    val date: String = formatDate(Date()),
+    val date: String = formatOnlyDate(Date()),
 
     @SerialName("Dřevina")
     val quality: String,

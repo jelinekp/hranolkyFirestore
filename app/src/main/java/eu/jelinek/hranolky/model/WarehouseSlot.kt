@@ -76,6 +76,16 @@ data class WarehouseSlot(
         return volume
     }
 
+    fun getFullQualityName(): String {
+        return when (this.quality) {
+            null -> ""
+            "DUB-A" -> "DUB A/A"
+            "DUB-R" -> "DUB RUSTIK"
+            "DUB-B" -> ""
+            else -> this.quality
+        }
+    }
+
     fun hasAllProperties(): Boolean {
         return this.quality != null && this.width != null && this.thickness != null && this.length != null
     }
