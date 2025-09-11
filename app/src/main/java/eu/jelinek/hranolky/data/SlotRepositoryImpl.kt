@@ -130,7 +130,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             "quantity" to FieldValue.increment(change),
             "lastModified" to FieldValue.serverTimestamp(),
         )
-        
+
         val slotAction = hashMapOf(
             "action" to actionType.toString(),
             "userId" to deviceId,

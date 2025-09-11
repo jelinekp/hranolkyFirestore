@@ -1,10 +1,14 @@
 package eu.jelinek.hranolky.domain
 
+import android.util.Log
+import eu.jelinek.hranolky.data.SheetDbRepository
 import eu.jelinek.hranolky.data.SlotRepository
+import eu.jelinek.hranolky.data.network.JointerReportingRow
 import eu.jelinek.hranolky.ui.manageitem.ActionType
 
 class AddSlotActionUseCase(
     private val slotRepository: SlotRepository,
+    private val sheetDbRepository: SheetDbRepository,
     private val inputValidator: InputValidator
 ) {
     suspend operator fun invoke(
@@ -19,8 +23,47 @@ class AddSlotActionUseCase(
         return if (validationResult.isSuccess) {
             try {
                 slotRepository.addSlotAction(slotId, actionType, validationResult.getOrThrow(), currentQuantity, deviceId)
+
+                if (slotId.first() == 'S') {
+                    val sampleRowData = JointerReportingRow(
+                        quality = "DUB RUSTIK",
+                        thickness = "42,4",
+                        width = "860",
+                        length = "1860",
+                        quantityChange = "2",
+                        madeBy = "Petr",
+                    )
+
+                    val sheetDbResult = sheetDbRepository.addLogRow(sampleRowData)
+
+                    sheetDbResult.onSuccess {
+                        // Log successful, proceed with overall success
+                        Result.success(Unit)
+                    }.onFailure { sheetDbError ->
+                        // SheetDB logging failed.
+                        // Decide on behavior:
+                        // 1. Return overall success anyway, but log this specific error?
+                        // 2. Return failure for the whole use case?
+                        // For now, let's treat SheetDB failure as a non-critical error for the use case's success,
+                        // but log it. The primary slot action succeeded.
+                        Log.e(
+                            "AddSlotActionUseCase",
+                            "Slot action succeeded but SheetDB logging failed for slot $slotId: ${sheetDbError.message}",
+                            sheetDbError
+                        )
+                        Result.success(Unit) // Still consider the main operation successful
+                        // OR if SheetDB logging is critical:
+                        // return Result.failure(Exception("Failed to log to SheetDB after slot action: ${sheetDbError.message}", sheetDbError))
+                    }
+                }
+
                 Result.success(Unit)
             } catch (e: Exception) {
+                Log.e(
+                    "AddSlotActionUseCase",
+                    "Error during slot action or preparing SheetDB log for slot $slotId: ${e.message}",
+                    e
+                )
                 Result.failure(e)
             }
         } else {

@@ -5,6 +5,6 @@ import eu.jelinek.hranolky.domain.InputValidator
 import org.koin.dsl.module
 
 val domainModule = module {
-    factory { AddSlotActionUseCase(get(), get()) }
+    factory { AddSlotActionUseCase(get(), get(), get()) }
     single { InputValidator() }
 }
