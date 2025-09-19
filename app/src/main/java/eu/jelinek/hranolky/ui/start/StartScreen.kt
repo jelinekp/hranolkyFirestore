@@ -75,7 +75,10 @@ fun StartScreen(
     var isAutoScanEnabled by remember { mutableStateOf(true) }
     var isFormatError by remember { mutableStateOf(false) }
 
-    val onSubmit = {
+    fun onSubmit() {
+
+        Log.d("Scanned", "onSubmit: $scannedText")
+
         if (viewModel.isValidScannedTextFormat(scannedText)) {
             val textLength = scannedText.length
             if (textLength == 16)
@@ -141,7 +144,7 @@ fun StartScreen(
                     },
                     focusRequester = focusRequester,
                     isError = isFormatError,
-                    onDoneAction = onSubmit,
+                    onDoneAction = { onSubmit() },
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
@@ -150,7 +153,7 @@ fun StartScreen(
                 }
 
                 if (!isAutoScanEnabled) {
-                    ManualScanButton(onClicked = { onSubmit })
+                    ManualScanButton(onClicked = { onSubmit() })
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -252,7 +255,7 @@ fun StartScreen(
                         },
                         focusRequester = focusRequester,
                         isError = isFormatError,
-                        onDoneAction = onSubmit,
+                        onDoneAction = { onSubmit() },
                     )
 
                     if (isFormatError) {
@@ -260,7 +263,7 @@ fun StartScreen(
                     }
 
                     if (!isAutoScanEnabled) {
-                        ManualScanButton(onClicked = { onSubmit })
+                        ManualScanButton(onClicked = { onSubmit() })
                     }
 
                     // OverviewButton(navigateToOverview)
@@ -333,7 +336,7 @@ fun ScannedCodeInput(
 @Composable
 fun WrongLengthError() {
     Text(
-        text = "Špatná délka kódu, kód musí začínat na \'H\' nebo \'S\' a být 18 znaků dlouhý, nebo být 16 znaků dlouhý.",
+        text = "Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, nebo \'S\' a být 20 znaků dlouhý, nebo být 16 znaků dlouhý.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.padding(horizontal = 16.dp)
@@ -342,10 +345,10 @@ fun WrongLengthError() {
 
 @Composable
 fun ManualScanButton(
-    onClicked: () -> Unit = {}
+    onClicked: () -> Unit
 ) {
     Button(
-        onClick = { onClicked() }
+        onClick = { onClicked().also { Log.d("Scanned", "Manual scan button clicked") } }
     ) {
         Text("Přejít na položku")
         Icon(
