@@ -177,6 +177,16 @@ fun StartScreen(
                         .fillMaxWidth()
                         .padding(all = 2.dp)
                 )
+                if (screenState.deviceName != null) {
+                    Text(
+                        text = "Název zařízení: " + screenState.deviceName,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(all = 2.dp)
+                    )
+                }
                 Text(
                     text = "Verze aplikace: " + screenState.appVersion,
                     style = MaterialTheme.typography.bodySmall,

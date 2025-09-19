@@ -13,6 +13,7 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class StartViewModel(
     application: Application,
@@ -23,6 +24,7 @@ class StartViewModel(
 
     init {
         viewModelScope.launch {
+            fetchDeviceName()
             logDeviceId()
         }
     }
@@ -68,6 +70,32 @@ class StartViewModel(
             .addOnFailureListener { e -> Log.w("Firestore", "Error writing document", e) }
     }
 
+    private suspend fun fetchDeviceName() { // Make this a suspend function
+        val deviceId = getDeviceId()
+        Log.d("StartViewModel", "Fetching device name for ID: $deviceId")
+        try {
+            val documentSnapshot = firestoreDb.collection("devices").document(deviceId).get().await()
+
+            if (documentSnapshot.exists()) {
+                val deviceName = documentSnapshot.getString("deviceName") // Get the "deviceName" field
+                if (deviceName != null) {
+                    Log.d("StartViewModel", "Device name found: $deviceName")
+                    _startScreenState.value = _startScreenState.value.copy(deviceName = deviceName)
+                } else {
+                    Log.d("StartViewModel", "deviceName field is null or not found in document for $deviceId.")
+                    // Optionally set a default or leave it as null in the state
+                    _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default like "Unknown Device"
+                }
+            } else {
+                Log.d("StartViewModel", "Device document not found for ID: $deviceId. Cannot fetch device name.")
+                _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default
+            }
+        } catch (e: Exception) {
+            Log.e("StartViewModel", "Error fetching device name for ID: $deviceId", e)
+            _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default in case of error
+        }
+    }
+
     fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class
         val textLength = text.length
 
@@ -111,6 +139,7 @@ class StartViewModel(
 data class StartUiState(
     val scannedCode: String = "",
     val shortenedDeviceId: String = "",
+    val deviceName: String? = null,
     val appVersion: String = "",
 )
 
