@@ -29,7 +29,10 @@ class StartViewModel(
 
     @SuppressLint("HardwareIds")
     private fun getDeviceId(): String {
-        return Settings.Secure.getString(getApplication<Application>().contentResolver, Settings.Secure.ANDROID_ID)
+        return Settings.Secure.getString(
+            getApplication<Application>().contentResolver,
+            Settings.Secure.ANDROID_ID
+        )
     }
 
     private fun logDeviceId() {
@@ -56,9 +59,53 @@ class StartViewModel(
 
         firestoreDb.collection("devices").document(deviceId)
             .set(deviceData, SetOptions.merge())
-            .addOnSuccessListener { Log.d("Firestore", "Device document created/updated for ID: $deviceId") }
+            .addOnSuccessListener {
+                Log.d(
+                    "Firestore",
+                    "Device document created/updated for ID: $deviceId"
+                )
+            }
             .addOnFailureListener { e -> Log.w("Firestore", "Error writing document", e) }
     }
+
+    fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class
+        val textLength = text.length
+
+        if (textLength == 16) {
+            if (text[1] != '-'
+                && text[textLength - 5] == '-'
+                && text.substring(textLength - 4).all(Char::isDigit)
+            ) {
+               return true // Valid original universal beam
+            }
+        }
+
+        if (textLength == 18) {
+            if (text[0] == 'H'
+                && text[1] == '-'
+                && text[textLength - 5] == '-'
+                && text.substring(textLength - 4).all(Char::isDigit)
+            ) {
+                return true // Valid specified beam
+            }
+        }
+
+        if (textLength == 20) {
+            if (text[0] == 'S'
+                && text[1] == '-'
+                && text[textLength - 10] == '-'
+                && text.substring(textLength - 9, textLength - 5).all(Char::isDigit)
+                && text[textLength - 5] == '-'
+                && text.substring(textLength - 4).all(Char::isDigit)
+            ) {
+                return true // Valid specified jointer
+            }
+        }
+
+        // If neither rule matched, it's not a valid format
+        return false
+    }
+
 }
 
 data class StartUiState(
@@ -67,40 +114,3 @@ data class StartUiState(
     val appVersion: String = "",
 )
 
-fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class
-    val textLength = text.length
-
-    if (textLength == 16) {
-        if (text[1] != '-'
-            && text[textLength - 5] == '-'
-            && text.substring(textLength - 4).all(Char::isDigit)
-            ) {
-            return true // Valid universal beam
-        }
-    }
-
-    if (textLength == 18) {
-        if (text[0] == 'H'
-            && text[1] == '-'
-            && text[textLength - 5] == '-'
-            && text.substring(textLength - 4).all(Char::isDigit)
-            ) {
-            return true // Valid specified beam
-        }
-    }
-
-    if (textLength == 20) {
-        if (text[0] == 'S'
-            && text[1] == '-'
-            && text[textLength - 10] == '-'
-            && text.substring(textLength - 9, textLength - 5).all(Char::isDigit)
-            && text[textLength - 5] == '-'
-            && text.substring(textLength - 4).all(Char::isDigit)
-        ) {
-            return true // Valid specified jointer
-        }
-    }
-
-    // If neither rule matched, it's not a valid format
-    return false
-}

@@ -1,11 +1,11 @@
-package eu.jelinek.hranolky.data
-
 import android.util.Log
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import eu.jelinek.hranolky.data.LastModifiedSlots
+import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.SlotType
@@ -20,23 +20,46 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
 
     private val TAG = "SlotRepository"
 
+    // --- Helper function for ID normalization ---
+    private fun getNormalizedId(slotId: String): String {
+        return if (slotId.length > 16 && slotId.startsWith('H') && slotId[1] == '-') {
+            slotId.substring(2)
+        } else {
+            slotId
+        }
+    }
+
     override fun getSlot(slotId: String): Flow<WarehouseSlot?> = callbackFlow {
-        Log.d(TAG, "getSlot: Fetching slot $slotId")
-
+        Log.d(TAG, "getSlot: Attempting to fetch slot for original ID $slotId")
         var listenerRegistration: ListenerRegistration? = null
+        var attemptedFallback = false
 
-        fun fetchActualSlot(idToFetch: String, isFallback: Boolean) {
-            // Remove previous listener if any (important for fallback)
-            listenerRegistration?.remove()
+        fun fetchSlotInternal(idToFetch: String, isFallbackAttempt: Boolean) {
+            Log.d(
+                TAG,
+                "getSlot: Fetching document with ID $idToFetch (isFallback: $isFallbackAttempt)"
+            )
+            listenerRegistration?.remove() // Remove previous listener if any
 
             listenerRegistration = firestoreDb.collection("WarehouseSlots")
                 .document(idToFetch)
                 .addSnapshotListener { slotSnapshot, error ->
                     if (error != null) {
-                        Log.w(TAG, "getSlot (id: $idToFetch): Listen to slot download failed", error)
-                        // If it's a fallback attempt and it fails, we might still want to signal null
-                        // or close with error depending on desired behavior.
-                        // For now, if any fetch attempt errors out, we close the flow.
+                        Log.w(TAG, "getSlot (id: $idToFetch): Listen failed.", error)
+                        // If primary fails, and we haven't tried fallback, try it.
+                        // If fallback fails, then close with error.
+                        if (!isFallbackAttempt && !attemptedFallback) {
+                            val normalizedId = getNormalizedId(slotId)
+                            if (normalizedId != slotId) {
+                                Log.d(
+                                    TAG,
+                                    "getSlot: Primary fetch failed for $slotId, trying fallback $normalizedId due to error."
+                                )
+                                attemptedFallback = true
+                                fetchSlotInternal(normalizedId, true)
+                                return@addSnapshotListener
+                            }
+                        }
                         close(error)
                         return@addSnapshotListener
                     }
@@ -48,71 +71,158 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                         trySend(slot).isSuccess
                     } else {
                         Log.d(TAG, "getSlot (id: $idToFetch): Slot not found.")
-                        if (!isFallback) {
-                            // Original ID not found, try the normalized ID
-                            val normalizedId = if (slotId.length > 16 && slotId.startsWith('H') && slotId[1] == '-') {
-                                slotId.substring(2)
+                        if (!isFallbackAttempt && !attemptedFallback) {
+                            val normalizedId = getNormalizedId(slotId)
+                            if (normalizedId != slotId) { // Only try fallback if ID actually changes
+                                Log.d(
+                                    TAG,
+                                    "getSlot: Original ID $slotId not found, trying fallback $normalizedId"
+                                )
+                                attemptedFallback = true
+                                fetchSlotInternal(normalizedId, true)
                             } else {
-                                // If normalization doesn't change the ID, and it wasn't found,
-                                // we've already tried, so send null.
-                                slotId
-                            }
-
-                            if (normalizedId != idToFetch) { // Important: Only try fallback if ID is different
-                                Log.d(TAG, "getSlot: Original ID $slotId not found, trying fallback $normalizedId")
-                                fetchActualSlot(normalizedId, true)
-                            } else {
-                                // Normalization didn't change ID, or it's already the fallback, and it wasn't found
+                                // Normalization didn't change ID, and it wasn't found
                                 trySend(null).isSuccess
                             }
                         } else {
-                            // Fallback ID also not found
-                            Log.d(TAG, "getSlot: Fallback ID $idToFetch also not found.")
+                            // Fallback ID also not found, or normalization didn't change ID
                             trySend(null).isSuccess
                         }
                     }
                 }
         }
 
-        // Start fetching with the original slotId
-        fetchActualSlot(slotId, false)
+        fetchSlotInternal(slotId, false) // Start with original ID
 
         awaitClose {
-            Log.d(TAG, "getSlot: Closing listener for $slotId")
+            Log.d(TAG, "getSlot: Closing listener for initial ID $slotId")
             listenerRegistration?.remove()
         }
     }
 
-    override fun getSlotActions(slotId: String): Flow<List<SlotAction>> = callbackFlow {
-        val listener = firestoreDb.collection("WarehouseSlots")
-            .document(slotId)
-            .collection("SlotActions")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(10)
-            .addSnapshotListener { querySnapshot, error ->
-                if (error != null) {
-                    Log.e(TAG, "getSlotActions: Error receiving last slot actions from Firestore", error)
-                    close(error)
-                    return@addSnapshotListener
-                }
 
-                if (querySnapshot != null && !querySnapshot.isEmpty) {
-                    val lastActions = querySnapshot.documents.mapNotNull { document ->
-                        document.toObject(SlotAction::class.java)
+    override fun getSlotActions(slotId: String): Flow<List<SlotAction>> = callbackFlow {
+        Log.d(TAG, "getSlotActions: Attempting to fetch actions for original ID $slotId")
+        var listenerRegistration: ListenerRegistration? = null
+        var attemptedFallback = false
+
+        fun fetchSlotActionsInternal(idToFetch: String, isFallbackAttempt: Boolean) {
+            Log.d(
+                TAG,
+                "getSlotActions: Fetching actions for document ID $idToFetch (isFallback: $isFallbackAttempt)"
+            )
+            listenerRegistration?.remove()
+
+            // First, check if the parent document exists. Firestore doesn't error if the subcollection
+            // is queried on a non-existent document; it just returns an empty snapshot.
+            // So, we need to handle the "document not found" case for fallbacks explicitly.
+            firestoreDb.collection("WarehouseSlots").document(idToFetch).get()
+                .addOnSuccessListener { documentSnapshot ->
+                    if (!documentSnapshot.exists()) {
+                        Log.d(TAG, "getSlotActions (id: $idToFetch): Parent document not found.")
+                        if (!isFallbackAttempt && !attemptedFallback) {
+                            val normalizedId = getNormalizedId(slotId)
+                            if (normalizedId != slotId) {
+                                Log.d(
+                                    TAG,
+                                    "getSlotActions: Parent for $slotId not found, trying fallback $normalizedId"
+                                )
+                                attemptedFallback = true
+                                fetchSlotActionsInternal(normalizedId, true)
+                            } else {
+                                trySend(emptyList()).isSuccess // Normalization didn't change ID
+                            }
+                        } else {
+                            trySend(emptyList()).isSuccess // Fallback parent also not found
+                        }
+                        return@addOnSuccessListener
                     }
-                    trySend(lastActions).isSuccess
-                } else {
-                    trySend(emptyList()).isSuccess
+
+                    // Parent document exists, now listen for actions
+                    listenerRegistration = firestoreDb.collection("WarehouseSlots")
+                        .document(idToFetch)
+                        .collection("SlotActions")
+                        .orderBy("timestamp", Query.Direction.DESCENDING)
+                        .limit(10)
+                        .addSnapshotListener { querySnapshot, error ->
+                            if (error != null) {
+                                Log.e(
+                                    TAG,
+                                    "getSlotActions (id: $idToFetch): Error receiving slot actions",
+                                    error
+                                )
+                                // Similar to getSlot, if primary listener errors, try fallback
+                                if (!isFallbackAttempt && !attemptedFallback) {
+                                    val normalizedId = getNormalizedId(slotId)
+                                    if (normalizedId != slotId) {
+                                        Log.d(
+                                            TAG,
+                                            "getSlotActions: Listener error for $slotId, trying fallback $normalizedId."
+                                        )
+                                        attemptedFallback = true
+                                        fetchSlotActionsInternal(normalizedId, true)
+                                        return@addSnapshotListener
+                                    }
+                                }
+                                close(error)
+                                return@addSnapshotListener
+                            }
+
+                            if (querySnapshot != null && !querySnapshot.isEmpty) {
+                                val lastActions = querySnapshot.documents.mapNotNull { document ->
+                                    document.toObject(SlotAction::class.java)
+                                }
+                                Log.d(
+                                    TAG,
+                                    "getSlotActions (id: $idToFetch): Received ${lastActions.size} actions."
+                                )
+                                trySend(lastActions).isSuccess
+                            } else {
+                                Log.d(
+                                    TAG,
+                                    "getSlotActions (id: $idToFetch): No actions found or query snapshot empty."
+                                )
+                                trySend(emptyList()).isSuccess
+                            }
+                        }
                 }
-            }
-        awaitClose { listener.remove() }
+                .addOnFailureListener { error ->
+                    Log.e(
+                        TAG,
+                        "getSlotActions (id: $idToFetch): Failed to check parent document existence.",
+                        error
+                    )
+                    // If checking parent fails on primary, try fallback. If fallback check fails, close with error.
+                    if (!isFallbackAttempt && !attemptedFallback) {
+                        val normalizedId = getNormalizedId(slotId)
+                        if (normalizedId != slotId) {
+                            Log.d(
+                                TAG,
+                                "getSlotActions: Parent check failed for $slotId, trying fallback $normalizedId."
+                            )
+                            attemptedFallback = true
+                            fetchSlotActionsInternal(normalizedId, true)
+                            return@addOnFailureListener
+                        }
+                    }
+                    close(error)
+                }
+        }
+
+        fetchSlotActionsInternal(slotId, false) // Start with original ID
+
+        awaitClose {
+            Log.d(TAG, "getSlotActions: Closing listener for initial ID $slotId")
+            listenerRegistration?.remove()
+        }
     }
+
 
     override suspend fun addSlotAction(
         slotId: String,
         actionType: ActionType,
         quantity: Long,
-        currentQuantity: Long,            // ← Long
+        currentQuantity: Long,
         deviceId: String
     ) {
         val change = when (actionType) {
@@ -121,36 +231,94 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         }
 
         val nextEst = currentQuantity + change
-        if (nextEst < 0L) throw IllegalStateException("Quantity cannot go negative")
+        if (nextEst < 0L) throw IllegalStateException("Quantity cannot go negative. current: $currentQuantity, change: $change")
 
-        val docRef = firestoreDb.collection("WarehouseSlots").document(slotId)
+        suspend fun tryAddActionToId(idToUse: String, isFallback: Boolean): Boolean {
+            Log.d(TAG, "addSlotAction: Attempting on ID: $idToUse (isFallback: $isFallback)")
+            val docRef = firestoreDb.collection("WarehouseSlots").document(idToUse)
 
-        // 1) Stav skladu – výhradně increment + serverový timestamp
-        val updateSlot = mapOf(
-            "quantity" to FieldValue.increment(change),
-            "lastModified" to FieldValue.serverTimestamp(),
-        )
+            // First, check if the document exists before trying to update
+            val docSnapshot = try {
+                docRef.get().await()
+            } catch (e: Exception) {
+                Log.e(TAG, "addSlotAction: Error checking document existence for $idToUse", e)
+                return false // Indicate failure to check, allowing fallback if applicable
+            }
 
-        val slotAction = hashMapOf(
-            "action" to actionType.toString(),
-            "userId" to deviceId,
-            "quantityChange" to change,
-            "newQuantity" to nextEst,
-            "timestamp" to FieldValue.serverTimestamp(),
-        )
+            if (!docSnapshot.exists()) {
+                Log.w(TAG, "addSlotAction: Document $idToUse does not exist. Cannot add action.")
+                return false // Indicate document not found, allowing fallback
+            }
 
-        try {
-            docRef.update(updateSlot).await()
-            Log.d(TAG, "Updated slot $slotId (increment $change)")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating slot quantity", e)
+            // Document exists, proceed with adding action
+            val updateSlot = mapOf(
+                "quantity" to FieldValue.increment(change),
+                "lastModified" to FieldValue.serverTimestamp(),
+            )
+            val slotAction = hashMapOf(
+                "action" to actionType.toString(),
+                "userId" to deviceId,
+                "quantityChange" to change,
+                "newQuantity" to nextEst,
+                "timestamp" to FieldValue.serverTimestamp(),
+            )
+
+            var success = true
+            try {
+                docRef.update(updateSlot).await()
+                Log.d(TAG, "addSlotAction: Updated slot $idToUse (increment $change)")
+            } catch (e: Exception) {
+                Log.e(TAG, "addSlotAction: Error updating slot quantity for $idToUse", e)
+                success = false // Mark as failed but continue to try adding action log
+            }
+
+            try {
+                docRef.collection("SlotActions").add(slotAction).await()
+                Log.d(TAG, "addSlotAction: Added slot action to $idToUse: $slotAction")
+            } catch (e: Exception) {
+                Log.e(TAG, "addSlotAction: Error logging slot action for $idToUse", e)
+                success = false // The overall action wasn't fully successful
+            }
+            return success // Returns true if document existed and both operations were attempted (even if one failed)
+            // More precisely, it returns true if the document existed, false otherwise.
+            // The success of the individual operations is logged.
         }
 
-        try {
-            docRef.collection("SlotActions").add(slotAction).await()
-            Log.d(TAG, "addSlotAction: Added slot action to $slotId: $slotAction")
-        } catch (e: Exception) {
-            Log.e(TAG, "addSlotAction: Error logging slot action", e)
+        Log.d(TAG, "addSlotAction: Received request for original ID $slotId")
+        if (tryAddActionToId(slotId, false)) {
+            Log.d(TAG, "addSlotAction: Successfully processed or attempted on original ID $slotId.")
+            return // Success or document found on original ID
+        }
+
+        // Original ID failed (likely document not found or error checking it)
+        // Try normalized ID if different
+        val normalizedId = getNormalizedId(slotId)
+        if (normalizedId != slotId) {
+            Log.d(
+                TAG,
+                "addSlotAction: Failed on original ID $slotId. Trying fallback ID $normalizedId."
+            )
+            if (tryAddActionToId(normalizedId, true)) {
+                Log.d(
+                    TAG,
+                    "addSlotAction: Successfully processed or attempted on fallback ID $normalizedId."
+                )
+                return // Success or document found on fallback ID
+            } else {
+                Log.w(
+                    TAG,
+                    "addSlotAction: Fallback ID $normalizedId also failed or document not found."
+                )
+                // Optionally throw an exception here if both attempts fail and the document must exist
+                // throw Exception("Failed to add slot action to $slotId or $normalizedId. Document not found or error.")
+            }
+        } else {
+            Log.w(
+                TAG,
+                "addSlotAction: Original ID $slotId failed, and normalization yielded the same ID. No fallback attempt."
+            )
+            // Optionally throw an exception here
+            // throw Exception("Failed to add slot action to $slotId. Document not found or error.")
         }
     }
 
@@ -159,7 +327,10 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             .parsePropertiesFromProductId()
 
         if (!slot.hasAllProperties()) {
-            Log.w(TAG, "createNewSlot: Cannot create slot $slotId, missing properties after parsing.")
+            Log.w(
+                TAG,
+                "createNewSlot: Cannot create slot $slotId, missing properties after parsing."
+            )
             return
         }
 
@@ -177,27 +348,24 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                 val snapshot = transaction.get(docRef)
                 if (snapshot.exists()) {
                     // Document already exists, do nothing as per your requirement
-                    Log.d(TAG, "createNewSlot: Slot ${slot.productId} already exists. No action taken.")
-                    // You might want to return something from the transaction to indicate success/failure/already_exists
-                    // For now, null implies success of the transaction itself.
+                    Log.d(
+                        TAG,
+                        "createNewSlot: Slot ${slot.productId} already exists. No action taken."
+                    )
                     null
                 } else {
                     // Document does not exist, create it
                     transaction.set(docRef, data)
                     Log.d(TAG, "createNewSlot: Creating new slot with ID: ${slot.productId}")
-                    // Return something if needed, e.g., true for success
                     null
                 }
             }.await() // await the completion of the transaction
             Log.d(TAG, "createNewSlot: Transaction for creating slot ${slot.productId} completed.")
 
         } catch (e: Exception) {
-            // This catch block will handle exceptions during the transaction itself,
-            // including if the transaction fails after multiple retries.
             Log.e(TAG, "createNewSlot: Error or conflict creating slot ${slot.productId}", e)
         }
     }
-
 
 
     override fun getLastModifiedSlots(): Flow<LastModifiedSlots> = callbackFlow {
@@ -206,27 +374,34 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             .limit(20)
             .addSnapshotListener { querySnapshot, error ->
                 if (error != null) {
-                    Log.e("Firestore", "getLastModifiedSlots: Error receiving last slots from Firestore", error)
+                    Log.e(
+                        "Firestore",
+                        "getLastModifiedSlots: Error receiving last slots from Firestore",
+                        error
+                    )
                     close(error)
                     return@addSnapshotListener
                 }
 
                 if (querySnapshot != null && !querySnapshot.isEmpty) {
                     val lastModifiedBeamSlots = querySnapshot.documents.filter { document ->
-                        // Filter: only include documents whose ID does NOT start with "S"
                         !document.id.startsWith("S")
                     }.mapNotNull { document ->
                         val firestoreSlot = document.toObject(FirestoreSlot::class.java)
                         firestoreSlot?.toWarehouseSlot(document.id)
                     }
                     val lastModifiedJointerSlots = querySnapshot.documents.filter { document ->
-                        // Filter: only include documents whose ID starts with "S"
                         document.id.startsWith("S")
                     }.mapNotNull { document ->
                         val firestoreSlot = document.toObject(FirestoreSlot::class.java)
                         firestoreSlot?.toWarehouseSlot(document.id)
                     }
-                    trySend(LastModifiedSlots(lastModifiedBeamSlots, lastModifiedJointerSlots)).isSuccess
+                    trySend(
+                        LastModifiedSlots(
+                            lastModifiedBeamSlots,
+                            lastModifiedJointerSlots
+                        )
+                    ).isSuccess
                 } else {
                     trySend(LastModifiedSlots.EMPTY).isSuccess
                 }
@@ -238,28 +413,12 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
     override fun getAllSlots(slotType: SlotType): Flow<List<WarehouseSlot>> = callbackFlow {
         var query: Query = firestoreDb.collection("WarehouseSlots")
 
-        // Example based on ID prefix, assuming:
-        // SlotType.JOINTER means ID starts with "S"
-        // SlotType.BEAM means ID does NOT start with "S" (requires client-side filtering)
-
-        // Note: If SlotType.BEAM needs server-side filtering, you'd need a different data model
-        // (like a boolean field `isJointerType`) for efficient server-side "not S" filtering.
-
         if (slotType == SlotType.Jointer) {
-            // Query for documents where ID starts with "S"
-            // This range query works if your IDs are structured like Sxxxx
             query = query.whereGreaterThanOrEqualTo(FieldPath.documentId(), "S")
-                .whereLessThan(
-                    FieldPath.documentId(),
-                    "T"
-                ) // Assumes no valid IDs start with T, U, V etc. that are > "S" but not "Sxxxx"
+                .whereLessThan(FieldPath.documentId(), "T")
         } else if (slotType == SlotType.Beam) {
-            // for items starting with "D" to "H" -- all beams
             query = query.whereGreaterThanOrEqualTo(FieldPath.documentId(), "D")
-                .whereLessThan(
-                    FieldPath.documentId(),
-                    "I"
-                )
+                .whereLessThan(FieldPath.documentId(), "I")
         }
 
         val listener = query.addSnapshotListener { querySnapshot, error ->
@@ -270,7 +429,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             }
 
             if (querySnapshot != null && !querySnapshot.isEmpty) {
-                var allSlots = querySnapshot.documents.mapNotNull {
+                val allSlots = querySnapshot.documents.mapNotNull {
                     val firestoreSlot = it.toObject(FirestoreSlot::class.java)
                     firestoreSlot?.toWarehouseSlot(it.id)
                 }

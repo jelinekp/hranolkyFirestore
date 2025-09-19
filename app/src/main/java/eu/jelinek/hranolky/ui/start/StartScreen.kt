@@ -76,18 +76,32 @@ fun StartScreen(
     var isFormatError by remember { mutableStateOf(false) }
 
     val onSubmit = {
-        if (isValidScannedTextFormat(scannedText)) {
+        if (viewModel.isValidScannedTextFormat(scannedText)) {
+            val textLength = scannedText.length
+            if (textLength == 16)
+                if (scannedText[1] != '-'
+                    && scannedText[textLength - 5] == '-'
+                    && scannedText.substring(textLength - 4).all(Char::isDigit)
+                )
+                    if (scannedText.first() != 'S')
+                        scannedText = "H-$scannedText"
+
             navigateToManageItem(scannedText)
         } else {
-            Log.d("Scanned", "Invalid format $scannedText") // S-DUB-A-27-0-5225
+            Log.d(
+                "Scanned",
+                "Invalid format $scannedText"
+            ) // example of wrong format: S-DUB-A-27-0-5225
             isFormatError = true
         }
     }
 
     Scaffold(
-        topBar = { if (screenSize.isTablet()) StartScreenTopBar(
-            navigateToOverview = navigateToOverview
-        ) }
+        topBar = {
+            if (screenSize.isTablet()) StartScreenTopBar(
+                navigateToOverview = navigateToOverview
+            )
+        }
     ) { padding ->
         if (screenSize.isPhone()) {
             Column(
@@ -104,14 +118,25 @@ fun StartScreen(
                     modifier = Modifier.padding(horizontal = 64.dp)
                 )
 
-                AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
+                AutoScanToggle(
+                    isAutoScanEnabled,
+                    onAutoScanToggleChange = { isAutoScanEnabled = it })
 
                 ScannedCodeInput(
                     scannedText,
                     onValueChange = { text ->
                         scannedText = text
-                        if (isAutoScanEnabled && isValidScannedTextFormat(text)) {
-                            navigateToManageItem(text)
+                        if (isAutoScanEnabled && viewModel.isValidScannedTextFormat(scannedText)) {
+                            val textLength = text.length
+                            if (textLength == 16)
+                                if (text[1] != '-'
+                                    && text[textLength - 5] == '-'
+                                    && text.substring(textLength - 4).all(Char::isDigit)
+                                )
+                                    if (text.first() != 'S')
+                                        scannedText = "H-$scannedText"
+
+                            navigateToManageItem(scannedText)
                         }
                     },
                     focusRequester = focusRequester,
@@ -125,7 +150,7 @@ fun StartScreen(
                 }
 
                 if (!isAutoScanEnabled) {
-                    ManualScanButton(onClicked = {onSubmit})
+                    ManualScanButton(onClicked = { onSubmit })
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -167,9 +192,11 @@ fun StartScreen(
                     .padding(padding)
                     .fillMaxSize(),
             ) {
-                Column(modifier = Modifier
-                    .weight(5f)
-                    .padding(16.dp)) {
+                Column(
+                    modifier = Modifier
+                        .weight(5f)
+                        .padding(16.dp)
+                ) {
                     TabletSlotTable(
                         navigateToManageItem = { navigateToManageItem },
                     )
@@ -201,7 +228,9 @@ fun StartScreen(
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
 
-                    AutoScanToggle(isAutoScanEnabled, onAutoScanToggleChange = { isAutoScanEnabled = it })
+                    AutoScanToggle(
+                        isAutoScanEnabled,
+                        onAutoScanToggleChange = { isAutoScanEnabled = it })
 
                     ScannedCodeInput(
                         scannedText,
@@ -221,7 +250,7 @@ fun StartScreen(
                     }
 
                     if (!isAutoScanEnabled) {
-                        ManualScanButton(onClicked = {onSubmit})
+                        ManualScanButton(onClicked = { onSubmit })
                     }
 
                     // OverviewButton(navigateToOverview)
