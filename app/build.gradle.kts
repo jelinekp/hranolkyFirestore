@@ -14,8 +14,8 @@ android {
         applicationId = "eu.jelinek.hranolky"
         minSdk = 23
         targetSdk = 36
-        versionCode = 7
-        versionName = "2.3"
+        versionCode = 8
+        versionName = "2.4 (pro inventury)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -64,6 +64,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.client.logging)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.preference.ktx)
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)

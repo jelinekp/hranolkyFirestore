@@ -123,7 +123,9 @@ fun StartScreen(
 
                 AutoScanToggle(
                     isAutoScanEnabled,
-                    onAutoScanToggleChange = { isAutoScanEnabled = it })
+                    onAutoScanToggleChange = { isAutoScanEnabled = it },
+                    label = "Automatické skenování"
+                )
 
                 ScannedCodeInput(
                     scannedText,
@@ -171,6 +173,14 @@ fun StartScreen(
                     contentDescription = "Ikona položek",
                     onClick = navigateToOverview,
                 )
+
+                if (screenState.isInventoryCheckPermitted) {
+                    AutoScanToggle(
+                        screenState.isInventoryCheckEnabled,
+                        onAutoScanToggleChange = { viewModel.toggleInventoryCheck(it) },
+                        label = "Inventura"
+                    )
+                }
 
                 Text(
                     text = "Terminál: " + screenState.shortenedDeviceId,
@@ -243,7 +253,9 @@ fun StartScreen(
 
                     AutoScanToggle(
                         isAutoScanEnabled,
-                        onAutoScanToggleChange = { isAutoScanEnabled = it })
+                        onAutoScanToggleChange = { isAutoScanEnabled = it },
+                        label = "Automatické skenování"
+                        )
 
                     ScannedCodeInput(
                         scannedText,
@@ -277,7 +289,11 @@ fun StartScreen(
 
 // Extracted composables:
 @Composable
-fun AutoScanToggle(isAutoScanEnabled: Boolean, onAutoScanToggleChange: (Boolean) -> Unit) {
+fun AutoScanToggle(
+    isAutoScanEnabled: Boolean,
+    onAutoScanToggleChange: (Boolean) -> Unit,
+    label: String,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -286,7 +302,7 @@ fun AutoScanToggle(isAutoScanEnabled: Boolean, onAutoScanToggleChange: (Boolean)
             .padding(top = 4.dp)
     ) {
         Text(
-            text = "Automatický mód",
+            text = label,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(start = 8.dp)
         )

@@ -2,9 +2,11 @@ package eu.jelinek.hranolky.ui.start
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.util.Log
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FieldValue
@@ -21,6 +23,15 @@ class StartViewModel(
 ) : AndroidViewModel(application) {
     private val _startScreenState = MutableStateFlow(StartUiState())
     val startScreenState get() = _startScreenState.asStateFlow()
+
+    // Key for SharedPreferences
+    private companion object {
+        const val PREF_INVENTORY_CHECK_ENABLED = "inventory_check_enabled"
+    }
+
+    private val sharedPreferences: SharedPreferences by lazy {
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(getApplication())
+    }
 
     init {
         viewModelScope.launch {
@@ -78,22 +89,40 @@ class StartViewModel(
 
             if (documentSnapshot.exists()) {
                 val deviceName = documentSnapshot.getString("deviceName") // Get the "deviceName" field
+                val isInventoryCheckPermitted = documentSnapshot.getBoolean("isInventoryCheckPermitted") ?: false
+
                 if (deviceName != null) {
                     Log.d("StartViewModel", "Device name found: $deviceName")
-                    _startScreenState.value = _startScreenState.value.copy(deviceName = deviceName)
+                    _startScreenState.value = _startScreenState.value.copy(
+                        deviceName = deviceName,
+                        isInventoryCheckPermitted = isInventoryCheckPermitted
+                    )
                 } else {
                     Log.d("StartViewModel", "deviceName field is null or not found in document for $deviceId.")
                     // Optionally set a default or leave it as null in the state
-                    _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default like "Unknown Device"
+                    _startScreenState.value = _startScreenState.value.copy(
+                        deviceName = null,
+                        isInventoryCheckPermitted = isInventoryCheckPermitted
+                    ) // Or some default like "Unknown Device"
                 }
             } else {
                 Log.d("StartViewModel", "Device document not found for ID: $deviceId. Cannot fetch device name.")
-                _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default
+                _startScreenState.value = _startScreenState.value.copy(
+                    deviceName = null,
+                    isInventoryCheckPermitted = false,
+                ) // Or some default
             }
         } catch (e: Exception) {
             Log.e("StartViewModel", "Error fetching device name for ID: $deviceId", e)
             _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default in case of error
         }
+    }
+
+    fun toggleInventoryCheck(isEnabled: Boolean) {
+        _startScreenState.value = _startScreenState.value.copy(isInventoryCheckEnabled = isEnabled)
+        // Persist setting into android app preferences
+        sharedPreferences.edit { putBoolean(PREF_INVENTORY_CHECK_ENABLED, isEnabled) }
+        Log.d("StartViewModel", "Saved inventory check setting: $isEnabled")
     }
 
     fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class
@@ -141,5 +170,7 @@ data class StartUiState(
     val shortenedDeviceId: String = "",
     val deviceName: String? = null,
     val appVersion: String = "",
+    val isInventoryCheckPermitted: Boolean = false,
+    val isInventoryCheckEnabled: Boolean = false,
 )
 
