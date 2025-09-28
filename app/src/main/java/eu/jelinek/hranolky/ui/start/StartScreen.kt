@@ -8,8 +8,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -118,7 +121,7 @@ fun StartScreen(
                 Image(
                     painter = painterResource(R.drawable.logo_jelinek),
                     contentDescription = "Logo JELÍNEK",
-                    modifier = Modifier.padding(horizontal = 64.dp)
+                    modifier = Modifier.padding(horizontal = 80.dp)
                 )
 
                 AutoScanToggle(
@@ -158,21 +161,30 @@ fun StartScreen(
                     ManualScanButton(onClicked = { onSubmit() })
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-                NavigationActionButton(
-                    text = "Historie pohybů",
-                    iconPainter = painterResource(R.drawable.outline_history_24),
-                    contentDescription = "Ikona historie",
-                    onClick = navigateToHistory,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp).height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    NavigationActionButton(
+                        text = "Historie pohybů",
+                        iconPainter = painterResource(R.drawable.outline_history_24),
+                        contentDescription = "Ikona historie",
+                        onClick = navigateToHistory,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                    NavigationActionButton(
+                        text = "Přehled všech položek",
+                        iconPainter = painterResource(R.drawable.outline_lists_24),
+                        contentDescription = "Ikona položek",
+                        onClick = navigateToOverview,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    )
+                }
 
-                NavigationActionButton(
-                    text = "Přehled všech položek",
-                    iconPainter = painterResource(R.drawable.outline_lists_24),
-                    contentDescription = "Ikona položek",
-                    onClick = navigateToOverview,
-                )
+                Spacer(modifier = Modifier.height(20.dp))
 
                 if (screenState.isInventoryCheckPermitted) {
                     AutoScanToggle(
@@ -299,7 +311,6 @@ fun AutoScanToggle(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .width(280.dp)
-            .padding(top = 4.dp)
     ) {
         Text(
             text = label,
@@ -386,14 +397,13 @@ fun NavigationActionButton(
     Button(
         onClick = onClick,
         // Apply a common modifier first, then any additional specific modifiers
-        modifier = Modifier
-            .padding(vertical = 16.dp)
-            .then(modifier) // Chain any passed-in modifier
+        modifier = modifier, // Chain any passed-in modifier
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Icon(
             painter = iconPainter,
             contentDescription = contentDescription,
-            modifier = Modifier.padding(all = 4.dp) // Common padding for the icon
+            modifier = Modifier.padding(all = 6.dp) // Common padding for the icon
         )
         Text(text)
     }

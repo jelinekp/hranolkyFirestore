@@ -103,12 +103,13 @@ fun QuantityInput(
     inputData: QuantityInputData,
     quantityFocusRequester: FocusRequester,
     keyboardController: SoftwareKeyboardController?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    label: String = stringResource(R.string.zadej_mno_stv)
 ) {
     OutlinedTextField(
         value = inputData.quantity,
         onValueChange = inputData.onQuantityChanged,
-        label = { Text(stringResource(R.string.zadej_mno_stv)) },
+        label = { Text(label) },
         isError = inputData.isError,
         keyboardActions = KeyboardActions(onDone = {
             quantityFocusRequester.freeFocus()

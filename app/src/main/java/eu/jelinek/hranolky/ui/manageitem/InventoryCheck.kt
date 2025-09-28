@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -71,15 +71,15 @@ fun InventoryCheck(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
+            /*Text(
                 text = label,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .weight(2f)
-                    .padding(top = 8.dp, end = 8.dp)
-            )
+                    .padding(top = 8.dp)
+            )*/
             val quantityInputData = QuantityInputData(
                 quantity = quantity,
                 isError = validationState.isQuantityError,
@@ -89,19 +89,20 @@ fun InventoryCheck(
                 inputData = quantityInputData,
                 quantityFocusRequester = quantityFocusRequester,
                 keyboardController = keyboardController,
-                modifier = Modifier.weight(3f)
+                modifier = Modifier.weight(3f),
+                label = "Oprav množství"
+            )
+            ActionButton(
+                text = "Nastavit",
+                onClick = {
+                    onSetClicked()
+                    keyboardController?.hide()
+                },
+                icon = Icons.AutoMirrored.Default.Send,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 
-        ActionButton(
-            text = "Nastavit",
-            onClick = {
-                onSetClicked()
-                keyboardController?.hide()
-            },
-            icon = Icons.Default.Check,
-            modifier = Modifier
-        )
     }
 }
 
