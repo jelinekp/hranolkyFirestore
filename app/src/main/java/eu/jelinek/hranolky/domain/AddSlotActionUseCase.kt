@@ -5,8 +5,8 @@ import eu.jelinek.hranolky.data.SheetDbRepository
 import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.data.helpers.toCustomCommaDecimalString
 import eu.jelinek.hranolky.data.network.JointerReportingRow
+import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.WarehouseSlot
-import eu.jelinek.hranolky.ui.manageitem.ActionType
 
 class AddSlotActionUseCase(
     private val slotRepository: SlotRepository,
@@ -25,7 +25,13 @@ class AddSlotActionUseCase(
 
         return if (validationResult.isSuccess) {
             try {
-                slotRepository.addSlotAction(slotId, actionType, validationResult.getOrThrow(), currentQuantity, deviceId)
+                slotRepository.addSlotAction(
+                    slotId = slotId,
+                    actionType = actionType,
+                    quantity = validationResult.getOrThrow(),
+                    currentQuantity = currentQuantity,
+                    deviceId = deviceId
+                )
 
                 if (slotId.first() == 'S') {
                     val sampleRowData = JointerReportingRow(

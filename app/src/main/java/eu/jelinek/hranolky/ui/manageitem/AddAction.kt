@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.jelinek.hranolky.R
+import eu.jelinek.hranolky.model.ActionType
 
 data class QuantityInputData(
     val quantity: String,
@@ -46,7 +47,8 @@ fun AddAction(
     onQuantityChanged: (String) -> Unit,
     validationState: AddActionValidationState,
     onAddActionClick: (ActionType) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    label: String = "Přidat pohyb:"
 ) {
     val quantityFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -64,7 +66,7 @@ fun AddAction(
             horizontalArrangement = Arrangement.Center,
         ) {
             Text(
-                "Přidat pohyb:", // Consider making this a parameter if it needs to change
+                text = label,
                 fontSize = 20.sp,
                 modifier = Modifier.padding(top = 8.dp, end = 8.dp)
             )
@@ -100,7 +102,8 @@ fun AddAction(
 fun QuantityInput(
     inputData: QuantityInputData,
     quantityFocusRequester: FocusRequester,
-    keyboardController: SoftwareKeyboardController?
+    keyboardController: SoftwareKeyboardController?,
+    modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
         value = inputData.quantity,
@@ -112,7 +115,7 @@ fun QuantityInput(
             keyboardController?.hide()
         }),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        modifier = Modifier
+        modifier = modifier
             .widthIn(max = 180.dp)
             .focusRequester(quantityFocusRequester),
         singleLine = true

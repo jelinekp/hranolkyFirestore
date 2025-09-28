@@ -48,6 +48,18 @@ fun ManageItemScreen(
     else
         "Hranolek"
 
+    if (screenState.isInventoryCheckEnabled)
+        ConfirmSettingPopup(
+            modifier = Modifier,
+            dialogTitle = "Nastavit množství na $quantity?",
+            dialogMessage = "To je o ${screenState.inventoryCheckPopupMessage.diff} " +
+                    "${screenState.inventoryCheckPopupMessage.compareString} " +
+                    "než je současné množství.",
+            showYesNoDialog = screenState.showConfirmSettingPopup,
+            onDismissYesNoDialog = viewModel::onDismissSettingPopup,
+            onConfirmYesNoDialog = viewModel::onConfirmSettingPopup
+        )
+
     Scaffold(
         topBar = {
             ShowLastActionsTopBar(
@@ -77,14 +89,23 @@ fun ManageItemScreen(
                         if (screenSize.isPhone()) {
                             ShowOffline(screenState.isOnline)
                             SlotData(slot = slot)
-                            AddAction(
-                                quantity = quantity,
-                                onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
-                                validationState = validationState,
-                                onAddActionClick = { actionType ->
-                                    viewModel.addActionToTheSlot(actionType)
-                                },
-                            )
+                            if (screenState.isInventoryCheckEnabled) {
+                                InventoryCheck(
+                                    quantity = quantity,
+                                    onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
+                                    onSetClicked = viewModel::showSettingPopup,
+                                    validationState = validationState,
+                                )
+                            } else {
+                                AddAction(
+                                    quantity = quantity,
+                                    onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
+                                    validationState = validationState,
+                                    onAddActionClick = { actionType ->
+                                        viewModel.addActionToTheSlot(actionType)
+                                    },
+                                )
+                            }
                             LastActions(slot.slotActions)
                         } else {
                             Row(

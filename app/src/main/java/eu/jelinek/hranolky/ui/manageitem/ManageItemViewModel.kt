@@ -2,13 +2,16 @@ package eu.jelinek.hranolky.ui.manageitem
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.SharedPreferences
 import android.provider.Settings
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.preference.PreferenceManager
 import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.domain.AddSlotActionUseCase
+import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class ManageItemViewModel(
     application: Application,
@@ -37,6 +41,14 @@ class ManageItemViewModel(
     var quantityState = mutableStateOf("")
         private set
 
+    private companion object {
+        const val PREF_INVENTORY_CHECK_ENABLED = "inventory_check_enabled"
+    }
+
+    private val sharedPreferences: SharedPreferences by lazy {
+        PreferenceManager.getDefaultSharedPreferences(getApplication())
+    }
+
     fun onQuantityChanged(newQuantity: String) {
         quantityState.value = newQuantity
     }
@@ -44,6 +56,15 @@ class ManageItemViewModel(
     init {
         viewModelScope.launch {
             fetchSlotData()
+        }
+        loadInventoryCheckSetting()
+    }
+
+    private fun loadInventoryCheckSetting() {
+        val inventoryCheckEnabled =
+            sharedPreferences.getBoolean(PREF_INVENTORY_CHECK_ENABLED, false)
+        _screenStateStream.update {
+            it.copy(isInventoryCheckEnabled = inventoryCheckEnabled)
         }
     }
 
@@ -95,6 +116,48 @@ class ManageItemViewModel(
         }
     }
 
+    fun showSettingPopup() {
+        viewModelScope.launch {
+            try {
+                if (quantityState.value.toLong() != (screenStateStream.value.slot?.quantity ?: 0)) {
+                    val diff = quantityState.value.toLong() - (screenStateStream.value.slot?.quantity ?: 0)
+                    val compareString = if (diff > 0) "více" else "méně"
+                    _screenStateStream.update {
+                        it.copy(
+                            showConfirmSettingPopup = true,
+                            inventoryCheckPopupMessage = InventoryCheckPopupMessage(
+                                diff = abs(diff),
+                                compareString = compareString
+                            )
+                        )
+                    }
+                }
+                else
+                    performInventoryQuantitySet()
+            } catch (_: NumberFormatException) {
+                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
+            }
+        }
+    }
+
+    fun onDismissSettingPopup() {
+        _screenStateStream.update {
+            it.copy(showConfirmSettingPopup = false)
+        }
+    }
+
+    fun onConfirmSettingPopup() {
+        performInventoryQuantitySet()
+
+        _screenStateStream.update {
+            it.copy(showConfirmSettingPopup = false)
+        }
+    }
+
+    private fun performInventoryQuantitySet() {
+        addActionToTheSlot(ActionType.INVENTORY_CHECK)
+    }
+
     private fun resetFields() {
         quantityState.value = ""
 
@@ -109,6 +172,9 @@ data class ManageItemScreenState(
     val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,
     val isOnline: Boolean = true,
+    val isInventoryCheckEnabled: Boolean = false,
+    val showConfirmSettingPopup: Boolean = false,
+    val inventoryCheckPopupMessage: InventoryCheckPopupMessage = InventoryCheckPopupMessage()
 )
 
 
@@ -121,13 +187,7 @@ enum class ResultStatus {
     LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR
 }
 
-enum class ActionType {
-    ADD, REMOVE;
-
-    override fun toString(): String {
-        return when (this) {
-            ADD -> "prijem"
-            REMOVE -> "vydej"
-        }
-    }
-}
+data class InventoryCheckPopupMessage (
+    val diff: Long = 0,
+    val compareString: String = "stejný",
+)

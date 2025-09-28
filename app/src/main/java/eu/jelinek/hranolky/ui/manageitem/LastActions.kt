@@ -20,8 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.data.helpers.formatDate
+import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.ui.shared.slotActionsIndexedWithAlternatingModifier
 import java.util.Date
 
@@ -110,7 +110,8 @@ fun LastActionRow(
     val action = when (slotAction.action) {
         "prijem" -> "Příjem"
         "vydej" -> "Výdej"
-        else -> "Error"
+        "inventura" -> "Inventura"
+        else -> "Neznámý pohyb"
     }
     val date = slotAction.timestamp?.toDate() ?: Date()
     val readableDate = formatDate(date)

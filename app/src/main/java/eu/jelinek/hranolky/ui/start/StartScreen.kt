@@ -178,7 +178,7 @@ fun StartScreen(
                     AutoScanToggle(
                         screenState.isInventoryCheckEnabled,
                         onAutoScanToggleChange = { viewModel.toggleInventoryCheck(it) },
-                        label = "Inventura"
+                        label = "Inventura ${if (screenState.isInventoryCheckEnabled) "zapnuta" else "vypnuta"}"
                     )
                 }
 

@@ -6,11 +6,11 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import eu.jelinek.hranolky.data.LastModifiedSlots
 import eu.jelinek.hranolky.data.SlotRepository
+import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.FirestoreSlot
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
-import eu.jelinek.hranolky.ui.manageitem.ActionType
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -228,6 +228,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         val change = when (actionType) {
             ActionType.ADD -> quantity
             ActionType.REMOVE -> -quantity
+            ActionType.INVENTORY_CHECK -> quantity - currentQuantity
         }
 
         val nextEst = currentQuantity + change

@@ -35,7 +35,7 @@ class StartViewModel(
 
     init {
         viewModelScope.launch {
-            fetchDeviceName()
+            fetchDeviceNameAndInventoryPermit()
             logDeviceId()
         }
     }
@@ -81,7 +81,7 @@ class StartViewModel(
             .addOnFailureListener { e -> Log.w("Firestore", "Error writing document", e) }
     }
 
-    private suspend fun fetchDeviceName() { // Make this a suspend function
+    private suspend fun fetchDeviceNameAndInventoryPermit() { // Make this a suspend function
         val deviceId = getDeviceId()
         Log.d("StartViewModel", "Fetching device name for ID: $deviceId")
         try {
@@ -90,6 +90,10 @@ class StartViewModel(
             if (documentSnapshot.exists()) {
                 val deviceName = documentSnapshot.getString("deviceName") // Get the "deviceName" field
                 val isInventoryCheckPermitted = documentSnapshot.getBoolean("isInventoryCheckPermitted") ?: false
+
+                if (isInventoryCheckPermitted) {
+                    loadInventoryCheckSetting()
+                }
 
                 if (deviceName != null) {
                     Log.d("StartViewModel", "Device name found: $deviceName")
@@ -123,6 +127,12 @@ class StartViewModel(
         // Persist setting into android app preferences
         sharedPreferences.edit { putBoolean(PREF_INVENTORY_CHECK_ENABLED, isEnabled) }
         Log.d("StartViewModel", "Saved inventory check setting: $isEnabled")
+    }
+
+    private fun loadInventoryCheckSetting() {
+        val isEnabled = sharedPreferences.getBoolean(PREF_INVENTORY_CHECK_ENABLED, false)
+        _startScreenState.value = _startScreenState.value.copy(isInventoryCheckEnabled = isEnabled)
+        Log.d("StartViewModel", "Loaded inventory check setting: $isEnabled")
     }
 
     fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class

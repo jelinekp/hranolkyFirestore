@@ -1,9 +1,9 @@
 package eu.jelinek.hranolky.data
 
+import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.SlotAction
 import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
-import eu.jelinek.hranolky.ui.manageitem.ActionType
 import kotlinx.coroutines.flow.Flow
 
 interface SlotRepository {
