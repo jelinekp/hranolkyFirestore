@@ -82,13 +82,12 @@ fun AddAction(
             )
         }
 
-        if (validationState.isQuantityError || validationState.isRemovedError) {
-            val errorText = if (validationState.isQuantityError) {
-                stringResource(R.string.zadej_platn_mno_stv)
-            } else {
-                stringResource(R.string.vydej_nemuze_byt_vetsi_nez_aktualni_stav)
-            }
-            ErrorText(text = errorText)
+        if (validationState.errorMessage != null) {
+            ErrorText(text = validationState.errorMessage)
+        } else if (validationState.isQuantityError) { // Fallback generic messages if no specific errorMessage
+            ErrorText(text = stringResource(R.string.zadej_platn_mno_stv))
+        } else if (validationState.isRemovedError) {
+            ErrorText(text = stringResource(R.string.vydej_nemuze_byt_vetsi_nez_aktualni_stav))
         }
 
         ActionButtons(
@@ -104,7 +103,8 @@ fun QuantityInput(
     quantityFocusRequester: FocusRequester,
     keyboardController: SoftwareKeyboardController?,
     modifier: Modifier = Modifier,
-    label: String = stringResource(R.string.zadej_mno_stv)
+    label: String = stringResource(R.string.zadej_mno_stv),
+    keyboardType: KeyboardType = KeyboardType.Number
 ) {
     OutlinedTextField(
         value = inputData.quantity,
@@ -115,7 +115,7 @@ fun QuantityInput(
             quantityFocusRequester.freeFocus()
             keyboardController?.hide()
         }),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier
             .widthIn(max = 180.dp)
             .focusRequester(quantityFocusRequester),

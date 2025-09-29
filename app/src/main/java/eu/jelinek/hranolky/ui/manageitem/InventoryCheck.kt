@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -32,7 +33,6 @@ fun InventoryCheck(
     onSetClicked: () -> Unit,
     modifier: Modifier = Modifier,
     isInventoryCheckDone: Boolean = false,
-    label: String = "Opravit množství na:"
 ) {
     val quantityFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -91,7 +91,8 @@ fun InventoryCheck(
                 quantityFocusRequester = quantityFocusRequester,
                 keyboardController = keyboardController,
                 modifier = Modifier.weight(3f),
-                label = "Zadej stav při inventuře"
+                label = "Zadej stav při inventuře",
+                keyboardType = KeyboardType.Phone
             )
             ActionButton(
                 text = "Odeslat",

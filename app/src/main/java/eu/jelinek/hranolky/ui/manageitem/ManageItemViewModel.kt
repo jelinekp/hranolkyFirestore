@@ -4,11 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.SharedPreferences
 import android.icu.util.Calendar
-import android.os.Build
 import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -27,7 +25,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-@RequiresApi(Build.VERSION_CODES.N)
 class ManageItemViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
@@ -75,7 +72,6 @@ class ManageItemViewModel(
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     private fun checkInventoryDone() {
         val slotActions = _screenStateStream.value.slot?.slotActions
         if (slotActions.isNullOrEmpty()) {
@@ -163,26 +159,47 @@ class ManageItemViewModel(
         viewModelScope.launch {
             val currentSlot = screenStateStream.value.slot
             if (slotId == null || currentSlot == null) {
-                Log.e(TAG, "addActionToTheSlot: slotId or currentSlot is null. Cannot add action.")
-                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true)) // Generic error
+                Log.e(TAG, "addActionToTheSlot: slotId or currentSlot is null.")
+                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Položka nenalezena."))
                 return@launch
             }
 
+            val parsedQuantityResult = parseQuantityStringToLong(quantityState.value)
+            val quantityLong: Long
+
+            if (parsedQuantityResult.isSuccess) {
+                quantityLong = parsedQuantityResult.getOrThrow()
+                if (quantityLong <= 0) { // Quantity must be positive
+                    _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Zadané množství musí být kladné."))
+                    return@launch
+                }
+            } else {
+                val errorMessage = parsedQuantityResult.exceptionOrNull()?.message ?: "Neplatný formát množství."
+                Log.e(TAG, "addActionToTheSlot: Invalid quantity format: ${quantityState.value}", parsedQuantityResult.exceptionOrNull())
+                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = errorMessage))
+                return@launch
+            }
+
+            // For INVENTORY_CHECK, quantityLong is the *new total* quantity.
+            // For ADD/REMOVE, quantityLong is the *change* in quantity.
             val result = addSlotActionUseCase(
                 slotId = slotId,
-                slot = screenStateStream.value.slot!!,
+                slot = currentSlot,
                 actionType = actionType,
-                quantity = quantityState.value,
-                currentQuantity = screenStateStream.value.slot?.quantity ?: 0,
+                quantity = quantityLong.toString(), // Use the parsed Long
+                currentQuantity = currentSlot.quantity,
                 deviceId = getDeviceId()
             )
+
             if (result.isSuccess) {
                 resetFields()
             } else {
-                val validationState = when (result.exceptionOrNull()) {
-                    is IllegalArgumentException -> AddActionValidationState(isQuantityError = true)
-                    is IllegalStateException -> AddActionValidationState(isRemovedError = true)
-                    else -> AddActionValidationState()
+                val exception = result.exceptionOrNull()
+                Log.e(TAG, "addActionToTheSlot: Error adding action.", exception)
+                val validationState = when (exception) {
+                    is IllegalArgumentException -> AddActionValidationState(isQuantityError = true, errorMessage = exception.message)
+                    is IllegalStateException -> AddActionValidationState(isRemovedError = true, errorMessage = exception.message)
+                    else -> AddActionValidationState(errorMessage = exception?.message ?: "Neznámá chyba.")
                 }
                 _validationSharedFlowStream.emit(validationState)
             }
@@ -191,27 +208,79 @@ class ManageItemViewModel(
 
     fun showSettingPopup() {
         viewModelScope.launch {
-            try {
-                if (quantityState.value.toLong() != (screenStateStream.value.slot?.quantity ?: 0)) {
-                    val diff = quantityState.value.toLong() - (screenStateStream.value.slot?.quantity ?: 0)
-                    val compareString = if (diff > 0) "více" else "méně"
-                    _screenStateStream.update {
-                        it.copy(
-                            showConfirmSettingPopup = true,
-                            inventoryCheckPopupMessage = InventoryCheckPopupMessage(
-                                diff = abs(diff),
-                                compareString = compareString
-                            )
-                        )
-                    }
+            val currentSlotQuantity = screenStateStream.value.slot?.quantity ?: 0L
+            val parsedQuantityResult = parseQuantityStringToLong(quantityState.value)
+            val enteredQuantityLong: Long
+
+            if (parsedQuantityResult.isSuccess) {
+                enteredQuantityLong = parsedQuantityResult.getOrThrow()
+                if (enteredQuantityLong < 0) { // For inventory check, new quantity cannot be negative
+                    _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Nové množství nemůže být záporné."))
+                    return@launch
                 }
-                else
-                    performInventoryQuantitySet()
-            } catch (_: NumberFormatException) {
-                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true))
+            } else {
+                val errorMessage = parsedQuantityResult.exceptionOrNull()?.message ?: "Neplatný formát množství."
+                Log.e(TAG, "showSettingPopup: Invalid quantity format: ${quantityState.value}", parsedQuantityResult.exceptionOrNull())
+                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = errorMessage))
+                return@launch
+            }
+
+            if (enteredQuantityLong != currentSlotQuantity) {
+                val diff = enteredQuantityLong - currentSlotQuantity
+                val compareString = if (diff > 0) "více" else "méně"
+                quantityState.value = enteredQuantityLong.toString()
+                _screenStateStream.update {
+                    it.copy(
+                        showConfirmSettingPopup = true,
+                        inventoryCheckPopupMessage = InventoryCheckPopupMessage(
+                            diff = abs(diff),
+                            compareString = compareString
+                        )
+                    )
+                }
+            } else {
+                // If quantities are the same, still perform INVENTORY_CHECK to record the timestamp
+                performInventoryQuantitySet()
             }
         }
     }
+
+    private fun parseQuantityStringToLong(quantityStr: String): Result<Long> {
+        if (quantityStr.isBlank()) {
+            return Result.failure(NumberFormatException("Množství nemůže být prázdné."))
+        }
+
+        // Handle simple numbers first
+        quantityStr.toLongOrNull()?.let {
+            if (it < 0) return Result.failure(NumberFormatException("Množství nemůže být záporné."))
+            return Result.success(it)
+        }
+
+        // Handle sums like "X+Y" or "X+Y+Z"
+        val parts = quantityStr.split('+')
+        if (parts.any { it.trim().isEmpty() }) { // Check for empty parts like "5++5" or "5+"
+            return Result.failure(NumberFormatException("Neplatný formát: prázdná část v součtu."))
+        }
+
+        if (parts.size > 1) {
+            var sum = 0L
+            for (part in parts) {
+                val trimmedPart = part.trim()
+                // Ensure part is not just whitespace if not caught by the above check
+                if (trimmedPart.isEmpty() && parts.size > 1) {
+                    return Result.failure(NumberFormatException("Neplatný formát: prázdná část v součtu."))
+                }
+                val number = trimmedPart.toLongOrNull()
+                    ?: return Result.failure(NumberFormatException("Neplatný formát čísla v části: '$trimmedPart'"))
+                if (number < 0) return Result.failure(NumberFormatException("Část součtu nemůže být záporná: '$trimmedPart'"))
+                sum += number
+            }
+            return Result.success(sum)
+        }
+        // If it's not a simple number and not a valid sum, it's an invalid format
+        return Result.failure(NumberFormatException("Neplatný formát množství."))
+    }
+
 
     fun onDismissSettingPopup() {
         _screenStateStream.update {
@@ -255,6 +324,7 @@ data class ManageItemScreenState(
 data class AddActionValidationState(
     val isQuantityError: Boolean = false,
     val isRemovedError: Boolean = false,
+    val errorMessage: String? = null
 )
 
 enum class ResultStatus {

@@ -14,10 +14,10 @@ android {
 
     defaultConfig {
         applicationId = "eu.jelinek.hranolky"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 36
         versionCode = 8
-        versionName = "2.4.1 (inventura)"
+        versionName = "2.4.2 (inventura)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
