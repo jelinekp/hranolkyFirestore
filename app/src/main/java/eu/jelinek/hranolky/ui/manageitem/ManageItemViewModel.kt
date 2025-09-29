@@ -3,12 +3,16 @@ package eu.jelinek.hranolky.ui.manageitem
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.SharedPreferences
+import android.icu.util.Calendar
+import android.os.Build
+import android.preference.PreferenceManager
 import android.provider.Settings
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import androidx.preference.PreferenceManager
 import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.domain.AddSlotActionUseCase
 import eu.jelinek.hranolky.model.ActionType
@@ -23,12 +27,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+@RequiresApi(Build.VERSION_CODES.N)
 class ManageItemViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val slotRepository: SlotRepository,
     private val addSlotActionUseCase: AddSlotActionUseCase
 ) : AndroidViewModel(application) {
+
+    val TAG = "ManageItemViewModel"
 
     val slotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
     private val _screenStateStream =
@@ -55,9 +62,9 @@ class ManageItemViewModel(
 
     init {
         viewModelScope.launch {
+            loadInventoryCheckSetting()
             fetchSlotData()
         }
-        loadInventoryCheckSetting()
     }
 
     private fun loadInventoryCheckSetting() {
@@ -65,6 +72,45 @@ class ManageItemViewModel(
             sharedPreferences.getBoolean(PREF_INVENTORY_CHECK_ENABLED, false)
         _screenStateStream.update {
             it.copy(isInventoryCheckEnabled = inventoryCheckEnabled)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.N)
+    private fun checkInventoryDone() {
+        val slotActions = _screenStateStream.value.slot?.slotActions
+        if (slotActions.isNullOrEmpty()) {
+            _screenStateStream.update { it.copy(isInventoryCheckDone = false) }
+            Log.d(TAG, "checkInventoryDone: No slot actions found.")
+            return
+        }
+
+        // Calculate the date 80 days ago
+        val calendar80DaysAgo = Calendar.getInstance()
+        calendar80DaysAgo.add(Calendar.DAY_OF_YEAR, -80)
+        val limitDate = calendar80DaysAgo.time // This is a java.util.Date
+
+        Log.d(TAG, "checkInventoryDone: Checking for INVENTORY_CHECK actions newer than $limitDate")
+
+        val recentInventoryCheckExists = slotActions.any { slotAction ->
+            // Assuming slotAction.action is a String that matches ActionType enum names
+            // And slotAction.timestamp is a com.google.firebase.Timestamp
+            if (slotAction.action == ActionType.INVENTORY_CHECK.toString() && slotAction.timestamp != null) {
+                val actionDate = slotAction.timestamp.toDate() // Convert Firebase Timestamp to java.util.Date
+                val isRecent = actionDate.after(limitDate)
+                if (isRecent) {
+                    Log.d(TAG, "checkInventoryDone: Found recent INVENTORY_CHECK action: $slotAction at $actionDate")
+                }
+                isRecent
+            } else {
+                false
+            }
+        }
+
+        if (_screenStateStream.value.isInventoryCheckDone != recentInventoryCheckExists) {
+            _screenStateStream.update { it.copy(isInventoryCheckDone = recentInventoryCheckExists) }
+            Log.d(TAG, "checkInventoryDone: Updated isInventoryCheckDone to $recentInventoryCheckExists")
+        } else {
+            Log.d(TAG, "checkInventoryDone: isInventoryCheckDone state is already $recentInventoryCheckExists, no update.")
         }
     }
 
@@ -78,25 +124,52 @@ class ManageItemViewModel(
             viewModelScope.launch {
                 combine(
                     slotRepository.getSlot(id),
-                    slotRepository.getSlotActions(id)
+                    slotRepository.getSlotActions(id) // Ensure this flow also emits when actions change
                 ) { slot, actions ->
+                    // This lambda will be called whenever slot or actions change
                     if (slot != null) {
                         val parsedSlot = slot.parsePropertiesFromProductId().copy(slotActions = actions)
                         _screenStateStream.update {
                             it.copy(slot = parsedSlot, resultStatus = ResultStatus.SUCCESS)
                         }
+                        // After updating the slot with actions, if inventory check is enabled,
+                        // the collector in init will pick up the change and call checkInventoryDone.
+                        // Or, you could call it explicitly here too if preferred,
+                        // but the collector pattern is more robust for ongoing updates.
+                        if (_screenStateStream.value.isInventoryCheckEnabled) {
+                            checkInventoryDone()
+                        }
                     } else {
-                        slotRepository.createNewSlot(id, 0)
+                        // Slot not found, potentially create it or handle error
+                        // If creating new, slotActions will be empty initially.
+                        Log.d(TAG, "fetchSlotData: Slot with ID $id not found. Attempting to create.")
+                        slotRepository.createNewSlot(id, 0) // This might then trigger another emission
+                        _screenStateStream.update {
+                            it.copy(slot = null, resultStatus = ResultStatus.DATA_ERROR, error = "Slot not found")
+                        }
                     }
-                }.collect { }
+                }.collect {
+                    // Collection is handled by the combine operator.
+                    // The block inside combine is the actual processing per emission.
+                    Log.d(TAG, "fetchSlotData: combine block executed.")
+                }
             }
+        } ?: run {
+            _screenStateStream.update { it.copy(resultStatus = ResultStatus.DATA_ERROR, error = "Slot ID is null") }
         }
     }
 
     fun addActionToTheSlot(actionType: ActionType) {
         viewModelScope.launch {
+            val currentSlot = screenStateStream.value.slot
+            if (slotId == null || currentSlot == null) {
+                Log.e(TAG, "addActionToTheSlot: slotId or currentSlot is null. Cannot add action.")
+                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true)) // Generic error
+                return@launch
+            }
+
             val result = addSlotActionUseCase(
-                slotId = slotId!!,
+                slotId = slotId,
                 slot = screenStateStream.value.slot!!,
                 actionType = actionType,
                 quantity = quantityState.value,
@@ -174,7 +247,8 @@ data class ManageItemScreenState(
     val isOnline: Boolean = true,
     val isInventoryCheckEnabled: Boolean = false,
     val showConfirmSettingPopup: Boolean = false,
-    val inventoryCheckPopupMessage: InventoryCheckPopupMessage = InventoryCheckPopupMessage()
+    val inventoryCheckPopupMessage: InventoryCheckPopupMessage = InventoryCheckPopupMessage(),
+    val isInventoryCheckDone: Boolean = false,
 )
 
 

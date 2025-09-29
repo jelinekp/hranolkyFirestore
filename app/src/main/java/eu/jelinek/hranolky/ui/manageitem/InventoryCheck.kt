@@ -31,6 +31,7 @@ fun InventoryCheck(
     validationState: AddActionValidationState,
     onSetClicked: () -> Unit,
     modifier: Modifier = Modifier,
+    isInventoryCheckDone: Boolean = false,
     label: String = "Opravit množství na:"
 ) {
     val quantityFocusRequester = remember { FocusRequester() }
@@ -55,16 +56,16 @@ fun InventoryCheck(
             modifier = modifier
                 .fillMaxWidth()
                 .background(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (isInventoryCheckDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     shape = MaterialTheme.shapes.large
                 ),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Inventura",
+                text = "Inventura " + if (isInventoryCheckDone) "provedena" else "neprovedena",
                 fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = if (isInventoryCheckDone) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onError,
                 modifier = Modifier.padding(vertical = 2.dp)
             )
         }
@@ -90,10 +91,10 @@ fun InventoryCheck(
                 quantityFocusRequester = quantityFocusRequester,
                 keyboardController = keyboardController,
                 modifier = Modifier.weight(3f),
-                label = "Oprav množství"
+                label = "Zadej stav při inventuře"
             )
             ActionButton(
-                text = "Nastavit",
+                text = "Odeslat",
                 onClick = {
                     onSetClicked()
                     keyboardController?.hide()
@@ -122,7 +123,7 @@ fun ConfirmSettingPopup(
             text = { Text(dialogMessage) },
             confirmButton = {
                 Button(onClick = onConfirmYesNoDialog) {
-                    Text("Nastavit")
+                    Text("Opravit")
                 }
             },
             dismissButton = {

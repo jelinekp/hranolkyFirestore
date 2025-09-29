@@ -95,6 +95,7 @@ fun ManageItemScreen(
                                     onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
                                     onSetClicked = viewModel::showSettingPopup,
                                     validationState = validationState,
+                                    isInventoryCheckDone = screenState.isInventoryCheckDone,
                                 )
                             } else {
                                 AddAction(

@@ -143,7 +143,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                         .document(idToFetch)
                         .collection("SlotActions")
                         .orderBy("timestamp", Query.Direction.DESCENDING)
-                        .limit(10)
+                        .limit(20)
                         .addSnapshotListener { querySnapshot, error ->
                             if (error != null) {
                                 Log.e(

@@ -17,7 +17,7 @@ android {
         minSdk = 23
         targetSdk = 36
         versionCode = 8
-        versionName = "2.4 (pro inventury)"
+        versionName = "2.4.1 (inventura)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
