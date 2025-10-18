@@ -363,7 +363,7 @@ fun ScannedCodeInput(
 @Composable
 fun WrongLengthError() {
     Text(
-        text = "Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, nebo \'S\' a být 20 znaků dlouhý, nebo být 16 znaků dlouhý.",
+        text = "Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, nebo \'S\' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.padding(horizontal = 16.dp)

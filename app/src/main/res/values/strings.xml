@@ -6,7 +6,7 @@
     <string name="ahoj_romane_co_si_p_eje_ud_lat">Ahoj, co si přeješ udělat?</string>
     <string name="vyber_akci">Vyber akci</string>
     <string name="n_zev_naskenuj_k_d">Název (naskenuj kód)</string>
-    <string name="zadej_platn_n_zev">Zadej platný název (10 – 20 znaků)</string>
+    <string name="zadej_platn_n_zev">Zadej platný název (10 – 22 znaků)</string>
     <string name="zadej_mno_stv">Zadej množství</string>
     <string name="zadej_platn_mno_stv">Zadej platné množství (&gt;0 a &lt;9999)</string>
     <string name="odeslat_data_do_tabulky">Odeslat data do tabulky</string>

@@ -25,8 +25,8 @@ data class WarehouseSlot(
         }
 
         // Extract quality and split parts from the potentially modified product ID
-        val quality = processedProductId.take(5)
         val parts = processedProductId.split("-")
+        val quality = parts[0] + "-" + parts[1]
 
         if (parts.size < 5) {
             Log.d("Parsed parts", "Parsed parts: ${parts.size}")
@@ -79,9 +79,21 @@ data class WarehouseSlot(
     fun getFullQualityName(): String {
         return when (this.quality) {
             null -> ""
-            "DUB-A" -> "DUB A/A"
-            "DUB-R" -> "DUB RUSTIK"
-            "DUB-B" -> ""
+            "DUB-A/A" -> "DUB A/A"
+            "DUB-A/B" -> "DUB A/B"
+            "DUB-ABP" -> "DUB A/B-P"
+            "DUB-RST" -> "DUB RUSTIK"
+            "DUB-CNK" -> "DUB CINK"
+            "DUB-RSC" -> "DUB RUSTIK CINK"
+            "ZIR-ZIR" -> "ZIRBE"
+            "ZIR-BMS" -> "ZIRBE MS"
+            "ZIR-CNK" -> "ZIRBE CINK"
+            "ZBD-BDC" -> "ZIRBE+BUK/DUB/BUK CINK/DUB CINK"
+            "ZBD-CNK" -> "ZIRBE CINK+BUK/DUB/BUK CINK/DUB CINK"
+            "BUK-BUK" -> "BUK"
+            "BUK-CNK" -> "BUK CINK"
+            "JSN-JSN" -> "JASAN"
+            "KŠT-KŠT" -> "KAŠTAN"
             else -> this.quality
         }
     }

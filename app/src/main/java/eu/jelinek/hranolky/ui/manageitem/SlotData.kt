@@ -30,8 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.data.helpers.formatCubicMeters
+import eu.jelinek.hranolky.model.WarehouseSlot
 
 @Composable
 fun SlotData(
@@ -65,7 +65,7 @@ fun SlotData(
             DataRow("Množství na skladě", slot.quantity.toString(), alternateRowModifier, fontSize = fontSize)
             DataRow("Objem dřeva", formattedVolume, fontSize = fontSize)
             if (isShowMore || forceExpanded) {
-                DataRow("Kvalita", slot.quality.toString(), alternateRowModifier, fontSize = fontSize)
+                DataRow("Kvalita", slot.getFullQualityName(), alternateRowModifier, fontSize = fontSize)
                 DataRow("Tloušťka", "${slot.thickness} mm", fontSize = fontSize)
                 DataRow("Šířka", "${slot.width} mm", alternateRowModifier, fontSize = fontSize)
                 DataRow("Délka", "${slot.length} mm", fontSize = fontSize)
