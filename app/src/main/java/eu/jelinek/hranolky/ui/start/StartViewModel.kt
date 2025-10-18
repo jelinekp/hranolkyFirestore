@@ -93,6 +93,8 @@ class StartViewModel(
 
                 if (isInventoryCheckPermitted) {
                     loadInventoryCheckSetting()
+                } else {
+                    toggleInventoryCheck(isEnabled = false)
                 }
 
                 if (deviceName != null) {
@@ -108,6 +110,7 @@ class StartViewModel(
                         deviceName = null,
                         isInventoryCheckPermitted = isInventoryCheckPermitted
                     ) // Or some default like "Unknown Device"
+                    toggleInventoryCheck(isEnabled = false)
                 }
             } else {
                 Log.d("StartViewModel", "Device document not found for ID: $deviceId. Cannot fetch device name.")
@@ -115,6 +118,7 @@ class StartViewModel(
                     deviceName = null,
                     isInventoryCheckPermitted = false,
                 ) // Or some default
+                toggleInventoryCheck(isEnabled = false)
             }
         } catch (e: Exception) {
             Log.e("StartViewModel", "Error fetching device name for ID: $deviceId", e)
