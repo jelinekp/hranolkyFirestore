@@ -79,8 +79,8 @@ data class WarehouseSlot(
     fun getFullQualityName(): String {
         return when (this.quality) {
             null -> ""
-            "DUB-A/A" -> "DUB A/A"
-            "DUB-A/B" -> "DUB A/B"
+            "DUB-A|A" -> "DUB A/A"
+            "DUB-A|B" -> "DUB A/B"
             "DUB-ABP" -> "DUB A/B-P"
             "DUB-RST" -> "DUB RUSTIK"
             "DUB-CNK" -> "DUB CINK"

@@ -167,7 +167,7 @@ class StartViewModel(
             // S-DUB-ABP-42-0272-1860
             // S-DUB-A/A-27-0095-2050
             // S-ZIR-ZIR-32-0245-2150
-            val jointerRegex = Regex("^S-[A-Z]{3}-[A-Z/]{3}-[0-9]{2}-[0-9]{4}-[0-9]{4}$")
+            val jointerRegex = Regex("^S-[A-Z]{3}-[A-Z|]{3}-[0-9]{2}-[0-9]{4}-[0-9]{4}$")
             return jointerRegex.matches(text)
         }
 
