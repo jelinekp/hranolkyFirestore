@@ -26,10 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import eu.jelinek.hranolky.model.WarehouseSlot
-import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.data.helpers.formatCubicMeters
 import eu.jelinek.hranolky.data.helpers.formatCubicMetersTwo
+import eu.jelinek.hranolky.model.WarehouseSlot
+import eu.jelinek.hranolky.ui.shared.ScreenSize
 
 @Composable
 fun AllSlotsContent(
@@ -117,9 +117,9 @@ fun OverviewRowHeader(
             modifier = Modifier.weight(6f)
         )*/
         Text(
-            text = if (screenSize.isTablet()) "Kvalita" else "K",
+            text = if (screenSize.isTablet()) "Kvalita" else "Kvalita",
             fontWeight = fontWeight,
-            modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(1f)
+            modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(3f)
         )
         HeaderItem(
             text = if (screenSize.isTablet()) "Tloušťka" else "T",
@@ -260,8 +260,10 @@ fun OverviewRow(
             //style = MaterialTheme.typography.bodySmall
         )*/
         Text(
-            text = if (screenSize.isTablet()) slot.quality.toString() else slot.quality?.getOrNull(4).toString(),
-            modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(1f)
+            text = if (screenSize.isTablet()) slot.quality.toString() else slot.quality?.getOrNull(0).toString() + "-" + if ((slot.quality?.length
+                    ?: 0) > 5
+            ) slot.quality?.substring(4, 7) else slot.quality?.getOrNull(4).toString(),
+            modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(3f)
         )
         Text(
             slot.thickness.toString(),
