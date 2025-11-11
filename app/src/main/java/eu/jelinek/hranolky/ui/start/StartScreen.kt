@@ -6,6 +6,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -47,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -121,7 +123,12 @@ fun StartScreen(
                 Image(
                     painter = painterResource(R.drawable.logo_jelinek),
                     contentDescription = "Logo JELÍNEK",
-                    modifier = Modifier.padding(horizontal = 80.dp)
+                    modifier = Modifier.padding(horizontal = 80.dp),
+                    colorFilter = if (isSystemInDarkTheme()) {
+                        ColorFilter.tint(MaterialTheme.colorScheme.onBackground)
+                    } else {
+                        null
+                    }
                 )
 
                 AutoScanToggle(
@@ -165,7 +172,9 @@ fun StartScreen(
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 12.dp).height(IntrinsicSize.Min),
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .height(IntrinsicSize.Min),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     NavigationActionButton(
@@ -173,14 +182,18 @@ fun StartScreen(
                         iconPainter = painterResource(R.drawable.outline_history_24),
                         contentDescription = "Ikona historie",
                         onClick = navigateToHistory,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     )
                     NavigationActionButton(
                         text = "Přehled všech položek",
                         iconPainter = painterResource(R.drawable.outline_lists_24),
                         contentDescription = "Ikona položek",
                         onClick = navigateToOverview,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
                     )
                 }
 
