@@ -14,10 +14,10 @@ android {
 
     defaultConfig {
         applicationId = "eu.jelinek.hranolky"
-        minSdk = 24
+        minSdk = 27
         targetSdk = 36
-        versionCode = 12
-        versionName = "2.5.3"
+        versionCode = 13
+        versionName = "2.6.0 (security)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.androidx.preference.ktx)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.firebase.auth)
+    implementation(libs.androidx.compose.material3)
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)
@@ -94,4 +95,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+
+    compileOnly(libs.emdk)
 }

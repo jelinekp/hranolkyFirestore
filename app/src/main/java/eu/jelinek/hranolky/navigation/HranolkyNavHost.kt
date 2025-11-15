@@ -1,8 +1,5 @@
 package eu.jelinek.hranolky.navigation
 
-
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -17,7 +14,6 @@ import eu.jelinek.hranolky.ui.overview.OverviewScreen
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.start.StartScreen
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HranolkyNavHost(
     screenSize: ScreenSize,

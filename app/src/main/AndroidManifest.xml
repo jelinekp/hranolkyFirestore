@@ -29,4 +29,8 @@
         </activity>
     </application>
 
+    <queries>
+        <package android:name="com.symbol.emdk.emdkservice" />
+    </queries>
+
 </manifest>

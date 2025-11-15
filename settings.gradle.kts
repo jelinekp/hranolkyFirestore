@@ -16,6 +16,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://zebratech.jfrog.io/artifactory/EMDK-Android/")
+        }
     }
 }
 

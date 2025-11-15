@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -79,10 +80,13 @@ fun StartScreen(
     var scannedText by remember { mutableStateOf("") }
     var isAutoScanEnabled by remember { mutableStateOf(true) }
     var isFormatError by remember { mutableStateOf(false) }
+    var isSignInError by remember { mutableStateOf(false) }
 
-    fun onSubmit() {
+    fun onSubmit() { // TODO extract to viewModel
 
         Log.d("Scanned", "onSubmit: $scannedText")
+
+        isSignInError = screenState.isSigningIn
 
         if (viewModel.isValidScannedTextFormat(scannedText)) {
             val textLength = scannedText.length
@@ -99,7 +103,7 @@ fun StartScreen(
             Log.d(
                 "Scanned",
                 "Invalid format $scannedText"
-            ) // example of wrong format: S-DUB-A-27-0-5225
+            )
             isFormatError = true
         }
     }
@@ -118,7 +122,6 @@ fun StartScreen(
                     .fillMaxSize()
                     .widthIn(max = 200.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                //verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Image(
                     painter = painterResource(R.drawable.logo_jelinek),
@@ -160,8 +163,13 @@ fun StartScreen(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
+                if (isSignInError) {
+                    ErrorText("Počkejte na přihlášení. Jste připojeni k internetu?")
+                }
+
                 if (isFormatError) {
-                    WrongLengthError()
+                    ErrorText("Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, " +
+                            "nebo \'S\' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý.")
                 }
 
                 if (!isAutoScanEnabled) {
@@ -198,26 +206,44 @@ fun StartScreen(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
+                if (screenState.isSigningIn) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("Přihlašování")
+                        CircularProgressIndicator()
+                    }
+                } else {
 
-                if (screenState.isInventoryCheckPermitted) {
-                    AutoScanToggle(
-                        screenState.isInventoryCheckEnabled,
-                        onAutoScanToggleChange = { viewModel.toggleInventoryCheck(it) },
-                        label = "Inventura ${if (screenState.isInventoryCheckEnabled) "zapnuta" else "vypnuta"}"
-                    )
-                }
+                    if (screenState.isInventoryCheckPermitted) {
+                        AutoScanToggle(
+                            screenState.isInventoryCheckEnabled,
+                            onAutoScanToggleChange = { viewModel.toggleInventoryCheck(it) },
+                            label = "Inventura ${if (screenState.isInventoryCheckEnabled) "zapnuta" else "vypnuta"}"
+                        )
+                    }
 
-                Text(
-                    text = "Terminál: " + screenState.shortenedDeviceId,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(all = 2.dp)
-                )
-                if (screenState.deviceName != null) {
                     Text(
-                        text = "Název zařízení: " + screenState.deviceName,
+                        text = "Terminál: " + screenState.shortenedDeviceId,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(all = 2.dp)
+                    )
+                    if (screenState.deviceName != null) {
+                        Text(
+                            text = "Název zařízení: " + screenState.deviceName,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(all = 2.dp)
+                        )
+                    }
+                    Text(
+                        text = "Verze aplikace: " + screenState.appVersion,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
@@ -225,14 +251,6 @@ fun StartScreen(
                             .padding(all = 2.dp)
                     )
                 }
-                Text(
-                    text = "Verze aplikace: " + screenState.appVersion,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(all = 2.dp)
-                )
             }
         } else {
             Row(
@@ -280,7 +298,7 @@ fun StartScreen(
                         isAutoScanEnabled,
                         onAutoScanToggleChange = { isAutoScanEnabled = it },
                         label = "Automatické skenování"
-                        )
+                    )
 
                     ScannedCodeInput(
                         scannedText,
@@ -296,15 +314,13 @@ fun StartScreen(
                     )
 
                     if (isFormatError) {
-                        WrongLengthError()
+                        ErrorText("Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, " +
+                                "nebo \'S\' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý.")
                     }
 
                     if (!isAutoScanEnabled) {
                         ManualScanButton(onClicked = { onSubmit() })
                     }
-
-                    // OverviewButton(navigateToOverview)
-
                 }
             }
         }
@@ -312,7 +328,6 @@ fun StartScreen(
     LaunchedEffect(Unit) { if (screenSize.isPhone()) focusRequester.requestFocus() }
 }
 
-// Extracted composables:
 @Composable
 fun AutoScanToggle(
     isAutoScanEnabled: Boolean,
@@ -374,9 +389,11 @@ fun ScannedCodeInput(
 }
 
 @Composable
-fun WrongLengthError() {
+fun ErrorText(
+    text: String
+) {
     Text(
-        text = "Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, nebo \'S\' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý.",
+        text = text,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
         modifier = Modifier.padding(horizontal = 16.dp)
@@ -405,18 +422,17 @@ fun NavigationActionButton(
     iconPainter: Painter,
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier // Allow passing additional modifiers
+    modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
-        // Apply a common modifier first, then any additional specific modifiers
-        modifier = modifier, // Chain any passed-in modifier
+        modifier = modifier,
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Icon(
             painter = iconPainter,
             contentDescription = contentDescription,
-            modifier = Modifier.padding(all = 6.dp) // Common padding for the icon
+            modifier = Modifier.padding(all = 6.dp)
         )
         Text(text)
     }

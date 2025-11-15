@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -20,11 +21,11 @@ import kotlinx.coroutines.tasks.await
 class StartViewModel(
     application: Application,
     private val firestoreDb: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ) : AndroidViewModel(application) {
     private val _startScreenState = MutableStateFlow(StartUiState())
     val startScreenState get() = _startScreenState.asStateFlow()
 
-    // Key for SharedPreferences
     private companion object {
         const val PREF_INVENTORY_CHECK_ENABLED = "inventory_check_enabled"
     }
@@ -34,9 +35,28 @@ class StartViewModel(
     }
 
     init {
+        signInAnonymously()
+    }
+
+    private fun signInAnonymously() {
         viewModelScope.launch {
-            fetchDeviceNameAndInventoryPermit()
-            logDeviceId()
+            _startScreenState.value = _startScreenState.value.copy(isSigningIn = true)
+            if (auth.currentUser == null) {
+                try {
+                    auth.signInAnonymously().await()
+                    Log.d("Auth", "signInAnonymously:success. UID: ${auth.currentUser?.uid}")
+                    fetchDeviceNameAndInventoryPermit()
+                    logDeviceId()
+                } catch (e: Exception) {
+                    Log.w("Auth", "signInAnonymously:failure", e)
+                    // Handle error, maybe show a message to the user
+                }
+            } else {
+                Log.d("Auth", "User already signed in with UID: ${auth.currentUser?.uid}")
+                fetchDeviceNameAndInventoryPermit()
+                logDeviceId()
+            }
+            _startScreenState.value = _startScreenState.value.copy(isSigningIn = false)
         }
     }
 
@@ -81,14 +101,14 @@ class StartViewModel(
             .addOnFailureListener { e -> Log.w("Firestore", "Error writing document", e) }
     }
 
-    private suspend fun fetchDeviceNameAndInventoryPermit() { // Make this a suspend function
+    private suspend fun fetchDeviceNameAndInventoryPermit() { 
         val deviceId = getDeviceId()
         Log.d("StartViewModel", "Fetching device name for ID: $deviceId")
         try {
             val documentSnapshot = firestoreDb.collection("devices").document(deviceId).get().await()
 
             if (documentSnapshot.exists()) {
-                val deviceName = documentSnapshot.getString("deviceName") // Get the "deviceName" field
+                val deviceName = documentSnapshot.getString("deviceName")
                 val isInventoryCheckPermitted = documentSnapshot.getBoolean("isInventoryCheckPermitted") ?: false
 
                 if (isInventoryCheckPermitted) {
@@ -105,11 +125,10 @@ class StartViewModel(
                     )
                 } else {
                     Log.d("StartViewModel", "deviceName field is null or not found in document for $deviceId.")
-                    // Optionally set a default or leave it as null in the state
                     _startScreenState.value = _startScreenState.value.copy(
                         deviceName = null,
                         isInventoryCheckPermitted = isInventoryCheckPermitted
-                    ) // Or some default like "Unknown Device"
+                    ) 
                     toggleInventoryCheck(isEnabled = false)
                 }
             } else {
@@ -117,18 +136,17 @@ class StartViewModel(
                 _startScreenState.value = _startScreenState.value.copy(
                     deviceName = null,
                     isInventoryCheckPermitted = false,
-                ) // Or some default
+                )
                 toggleInventoryCheck(isEnabled = false)
             }
         } catch (e: Exception) {
             Log.e("StartViewModel", "Error fetching device name for ID: $deviceId", e)
-            _startScreenState.value = _startScreenState.value.copy(deviceName = null) // Or some default in case of error
+            _startScreenState.value = _startScreenState.value.copy(deviceName = null)
         }
     }
 
     fun toggleInventoryCheck(isEnabled: Boolean) {
         _startScreenState.value = _startScreenState.value.copy(isInventoryCheckEnabled = isEnabled)
-        // Persist setting into android app preferences
         sharedPreferences.edit { putBoolean(PREF_INVENTORY_CHECK_ENABLED, isEnabled) }
         Log.d("StartViewModel", "Saved inventory check setting: $isEnabled")
     }
@@ -139,7 +157,7 @@ class StartViewModel(
         Log.d("StartViewModel", "Loaded inventory check setting: $isEnabled")
     }
 
-    fun isValidScannedTextFormat(text: String): Boolean { // TODO move to input validator class
+    fun isValidScannedTextFormat(text: String): Boolean { 
         val textLength = text.length
 
         if (textLength == 16) {
@@ -147,7 +165,7 @@ class StartViewModel(
                 && text[textLength - 5] == '-'
                 && text.substring(textLength - 4).all(Char::isDigit)
             ) {
-               return true // Valid original universal beam
+               return true
             }
         }
 
@@ -157,21 +175,15 @@ class StartViewModel(
                 && text[textLength - 5] == '-'
                 && text.substring(textLength - 4).all(Char::isDigit)
             ) {
-                return true // Valid specified beam
+                return true
             }
         }
 
         if (textLength == 22) {
-            // This regex validates the structure: S-[3 uppercase chars]-[3 uppercase chars with slashes]-[2 digits]-[4 digits]-[4 digits]
-            // It matches all the provided examples like:
-            // S-DUB-ABP-42-0272-1860
-            // S-DUB-A/A-27-0095-2050
-            // S-ZIR-ZIR-32-0245-2150
             val jointerRegex = Regex("^S-[A-Z]{3}-[A-Z|]{3}-[0-9]{2}-[0-9]{4}-[0-9]{4}$")
             return jointerRegex.matches(text)
         }
 
-        // If neither rule matched, it's not a valid format
         return false
     }
 
@@ -184,5 +196,5 @@ data class StartUiState(
     val appVersion: String = "",
     val isInventoryCheckPermitted: Boolean = false,
     val isInventoryCheckEnabled: Boolean = false,
+    val isSigningIn: Boolean = false
 )
-
