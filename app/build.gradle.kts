@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.preference.ktx)
     implementation(libs.androidx.material.icons.core)
+    implementation(libs.firebase.auth)
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)

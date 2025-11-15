@@ -1,5 +1,5 @@
 [versions]
-agp = "8.10.1"
+agp = "8.13.1"
 firebaseBom = "34.3.0"
 koinAndroid = "4.1.0"
 koinAndroidxCompose = "4.1.0"
@@ -25,16 +25,17 @@ ktorClientLogging = "3.2.3"
 kotlinxSerializationJson = "1.9.0"
 preferenceKtx = "1.2.1"
 materialIconsCore = "1.7.8"
+firebaseAuth = "24.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-bom = { module = "com.google.firebase:firebase-bom", version = "34.6.0" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version = "2025.11.00" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
@@ -42,21 +43,22 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
-androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-koin-android = { module = "io.insert-koin:koin-android", version.ref = "koinAndroid" }
-koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koinAndroidxCompose" }
-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
-robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
-koin-test = { group = "io.insert-koin", name = "koin-test", version.ref = "koinTest" }
-ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktorClientCore" }
-ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version.ref = "ktorClientCio" }
-ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktorSerializationKotlinxJson" }
-ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version.ref = "ktorClientContentNegotiation" }
-ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version.ref = "ktorClientLogging" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version = "26.0.2" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version = "2.9.6" }
+koin-android = { module = "io.insert-koin:koin-android", version = "4.1.1" }
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version = "4.1.1" }
+mockk = { group = "io.mockk", name = "mockk", version = "1.14.6" }
+robolectric = { group = "org.robolectric", name = "robolectric", version = "4.16" }
+koin-test = { group = "io.insert-koin", name = "koin-test", version = "4.1.1" }
+ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version = "3.3.2" }
+ktor-client-cio = { group = "io.ktor", name = "ktor-client-cio", version = "3.3.2" }
+ktor-serialization-kotlinx-json = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version = "3.3.2" }
+ktor-client-content-negotiation = { group = "io.ktor", name = "ktor-client-content-negotiation", version = "3.3.2" }
+ktor-client-logging = { group = "io.ktor", name = "ktor-client-logging", version = "3.3.2" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 androidx-preference-ktx = { group = "androidx.preference", name = "preference-ktx", version.ref = "preferenceKtx" }
 androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core", version.ref = "materialIconsCore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 
 
 [plugins]
