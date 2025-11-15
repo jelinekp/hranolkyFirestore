@@ -2,14 +2,12 @@ package eu.jelinek.hranolky.ui.start
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,22 +16,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -46,25 +35,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
 import eu.jelinek.hranolky.ui.history.TabletSlotTable
+import eu.jelinek.hranolky.ui.shared.AutoScanToggle
+import eu.jelinek.hranolky.ui.shared.ErrorText
+import eu.jelinek.hranolky.ui.shared.ManualScanButton
+import eu.jelinek.hranolky.ui.shared.NavigationActionButton
+import eu.jelinek.hranolky.ui.shared.ScannedCodeInput
 import eu.jelinek.hranolky.ui.shared.ScreenSize
+import eu.jelinek.hranolky.ui.shared.SignInStatus
 import org.koin.androidx.compose.koinViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StartScreen(
     modifier: Modifier = Modifier,
@@ -75,8 +63,6 @@ fun StartScreen(
     screenSize: ScreenSize = ScreenSize.PHONE
 ) {
     val screenState by viewModel.startScreenState.collectAsStateWithLifecycle()
-    val focusRequester = remember { FocusRequester() }
-    var isAutoScanEnabled by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.navigateToManageItem.collect { route ->
@@ -92,327 +78,229 @@ fun StartScreen(
         }
     ) { padding ->
         if (screenSize.isPhone()) {
-            Column(
-                modifier = modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .widthIn(max = 200.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.logo_jelinek),
-                    contentDescription = "Logo JELÍNEK",
-                    modifier = Modifier.padding(horizontal = 80.dp),
-                    colorFilter = if (isSystemInDarkTheme()) {
-                        ColorFilter.tint(MaterialTheme.colorScheme.onBackground)
-                    } else {
-                        null
-                    }
-                )
-
-                AutoScanToggle(
-                    isAutoScanEnabled,
-                    onAutoScanToggleChange = { isAutoScanEnabled = it },
-                    label = "Automatické skenování"
-                )
-
-                ScannedCodeInput(
-                    screenState.scannedCode,
-                    onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
-                    focusRequester = focusRequester,
-                    isError = screenState.isFormatError,
-                    onDoneAction = { viewModel.onSubmit() },
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-
-                if (screenState.isSignInError) {
-                    ErrorText("Počkejte na přihlášení. Jste připojeni k internetu?")
-                }
-
-                if (screenState.isFormatError) {
-                    ErrorText(
-                        "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
-                                "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
-                    )
-                }
-
-                if (!isAutoScanEnabled) {
-                    ManualScanButton(onClicked = { viewModel.onSubmit() })
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .height(IntrinsicSize.Min),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    NavigationActionButton(
-                        text = "Historie pohybů",
-                        iconPainter = painterResource(R.drawable.outline_history_24),
-                        contentDescription = "Ikona historie",
-                        onClick = navigateToHistory,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    )
-                    NavigationActionButton(
-                        text = "Přehled všech položek",
-                        iconPainter = painterResource(R.drawable.outline_lists_24),
-                        contentDescription = "Ikona položek",
-                        onClick = navigateToOverview,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                SignInStatus(screenState = screenState) { // Extracted Composable
-                    // This block will be the content for the 'else' case in SignInStatus
-                    if (screenState.isInventoryCheckPermitted) {
-                        AutoScanToggle(
-                            screenState.isInventoryCheckEnabled,
-                            onAutoScanToggleChange = { viewModel.toggleInventoryCheck(it) },
-                            label = "Inventura ${if (screenState.isInventoryCheckEnabled) "zapnuta" else "vypnuta"}"
-                        )
-                    }
-
-                    Text(
-                        text = "Terminál: " + screenState.shortenedDeviceId,
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(all = 2.dp)
-                    )
-                    if (screenState.deviceName != null) {
-                        Text(
-                            text = "Název zařízení: " + screenState.deviceName,
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(all = 2.dp)
-                        )
-                    }
-                    Text(
-                        text = "Verze aplikace: " + screenState.appVersion,
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(all = 2.dp)
-                    )
-                }
-            }
+            StartScreenPhoneLayout(
+                modifier = modifier.padding(padding),
+                screenState = screenState,
+                viewModel = viewModel,
+                navigateToHistory = navigateToHistory,
+                navigateToOverview = navigateToOverview
+            )
         } else {
-            Row(
-                modifier = modifier
-                    .padding(padding)
-                    .fillMaxSize(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(5f)
-                        .padding(16.dp)
-                ) {
-                    TabletSlotTable(
-                        navigateToManageItem = { navigateToManageItem },
-                    )
-                    Text(
-                        text = "Terminál: " + screenState.shortenedDeviceId,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(all = 6.dp)
-                    )
-                }
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .weight(5f)
-                        .padding(horizontal = 64.dp)
-                        .padding(top = 32.dp)
-                        .widthIn(max = 220.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Zobrazit detail, přidat pohyb, zobrazit poslední pohyby:",
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-
-                    AutoScanToggle(
-                        isAutoScanEnabled = isAutoScanEnabled,
-                        onAutoScanToggleChange = { isAutoScanEnabled = it },
-                        label = "Automatické skenování"
-                    )
-
-                    ScannedCodeInput(
-                        scannedText = screenState.scannedCode,
-                        onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
-                        focusRequester = focusRequester,
-                        isError = screenState.isFormatError,
-                        onDoneAction = { viewModel.onSubmit() },
-                    )
-
-                    if (screenState.isFormatError) {
-                        ErrorText(
-                            "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
-                                    "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
-                        )
-                    }
-
-                    if (!isAutoScanEnabled) {
-                        ManualScanButton(onClicked = { viewModel.onSubmit() })
-                    }
-                }
-            }
+            StartScreenTabletLayout(
+                modifier = modifier.padding(padding),
+                screenState = screenState,
+                viewModel = viewModel,
+                navigateToManageItem = navigateToManageItem
+            )
         }
     }
-    LaunchedEffect(Unit) { if (screenSize.isPhone()) focusRequester.requestFocus() }
 }
 
 @Composable
-private fun SignInStatus(
+private fun StartScreenPhoneLayout(
+    modifier: Modifier = Modifier,
     screenState: StartUiState,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    viewModel: StartViewModel,
+    navigateToHistory: () -> Unit,
+    navigateToOverview: () -> Unit
 ) {
-    if (screenState.isSigningIn || screenState.isSignInProblem) {
-        Column(
-            modifier = modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    val focusRequester = remember { FocusRequester() }
+    var isAutoScanEnabled by remember { mutableStateOf(true) }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .widthIn(max = 200.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.logo_jelinek),
+            contentDescription = "Logo JELÍNEK",
+            modifier = Modifier.padding(horizontal = 80.dp),
+            colorFilter = if (isSystemInDarkTheme()) {
+                ColorFilter.tint(colorScheme.onBackground)
+            } else {
+                null
+            }
+        )
+
+        AutoScanToggle(
+            isAutoScanEnabled,
+            onAutoScanToggleChange = { isAutoScanEnabled = it },
+            label = "Automatické skenování"
+        )
+
+        ScannedCodeInput(
+            screenState.scannedCode,
+            onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
+            focusRequester = focusRequester,
+            isError = screenState.isFormatError,
+            onDoneAction = { viewModel.onSubmit() },
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        if (screenState.isSignInError) {
+            ErrorText("Počkejte na přihlášení. Jste připojeni k internetu?")
+        }
+
+        if (screenState.isFormatError) {
+            ErrorText(
+                "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
+                        "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
+            )
+        }
+
+        if (!isAutoScanEnabled) {
+            ManualScanButton(onClicked = { viewModel.onSubmit() })
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (screenState.isSigningIn) {
-                Text("Přihlašování")
-                CircularProgressIndicator()
-            } else { // This implies isSignInProblem is true
-                ErrorText("Přihlášení selhalo")
+            NavigationActionButton(
+                text = "Historie pohybů",
+                iconPainter = painterResource(R.drawable.outline_history_24),
+                contentDescription = "Ikona historie",
+                onClick = navigateToHistory,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+            NavigationActionButton(
+                text = "Přehled všech položek",
+                iconPainter = painterResource(R.drawable.outline_lists_24),
+                contentDescription = "Ikona položek",
+                onClick = navigateToOverview,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        SignInStatus(screenState = screenState) { // Extracted Composable
+            // This block will be the content for the 'else' case in SignInStatus
+            if (screenState.isInventoryCheckPermitted) {
+                AutoScanToggle(
+                    screenState.isInventoryCheckEnabled,
+                    onAutoScanToggleChange = { viewModel.toggleInventoryCheck(it) },
+                    label = "Inventura ${if (screenState.isInventoryCheckEnabled) "zapnuta" else "vypnuta"}"
+                )
+            }
+
+            Text(
+                text = "Terminál: " + screenState.shortenedDeviceId,
+                style = typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(all = 2.dp)
+            )
+            if (screenState.deviceName != null) {
+                Text(
+                    text = "Název zařízení: " + screenState.deviceName,
+                    style = typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(all = 2.dp)
+                )
+            }
+            Text(
+                text = "Verze aplikace: " + screenState.appVersion,
+                style = typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(all = 2.dp)
+            )
+        }
+    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+}
+
+@Composable
+private fun StartScreenTabletLayout(
+    modifier: Modifier = Modifier,
+    screenState: StartUiState,
+    viewModel: StartViewModel,
+    navigateToManageItem: (String) -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    var isAutoScanEnabled by remember { mutableStateOf(true) }
+
+    Row(
+        modifier = modifier
+            .fillMaxSize(),
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(5f)
+                .padding(16.dp)
+        ) {
+            TabletSlotTable(
+                navigateToManageItem = { navigateToManageItem },
+            )
+            Text(
+                text = "Terminál: " + screenState.shortenedDeviceId,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(all = 6.dp)
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(colorScheme.primaryContainer)
+                .weight(5f)
+                .padding(horizontal = 64.dp)
+                .padding(top = 32.dp)
+                .widthIn(max = 220.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Zobrazit detail, přidat pohyb, zobrazit poslední pohyby:",
+                style = typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                color = colorScheme.onPrimaryContainer
+            )
+
+            AutoScanToggle(
+                isAutoScanEnabled = isAutoScanEnabled,
+                onAutoScanToggleChange = { isAutoScanEnabled = it },
+                label = "Automatické skenování"
+            )
+
+            ScannedCodeInput(
+                scannedText = screenState.scannedCode,
+                onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
+                focusRequester = focusRequester,
+                isError = screenState.isFormatError,
+                onDoneAction = { viewModel.onSubmit() },
+            )
+
+            if (screenState.isFormatError) {
+                ErrorText(
+                    "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
+                            "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
+                )
+            }
+
+            if (!isAutoScanEnabled) {
+                ManualScanButton(onClicked = { viewModel.onSubmit() })
             }
         }
-    } else {
-        content()
-    }
-}
-
-
-@Composable
-fun ErrorText(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.error,
-        modifier = Modifier.padding(horizontal = 16.dp),
-        textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-fun AutoScanToggle(
-    isAutoScanEnabled: Boolean,
-    onAutoScanToggleChange: (Boolean) -> Unit,
-    label: String,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = Modifier
-            .width(280.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = 8.dp)
-        )
-        Switch(
-            checked = isAutoScanEnabled,
-            onCheckedChange = onAutoScanToggleChange
-        )
-    }
-}
-
-@Composable
-fun ScannedCodeInput(
-    scannedText: String,
-    onValueChange: (String) -> Unit,
-    focusRequester: FocusRequester,
-    isError: Boolean,
-    onDoneAction: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedTextField(
-        value = scannedText,
-        onValueChange = { newValue ->
-            onValueChange(newValue.uppercase())
-        },
-        label = { Text(stringResource(R.string.naskenuj_kod)) },
-        modifier = modifier.focusRequester(focusRequester),
-        isError = isError,
-        singleLine = true,
-        colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.Characters,
-            keyboardType = KeyboardType.Text,
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = {
-                onDoneAction()
-                focusRequester.freeFocus()
-            }
-        )
-    )
-}
-
-@Composable
-fun ManualScanButton(
-    onClicked: () -> Unit
-) {
-    Button(
-        onClick = { onClicked() }
-    ) {
-        Text("Přejít na položku")
-        Icon(
-            Icons.AutoMirrored.Default.ArrowForward,
-            contentDescription = stringResource(R.string.forward_icon),
-            modifier = Modifier.padding(all = 4.dp)
-        )
-    }
-}
-
-@Composable
-fun NavigationActionButton(
-    text: String,
-    iconPainter: Painter,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier // Allow passing additional modifiers
-) {
-    Button(
-        onClick = onClick,
-        // Apply a common modifier first, then any additional specific modifiers
-        modifier = modifier, // Chain any passed-in modifier
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
-    ) {
-        Icon(
-            painter = iconPainter,
-            contentDescription = contentDescription,
-            modifier = Modifier.padding(all = 6.dp) // Common padding for the icon
-        )
-        Text(text)
     }
 }
 
