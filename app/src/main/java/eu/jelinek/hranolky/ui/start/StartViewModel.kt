@@ -13,9 +13,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -26,6 +27,9 @@ class StartViewModel(
 ) : AndroidViewModel(application) {
     private val _startScreenState = MutableStateFlow(StartUiState())
     val startScreenState get() = _startScreenState.asStateFlow()
+
+    private val _navigateToManageItem = MutableSharedFlow<String>()
+    val navigateToManageItem = _navigateToManageItem.asSharedFlow()
 
     private companion object {
         const val PREF_INVENTORY_CHECK_ENABLED = "inventory_check_enabled"
@@ -50,19 +54,61 @@ class StartViewModel(
                     Log.d("Auth", "User already signed in with UID: ${auth.currentUser?.uid}")
                 }
 
-                // These functions will now run only after a user is guaranteed to be signed in.
                 fetchDeviceNameAndInventoryPermit()
                 val currentVersionCode = logDeviceId()
                 checkForUpdate(currentVersionCode)
 
             } catch (e: Exception) {
                 Log.w("Auth", "signInAnonymously:failure", e)
-                // Handle error, maybe show a message to the user
-                _startScreenState.update { it.copy(isSignInProblem = true) }
+                _startScreenState.value = _startScreenState.value.copy(isSignInProblem = true)
             } finally {
                 _startScreenState.value = _startScreenState.value.copy(isSigningIn = false)
             }
         }
+    }
+
+    fun onScannedCodeChange(text: String, isAutoScanEnabled: Boolean) {
+        viewModelScope.launch {
+            _startScreenState.value = _startScreenState.value.copy(
+                scannedCode = text.uppercase(),
+                isFormatError = false,
+                isSignInError = false
+            )
+            if (isAutoScanEnabled && isValidScannedTextFormat(text)) {
+                processAndNavigate(text)
+            }
+        }
+    }
+
+    fun onSubmit() {
+        viewModelScope.launch {
+            if (_startScreenState.value.isSigningIn) {
+                _startScreenState.value = _startScreenState.value.copy(isSignInError = true)
+                return@launch
+            }
+            _startScreenState.value = _startScreenState.value.copy(isSignInError = false)
+
+            val code = _startScreenState.value.scannedCode
+            if (isValidScannedTextFormat(code)) {
+                processAndNavigate(code)
+                _startScreenState.value = _startScreenState.value.copy(isFormatError = false)
+            } else {
+                _startScreenState.value = _startScreenState.value.copy(isFormatError = true)
+            }
+        }
+    }
+
+    private suspend fun processAndNavigate(code: String) {
+        var manipulatedCode = code
+        val textLength = manipulatedCode.length
+        if (textLength == 16) {
+            if (manipulatedCode[1] != '-' && manipulatedCode[textLength - 5] == '-' && manipulatedCode.substring(textLength - 4).all(Char::isDigit)) {
+                if (manipulatedCode.first() != 'S') {
+                    manipulatedCode = "H-$manipulatedCode"
+                }
+            }
+        }
+        _navigateToManageItem.emit(manipulatedCode)
     }
 
     @SuppressLint("HardwareIds")
@@ -85,7 +131,6 @@ class StartViewModel(
             "Unknown"
         }
 
-        // Get the app's current version code
         val currentVersionCode = try {
             val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
@@ -216,7 +261,7 @@ class StartViewModel(
                 && text[textLength - 5] == '-'
                 && text.substring(textLength - 4).all(Char::isDigit)
             ) {
-               return true
+                return true
             }
         }
 
@@ -246,8 +291,10 @@ data class StartUiState(
     val deviceName: String? = null,
     val appVersion: String = "",
     val appVersionCode: Int = -1,
-    val isSignInProblem: Boolean = false,
     val isInventoryCheckPermitted: Boolean = false,
     val isInventoryCheckEnabled: Boolean = false,
-    val isSigningIn: Boolean = false
+    val isSigningIn: Boolean = false,
+    val isSignInProblem: Boolean = false,
+    val isFormatError: Boolean = false,
+    val isSignInError: Boolean = false
 )

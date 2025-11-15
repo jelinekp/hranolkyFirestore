@@ -1,7 +1,6 @@
 package eu.jelinek.hranolky.ui.start
 
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -77,34 +76,11 @@ fun StartScreen(
 ) {
     val screenState by viewModel.startScreenState.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
-    var scannedText by remember { mutableStateOf("") }
     var isAutoScanEnabled by remember { mutableStateOf(true) }
-    var isFormatError by remember { mutableStateOf(false) }
-    var isSignInError by remember { mutableStateOf(false) }
 
-    fun onSubmit() { // TODO extract to viewModel
-
-        Log.d("Scanned", "onSubmit: $scannedText")
-
-        isSignInError = screenState.isSigningIn
-
-        if (viewModel.isValidScannedTextFormat(scannedText)) {
-            val textLength = scannedText.length
-            if (textLength == 16)
-                if (scannedText[1] != '-'
-                    && scannedText[textLength - 5] == '-'
-                    && scannedText.substring(textLength - 4).all(Char::isDigit)
-                )
-                    if (scannedText.first() != 'S')
-                        scannedText = "H-$scannedText"
-
-            navigateToManageItem(scannedText)
-        } else {
-            Log.d(
-                "Scanned",
-                "Invalid format $scannedText"
-            )
-            isFormatError = true
+    LaunchedEffect(Unit) {
+        viewModel.navigateToManageItem.collect { route ->
+            navigateToManageItem(route)
         }
     }
 
@@ -141,33 +117,19 @@ fun StartScreen(
                 )
 
                 ScannedCodeInput(
-                    scannedText,
-                    onValueChange = { text ->
-                        scannedText = text
-                        if (isAutoScanEnabled && viewModel.isValidScannedTextFormat(scannedText)) {
-                            val textLength = text.length
-                            if (textLength == 16)
-                                if (text[1] != '-'
-                                    && text[textLength - 5] == '-'
-                                    && text.substring(textLength - 4).all(Char::isDigit)
-                                )
-                                    if (text.first() != 'S')
-                                        scannedText = "H-$scannedText"
-
-                            navigateToManageItem(scannedText)
-                        }
-                    },
+                    screenState.scannedCode,
+                    onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
                     focusRequester = focusRequester,
-                    isError = isFormatError,
-                    onDoneAction = { onSubmit() },
+                    isError = screenState.isFormatError,
+                    onDoneAction = { viewModel.onSubmit() },
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
 
-                if (isSignInError) {
+                if (screenState.isSignInError) {
                     ErrorText("Počkejte na přihlášení. Jste připojeni k internetu?")
                 }
 
-                if (isFormatError) {
+                if (screenState.isFormatError) {
                     ErrorText(
                         "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
                                 "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
@@ -175,7 +137,7 @@ fun StartScreen(
                 }
 
                 if (!isAutoScanEnabled) {
-                    ManualScanButton(onClicked = { onSubmit() })
+                    ManualScanButton(onClicked = { viewModel.onSubmit() })
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
@@ -290,25 +252,20 @@ fun StartScreen(
                     )
 
                     AutoScanToggle(
-                        isAutoScanEnabled,
+                        isAutoScanEnabled = isAutoScanEnabled,
                         onAutoScanToggleChange = { isAutoScanEnabled = it },
                         label = "Automatické skenování"
                     )
 
                     ScannedCodeInput(
-                        scannedText,
-                        onValueChange = { text ->
-                            scannedText = text
-                            if (isAutoScanEnabled && text.length == 16) {
-                                navigateToManageItem(text)
-                            }
-                        },
+                        scannedText = screenState.scannedCode,
+                        onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
                         focusRequester = focusRequester,
-                        isError = isFormatError,
-                        onDoneAction = { onSubmit() },
+                        isError = screenState.isFormatError,
+                        onDoneAction = { viewModel.onSubmit() },
                     )
 
-                    if (isFormatError) {
+                    if (screenState.isFormatError) {
                         ErrorText(
                             "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
                                     "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
@@ -316,7 +273,7 @@ fun StartScreen(
                     }
 
                     if (!isAutoScanEnabled) {
-                        ManualScanButton(onClicked = { onSubmit() })
+                        ManualScanButton(onClicked = { viewModel.onSubmit() })
                     }
                 }
             }
@@ -425,7 +382,7 @@ fun ManualScanButton(
     onClicked: () -> Unit
 ) {
     Button(
-        onClick = { onClicked().also { Log.d("Scanned", "Manual scan button clicked") } }
+        onClick = { onClicked() }
     ) {
         Text("Přejít na položku")
         Icon(
