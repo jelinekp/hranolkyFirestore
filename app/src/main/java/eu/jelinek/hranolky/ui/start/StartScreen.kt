@@ -168,8 +168,10 @@ fun StartScreen(
                 }
 
                 if (isFormatError) {
-                    ErrorText("Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, " +
-                            "nebo \'S\' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý.")
+                    ErrorText(
+                        "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
+                                "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
+                    )
                 }
 
                 if (!isAutoScanEnabled) {
@@ -206,16 +208,9 @@ fun StartScreen(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-                if (screenState.isSigningIn) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text("Přihlašování")
-                        CircularProgressIndicator()
-                    }
-                } else {
 
+                SignInStatus(screenState = screenState) { // Extracted Composable
+                    // This block will be the content for the 'else' case in SignInStatus
                     if (screenState.isInventoryCheckPermitted) {
                         AutoScanToggle(
                             screenState.isInventoryCheckEnabled,
@@ -314,8 +309,10 @@ fun StartScreen(
                     )
 
                     if (isFormatError) {
-                        ErrorText("Špatná délka kódu, kód musí začínat na \'H\' a být 18 znaků dlouhý, " +
-                                "nebo \'S\' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý.")
+                        ErrorText(
+                            "Špatná délka kódu, kód musí začínat na 'H' a být 18 znaků dlouhý, " +
+                                    "nebo 'S' a být 22 znaků dlouhý, nebo být 16 znaků dlouhý."
+                        )
                     }
 
                     if (!isAutoScanEnabled) {
@@ -326,6 +323,41 @@ fun StartScreen(
         }
     }
     LaunchedEffect(Unit) { if (screenSize.isPhone()) focusRequester.requestFocus() }
+}
+
+@Composable
+private fun SignInStatus(
+    screenState: StartUiState,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    if (screenState.isSigningIn || screenState.isSignInProblem) {
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (screenState.isSigningIn) {
+                Text("Přihlašování")
+                CircularProgressIndicator()
+            } else { // This implies isSignInProblem is true
+                ErrorText("Přihlášení selhalo")
+            }
+        }
+    } else {
+        content()
+    }
+}
+
+
+@Composable
+fun ErrorText(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(horizontal = 16.dp),
+        textAlign = TextAlign.Center
+    )
 }
 
 @Composable
@@ -389,18 +421,6 @@ fun ScannedCodeInput(
 }
 
 @Composable
-fun ErrorText(
-    text: String
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.error,
-        modifier = Modifier.padding(horizontal = 16.dp)
-    )
-}
-
-@Composable
 fun ManualScanButton(
     onClicked: () -> Unit
 ) {
@@ -422,17 +442,18 @@ fun NavigationActionButton(
     iconPainter: Painter,
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier // Allow passing additional modifiers
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier,
+        // Apply a common modifier first, then any additional specific modifiers
+        modifier = modifier, // Chain any passed-in modifier
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Icon(
             painter = iconPainter,
             contentDescription = contentDescription,
-            modifier = Modifier.padding(all = 6.dp)
+            modifier = Modifier.padding(all = 6.dp) // Common padding for the icon
         )
         Text(text)
     }

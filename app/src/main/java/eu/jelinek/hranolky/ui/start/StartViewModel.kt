@@ -15,6 +15,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -41,22 +42,26 @@ class StartViewModel(
     private fun signInAnonymously() {
         viewModelScope.launch {
             _startScreenState.value = _startScreenState.value.copy(isSigningIn = true)
-            if (auth.currentUser == null) {
-                try {
+            try {
+                if (auth.currentUser == null) {
                     auth.signInAnonymously().await()
                     Log.d("Auth", "signInAnonymously:success. UID: ${auth.currentUser?.uid}")
-                    fetchDeviceNameAndInventoryPermit()
-                    logDeviceId()
-                } catch (e: Exception) {
-                    Log.w("Auth", "signInAnonymously:failure", e)
-                    // Handle error, maybe show a message to the user
+                } else {
+                    Log.d("Auth", "User already signed in with UID: ${auth.currentUser?.uid}")
                 }
-            } else {
-                Log.d("Auth", "User already signed in with UID: ${auth.currentUser?.uid}")
+
+                // These functions will now run only after a user is guaranteed to be signed in.
                 fetchDeviceNameAndInventoryPermit()
-                logDeviceId()
+                val currentVersionCode = logDeviceId()
+                checkForUpdate(currentVersionCode)
+
+            } catch (e: Exception) {
+                Log.w("Auth", "signInAnonymously:failure", e)
+                // Handle error, maybe show a message to the user
+                _startScreenState.update { it.copy(isSignInProblem = true) }
+            } finally {
+                _startScreenState.value = _startScreenState.value.copy(isSigningIn = false)
             }
-            _startScreenState.value = _startScreenState.value.copy(isSigningIn = false)
         }
     }
 
@@ -68,7 +73,7 @@ class StartViewModel(
         )
     }
 
-    private fun logDeviceId() {
+    private fun logDeviceId(): Int {
         val context = getApplication<Application>().applicationContext
         val deviceId = getDeviceId()
 
@@ -80,9 +85,24 @@ class StartViewModel(
             "Unknown"
         }
 
+        // Get the app's current version code
+        val currentVersionCode = try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pInfo.longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode
+            }
+        } catch (e: PackageManager.NameNotFoundException) {
+            Log.e("AppVersion", "Could not get package info", e)
+            -1
+        }
+
         _startScreenState.value = _startScreenState.value.copy(
             shortenedDeviceId = deviceId.substring(0..2),
-            appVersion = appVersion ?: "Neznámá verze"
+            appVersion = appVersion ?: "Neznámá verze",
+            appVersionCode = currentVersionCode
         )
 
         val deviceData = hashMapOf(
@@ -99,9 +119,10 @@ class StartViewModel(
                 )
             }
             .addOnFailureListener { e -> Log.w("Firestore", "Error writing document", e) }
+        return currentVersionCode
     }
 
-    private suspend fun fetchDeviceNameAndInventoryPermit() { 
+    private suspend fun fetchDeviceNameAndInventoryPermit() {
         val deviceId = getDeviceId()
         Log.d("StartViewModel", "Fetching device name for ID: $deviceId")
         try {
@@ -128,7 +149,7 @@ class StartViewModel(
                     _startScreenState.value = _startScreenState.value.copy(
                         deviceName = null,
                         isInventoryCheckPermitted = isInventoryCheckPermitted
-                    ) 
+                    )
                     toggleInventoryCheck(isEnabled = false)
                 }
             } else {
@@ -145,6 +166,36 @@ class StartViewModel(
         }
     }
 
+    private suspend fun checkForUpdate(currentVersionCode: Int) {
+        try {
+            val document = firestoreDb.collection("app_config").document("latest").get().await()
+
+            if (document.exists()) {
+                val latestVersionCode = document.getLong("versionCode")?.toInt() ?: -1
+
+                Log.d("AppUpdate", "Current version: $currentVersionCode, Latest version from Firestore: $latestVersionCode")
+
+                if (currentVersionCode != -1 && latestVersionCode > currentVersionCode) {
+                    Log.i("AppUpdate", "New app version found!")
+                    document.getString("downloadUrl")?.let { url ->
+                        downloadAndInstallUpdate(url)
+                    } ?: Log.w("AppUpdate", "Download URL is null for the latest version.")
+                } else {
+                    Log.d("AppUpdate", "App is up to date or local version code is invalid.")
+                }
+            } else {
+                Log.w("AppUpdate", "Could not find 'latest' app_config document.")
+            }
+        } catch (e: Exception) {
+            Log.e("AppUpdate", "Error checking for update", e)
+        }
+    }
+
+    private fun downloadAndInstallUpdate(url: String) {
+        // TODO: Implement the download and installation logic.
+        Log.d("AppUpdate", "Placeholder: Download and install update from $url")
+    }
+
     fun toggleInventoryCheck(isEnabled: Boolean) {
         _startScreenState.value = _startScreenState.value.copy(isInventoryCheckEnabled = isEnabled)
         sharedPreferences.edit { putBoolean(PREF_INVENTORY_CHECK_ENABLED, isEnabled) }
@@ -157,7 +208,7 @@ class StartViewModel(
         Log.d("StartViewModel", "Loaded inventory check setting: $isEnabled")
     }
 
-    fun isValidScannedTextFormat(text: String): Boolean { 
+    fun isValidScannedTextFormat(text: String): Boolean {
         val textLength = text.length
 
         if (textLength == 16) {
@@ -194,6 +245,8 @@ data class StartUiState(
     val shortenedDeviceId: String = "",
     val deviceName: String? = null,
     val appVersion: String = "",
+    val appVersionCode: Int = -1,
+    val isSignInProblem: Boolean = false,
     val isInventoryCheckPermitted: Boolean = false,
     val isInventoryCheckEnabled: Boolean = false,
     val isSigningIn: Boolean = false
