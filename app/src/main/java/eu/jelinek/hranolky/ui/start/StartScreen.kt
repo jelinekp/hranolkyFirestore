@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,12 @@ fun StartScreen(
     LaunchedEffect(Unit) {
         viewModel.navigateToManageItem.collect { route ->
             navigateToManageItem(route)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearScannedCode()
         }
     }
 
@@ -105,7 +113,8 @@ private fun StartScreenPhoneLayout(
     navigateToOverview: () -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
-    var isAutoScanEnabled by remember { mutableStateOf(true) }
+    var isManualInput by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(
         modifier = modifier
@@ -125,18 +134,33 @@ private fun StartScreenPhoneLayout(
         )
 
         AutoScanToggle(
-            isAutoScanEnabled,
-            onAutoScanToggleChange = { isAutoScanEnabled = it },
-            label = "Automatické skenování"
+            isManualInput,
+            onAutoScanToggleChange = { isManualInput = it },
+            label = "Zadat kód manuálně"
         )
 
+        if (!isManualInput) {
+            Text(
+                text = "Namiř terminál na QR kód a zmáčkni žluté tlačítko na boku terminálu.",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 24.dp),
+                style = typography.bodySmall
+            )
+        }
+
+        // Input field for scanner - always present for focus but hidden when not in manual mode
         ScannedCodeInput(
             screenState.scannedCode,
-            onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
+            onValueChange = { viewModel.onScannedCodeChange(it, isManualInput) },
             focusRequester = focusRequester,
             isError = screenState.isFormatError,
             onDoneAction = { viewModel.onSubmit() },
-            modifier = Modifier.padding(vertical = 8.dp)
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .then(
+                    if (!isManualInput) Modifier.height(0.dp)
+                    else Modifier
+                )
         )
 
         if (screenState.isSignInError) {
@@ -150,7 +174,7 @@ private fun StartScreenPhoneLayout(
             )
         }
 
-        if (!isAutoScanEnabled) {
+        if (isManualInput) {
             ManualScanButton(onClicked = { viewModel.onSubmit() })
         }
 
@@ -223,7 +247,18 @@ private fun StartScreenPhoneLayout(
             )
         }
     }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    LaunchedEffect(isManualInput) {
+        if (isManualInput) {
+            keyboardController?.show()
+        } else {
+            keyboardController?.hide()
+        }
+    }
 }
 
 @Composable
@@ -234,7 +269,8 @@ private fun StartScreenTabletLayout(
     navigateToManageItem: (String) -> Unit
 ) {
     val focusRequester = remember { FocusRequester() }
-    var isAutoScanEnabled by remember { mutableStateOf(true) }
+    var isManualInput by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Row(
         modifier = modifier
@@ -277,17 +313,19 @@ private fun StartScreenTabletLayout(
             )
 
             AutoScanToggle(
-                isAutoScanEnabled = isAutoScanEnabled,
-                onAutoScanToggleChange = { isAutoScanEnabled = it },
-                label = "Automatické skenování"
+                isAutoScanEnabled = isManualInput,
+                onAutoScanToggleChange = { isManualInput = it },
+                label = "Zadat kód manuálně"
             )
 
+            // Input field for scanner - always present for focus but hidden when not in manual mode
             ScannedCodeInput(
                 scannedText = screenState.scannedCode,
-                onValueChange = { viewModel.onScannedCodeChange(it, isAutoScanEnabled) },
+                onValueChange = { viewModel.onScannedCodeChange(it, isManualInput) },
                 focusRequester = focusRequester,
                 isError = screenState.isFormatError,
                 onDoneAction = { viewModel.onSubmit() },
+                modifier = if (!isManualInput) Modifier.height(0.dp) else Modifier
             )
 
             if (screenState.isFormatError) {
@@ -297,9 +335,21 @@ private fun StartScreenTabletLayout(
                 )
             }
 
-            if (!isAutoScanEnabled) {
+            if (isManualInput) {
                 ManualScanButton(onClicked = { viewModel.onSubmit() })
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    LaunchedEffect(isManualInput) {
+        if (isManualInput) {
+            keyboardController?.show()
+        } else {
+            keyboardController?.hide()
         }
     }
 }

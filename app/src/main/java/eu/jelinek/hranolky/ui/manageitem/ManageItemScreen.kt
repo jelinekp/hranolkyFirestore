@@ -1,5 +1,6 @@
 package eu.jelinek.hranolky.ui.manageitem
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +45,20 @@ fun ManageItemScreen(
     val validationState by viewModel.validationSharedFlowStream.collectAsStateWithLifecycle(
         initialValue = AddActionValidationState()
     )
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    // Create a unified back handler that clears focus, hides keyboard, and navigates
+    val handleBack: () -> Unit = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        navigateUp()
+    }
+
+    // Handle system back button press
+    BackHandler {
+        handleBack()
+    }
 
     val header = if (slotId?.first() == 'S')
         "Spárovka"
@@ -64,7 +81,7 @@ fun ManageItemScreen(
         topBar = {
             ShowLastActionsTopBar(
                 text = "$header $slotId",
-                navigateUp = navigateUp,
+                navigateUp = handleBack,
             )
         }
     ) { padding ->

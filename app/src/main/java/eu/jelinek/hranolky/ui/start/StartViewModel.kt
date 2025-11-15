@@ -72,14 +72,14 @@ class StartViewModel(
         }
     }
 
-    fun onScannedCodeChange(text: String, isAutoScanEnabled: Boolean) {
+    fun onScannedCodeChange(text: String, isManualInput: Boolean) {
         viewModelScope.launch {
             _startScreenState.value = _startScreenState.value.copy(
                 scannedCode = text.uppercase(),
                 isFormatError = false,
                 isSignInError = false
             )
-            if (isAutoScanEnabled && inputValidator.isValidScannedTextFormat(text)) {
+            if (!isManualInput && inputValidator.isValidScannedTextFormat(text)) {
                 processAndNavigate(text)
             }
         }
@@ -114,6 +114,10 @@ class StartViewModel(
             }
         }
         _navigateToManageItem.emit(manipulatedCode)
+    }
+
+    fun clearScannedCode() {
+        _startScreenState.value = _startScreenState.value.copy(scannedCode = "", isFormatError = false, isSignInError = false)
     }
 
     fun toggleInventoryCheck(isEnabled: Boolean) {
