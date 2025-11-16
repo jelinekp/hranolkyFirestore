@@ -1,6 +1,5 @@
 [versions]
 agp = "8.13.1"
-emdk = "9.1.1"
 firebaseBom = "34.6.0"
 koinAndroid = "4.1.1"
 koinAndroidxCompose = "4.1.1"
@@ -31,7 +30,6 @@ material3 = "1.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-emdk = { module = "com.symbol:emdk", version.ref = "emdk" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

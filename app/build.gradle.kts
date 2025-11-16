@@ -17,7 +17,7 @@ android {
         minSdk = 27
         targetSdk = 36
         versionCode = 13
-        versionName = "2.6.0 (security)"
+        versionName = "2.6.1 (auto-update-test)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -95,6 +95,4 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
-
-    compileOnly(libs.emdk)
 }
