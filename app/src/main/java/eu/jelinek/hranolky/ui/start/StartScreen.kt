@@ -1,7 +1,5 @@
 package eu.jelinek.hranolky.ui.start
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -54,7 +52,6 @@ import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.SignInStatus
 import org.koin.androidx.compose.koinViewModel
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun StartScreen(
     modifier: Modifier = Modifier,
@@ -154,7 +151,15 @@ private fun StartScreenPhoneLayout(
             onValueChange = { viewModel.onScannedCodeChange(it, isManualInput) },
             focusRequester = focusRequester,
             isError = screenState.isFormatError,
-            onDoneAction = { viewModel.onSubmit() },
+            onDoneAction = {
+                if (isManualInput) {
+                    // In manual mode, just hide keyboard - user must click button to navigate
+                    keyboardController?.hide()
+                } else {
+                    // In auto-scan mode, submit immediately
+                    viewModel.onSubmit()
+                }
+            },
             modifier = Modifier
                 .padding(vertical = 8.dp)
                 .then(
@@ -248,16 +253,14 @@ private fun StartScreenPhoneLayout(
         }
     }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
+    // Always request focus for the scanner input, which is always present (either visible or hidden).
+    // Combined focus + keyboard control: always keep focus for scanner, but forcibly hide keyboard when manual mode is off.
     LaunchedEffect(isManualInput) {
-        if (isManualInput) {
-            keyboardController?.show()
-        } else {
-            keyboardController?.hide()
-        }
+    }
+    if (isManualInput) {
+        keyboardController?.show()
+    } else {
+        keyboardController?.hide()
     }
 }
 
@@ -324,7 +327,15 @@ private fun StartScreenTabletLayout(
                 onValueChange = { viewModel.onScannedCodeChange(it, isManualInput) },
                 focusRequester = focusRequester,
                 isError = screenState.isFormatError,
-                onDoneAction = { viewModel.onSubmit() },
+                onDoneAction = {
+                    if (isManualInput) {
+                        // In manual mode, just hide keyboard - user must click button to navigate
+                        keyboardController?.hide()
+                    } else {
+                        // In auto-scan mode, submit immediately
+                        viewModel.onSubmit()
+                    }
+                },
                 modifier = if (!isManualInput) Modifier.height(0.dp) else Modifier
             )
 
@@ -341,16 +352,14 @@ private fun StartScreenTabletLayout(
         }
     }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
+    // Always request focus for the scanner input.
+    // Combined focus + keyboard control for tablet layout as well.
     LaunchedEffect(isManualInput) {
-        if (isManualInput) {
-            keyboardController?.show()
-        } else {
-            keyboardController?.hide()
-        }
+    }
+    if (isManualInput) {
+        keyboardController?.show()
+    } else {
+        keyboardController?.hide()
     }
 }
 

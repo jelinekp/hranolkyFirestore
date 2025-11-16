@@ -114,6 +114,8 @@ class StartViewModel(
             }
         }
         _navigateToManageItem.emit(manipulatedCode)
+        // Clear the scanned code immediately after navigation to prevent re-navigation when coming back
+        clearScannedCode()
     }
 
     fun clearScannedCode() {
