@@ -53,9 +53,9 @@ fun StartScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
-    // Animate the pads sliding in from the edges
+    // Animate the pads sliding in from the edges with smooth motion
     val leftPadOffset by animateFloatAsState(
-        targetValue = if (isL1Pressed) -25f else -35f,
+        targetValue = if (isL1Pressed) -27f else -33f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -64,7 +64,7 @@ fun StartScreen(
     )
 
     val rightPadOffset by animateFloatAsState(
-        targetValue = if (isR1Pressed) 25f else 35f,
+        targetValue = if (isR1Pressed) 27f else 33f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -163,13 +163,15 @@ fun StartScreen(
                 )
             }
 
-            // Button indicator pads
+            // Button indicator pads with subtle pulse
             ButtonPad(
                 offset = leftPadOffset,
+                isPressed = isL1Pressed,
                 modifier = Modifier.align(Alignment.TopStart)
             )
             ButtonPad(
                 offset = rightPadOffset,
+                isPressed = isR1Pressed,
                 modifier = Modifier.align(Alignment.TopEnd)
             )
         }
