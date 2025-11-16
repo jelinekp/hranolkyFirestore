@@ -15,7 +15,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HranolkyFirestore"
         tools:targetApi="36">
-        <uses-library android:name="com.symbol.emdk" />
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -30,6 +29,13 @@
         <receiver
             android:name="eu.jelinek.hranolky.domain.UpdateManager$InstallReceiver"
             android:exported="false" />
+        <receiver
+            android:name="eu.jelinek.hranolky.domain.AppUpdateRestartReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

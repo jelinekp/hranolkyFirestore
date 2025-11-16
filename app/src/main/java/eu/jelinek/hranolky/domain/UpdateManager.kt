@@ -12,15 +12,31 @@ import android.os.Environment
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.FileInputStream
 
+data class UpdateState(
+    val isUpdateAvailable: Boolean = false,
+    val isDownloading: Boolean = false,
+    val isInstalling: Boolean = false,
+    val downloadProgress: Int = 0,
+    val latestVersion: String = "",
+    val releaseNotes: String = "",
+    val error: String? = null
+)
+
 class UpdateManager(private val firestoreDb: FirebaseFirestore) {
+    private val _updateState = MutableStateFlow(UpdateState())
+    val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
+
     suspend fun checkForUpdate(currentVersionCode: Int, context: Context) {
         Log.d("AppUpdate", "checkForUpdate() started - currentVersionCode: $currentVersionCode")
         try {
@@ -30,22 +46,41 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
             if (document.exists()) {
                 val latestVersionCode = document.getLong("versionCode")?.toInt() ?: -1
                 val downloadUrl = document.getString("downloadUrl")
+                val latestVersion = document.getString("version") ?: "Unknown"
+                val releaseNotes = document.getString("releaseNotes") ?: ""
 
                 Log.d("AppUpdate", "Current version: $currentVersionCode, Latest version from Firestore: $latestVersionCode")
                 Log.d("AppUpdate", "Download URL from Firestore: $downloadUrl")
+                Log.d("AppUpdate", "Release notes: $releaseNotes")
 
                 if (currentVersionCode != -1 && latestVersionCode > currentVersionCode) {
                     Log.i("AppUpdate", "New app version found! Upgrading from v$currentVersionCode to v$latestVersionCode")
+
+                    // Update state to show update is available
+                    _updateState.value = UpdateState(
+                        isUpdateAvailable = true,
+                        latestVersion = latestVersion,
+                        releaseNotes = releaseNotes
+                    )
+
                     downloadUrl?.let { url ->
-                        Log.d("AppUpdate", "Starting download and install process...")
-                        downloadAndInstallUpdate(url, context)
-                    } ?: Log.w("AppUpdate", "Download URL is null for the latest version.")
+                        // Provide deterministic filename for the download (avoid generic names)
+                        val fileName = "hranolky_update_v${latestVersionCode}.apk"
+                        downloadAndInstallUpdate(url, context, fileName)
+                    } ?: run {
+                        Log.w("AppUpdate", "Download URL is null for the latest version.")
+                        _updateState.value = _updateState.value.copy(
+                            error = "Download URL is missing"
+                        )
+                    }
                 } else if (currentVersionCode == -1) {
                     Log.w("AppUpdate", "Current version code is invalid (-1), skipping update check")
                 } else if (latestVersionCode == currentVersionCode) {
-                    Log.d("AppUpdate", "App is up to date (both at version $currentVersionCode)")
+                    Log.d("AppUpdate", "App is up to date (both at version $currentVersionCode). Cleaning any stale downloaded APKs.")
+                    deleteDownloadedApks(context)
                 } else {
-                    Log.d("AppUpdate", "Current version ($currentVersionCode) is newer than Firestore version ($latestVersionCode)")
+                    Log.d("AppUpdate", "Current version ($currentVersionCode) is newer than Firestore version ($latestVersionCode). Cleaning any stale downloaded APKs.")
+                    deleteDownloadedApks(context)
                 }
             } else {
                 Log.w("AppUpdate", "Could not find 'latest' app_config document in Firestore.")
@@ -55,8 +90,14 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
         }
     }
 
-    private fun downloadAndInstallUpdate(apkUrl: String, context: Context) {
+    private fun downloadAndInstallUpdate(apkUrl: String, context: Context, fileName: String) {
         Log.d("AppUpdate", "downloadAndInstallUpdate() called with URL: $apkUrl")
+
+        // Set downloading state
+        _updateState.value = _updateState.value.copy(
+            isDownloading = true,
+            downloadProgress = 0
+        )
 
         // Use application context to ensure receiver persists
         val appContext = context.applicationContext
@@ -66,10 +107,10 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
         Log.d("AppUpdate", "DownloadManager service obtained")
 
         val request = DownloadManager.Request(Uri.parse(apkUrl))
-            .setTitle("hranolky_aktualizace")
-            .setDescription("Downloading new version...")
+            .setTitle("Stahuji novou verzi Hranolek")
+            .setDescription("Smaží se nové Hranolky!")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-            .setDestinationInExternalFilesDir(appContext, Environment.DIRECTORY_DOWNLOADS, "")
+            .setDestinationInExternalFilesDir(appContext, Environment.DIRECTORY_DOWNLOADS, fileName)
             .setMimeType("application/vnd.android.package-archive")
 
         val downloadId = downloadManager.enqueue(request)
@@ -164,6 +205,11 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                             } else {
                                 -1
                             }
+                            // Update download progress
+                            _updateState.value = _updateState.value.copy(
+                                isDownloading = true,
+                                downloadProgress = if (progress >= 0) progress else 0
+                            )
                             Log.d("AppUpdate", "Download #$checkCount: RUNNING - $bytesDownloaded/$bytesTotal bytes ($progress%)")
                         }
                         DownloadManager.STATUS_PAUSED -> {
@@ -179,6 +225,13 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                         DownloadManager.STATUS_SUCCESSFUL -> {
                             Log.i("AppUpdate", "Download #$checkCount: SUCCESSFUL - $bytesDownloaded bytes downloaded")
                             Log.d("AppUpdate", "Download completed successfully, triggering installation manually as fallback...")
+
+                            // Update state to installing
+                            _updateState.value = _updateState.value.copy(
+                                isDownloading = false,
+                                downloadProgress = 100,
+                                isInstalling = true
+                            )
 
                             // Manually trigger installation as fallback in case broadcast isn't received
                             val fileUri = downloadManager.getUriForDownloadedFile(downloadId)
@@ -199,13 +252,25 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                                         installUpdateSilently(context, file)
                                     } else {
                                         Log.e("AppUpdate", "Fallback: Could not get local file path - localUri is null")
+                                        _updateState.value = _updateState.value.copy(
+                                            isInstalling = false,
+                                            error = "Could not get local file path"
+                                        )
                                     }
                                 } else {
                                     localCursor.close()
                                     Log.e("AppUpdate", "Fallback: Download query returned no results")
+                                    _updateState.value = _updateState.value.copy(
+                                        isInstalling = false,
+                                        error = "Download query failed"
+                                    )
                                 }
                             } else {
                                 Log.e("AppUpdate", "Fallback: Could not retrieve file URI")
+                                _updateState.value = _updateState.value.copy(
+                                    isInstalling = false,
+                                    error = "Could not retrieve file"
+                                )
                             }
 
                             isComplete = true
@@ -224,6 +289,10 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                                 else -> "CODE_$reason"
                             }
                             Log.e("AppUpdate", "Download #$checkCount: FAILED - Error: $errorText")
+                            _updateState.value = _updateState.value.copy(
+                                isDownloading = false,
+                                error = "Download failed: $errorText"
+                            )
                             isComplete = true
                         }
                     }
@@ -252,6 +321,14 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
 
                 if (id == downloadId) {
                     Log.i("AppUpdate", "Download completed for ID: $downloadId")
+
+                    // Update state to installing
+                    _updateState.value = _updateState.value.copy(
+                        isDownloading = false,
+                        downloadProgress = 100,
+                        isInstalling = true
+                    )
+
                     val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                     val fileUri = downloadManager.getUriForDownloadedFile(downloadId)
                     Log.d("AppUpdate", "File URI from DownloadManager: $fileUri")
@@ -276,13 +353,25 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                                 installUpdateSilently(context, file)
                             } else {
                                 Log.e("AppUpdate", "Could not get local file path - localUri is null")
+                                _updateState.value = _updateState.value.copy(
+                                    isInstalling = false,
+                                    error = "Could not get local file path"
+                                )
                             }
                         } else {
                             cursor.close()
                             Log.e("AppUpdate", "Download query returned no results - cursor is empty")
+                            _updateState.value = _updateState.value.copy(
+                                isInstalling = false,
+                                error = "Download query failed"
+                            )
                         }
                     } else {
                         Log.e("AppUpdate", "Download failed, could not retrieve file URI - fileUri is null")
+                        _updateState.value = _updateState.value.copy(
+                            isInstalling = false,
+                            error = "Could not retrieve file"
+                        )
                     }
                     // Unregister the receiver to prevent memory leaks
                     Log.d("AppUpdate", "Unregistering BroadcastReceiver")
@@ -364,6 +453,45 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
         }
     }
 
+    private fun isOwnApk(context: Context, file: File): Boolean {
+        if (!file.name.startsWith("hranolky_update_v") || !file.name.endsWith(".apk")) return false
+        val pm = context.packageManager
+        val pkgInfo = pm.getPackageArchiveInfo(file.path, 0)
+        val matches = pkgInfo?.packageName == context.packageName
+        Log.d("AppUpdate", "APK ${file.name} package check: pkgInfoPackage=${pkgInfo?.packageName} matchesApp=$matches")
+        return matches
+    }
+
+    private fun deleteDownloadedApks(context: Context) {
+        try {
+            val downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+            if (downloadsDir == null) {
+                Log.w("AppUpdate", "Downloads directory is null; cannot clean APKs")
+                return
+            }
+            val apkFiles = downloadsDir.listFiles { file ->
+                file.isFile && file.name.endsWith(".apk") && file.name.startsWith("hranolky_update_v")
+            } ?: emptyArray()
+            if (apkFiles.isEmpty()) {
+                Log.d("AppUpdate", "No matching update APK files to delete in ${downloadsDir.absolutePath}")
+                return
+            }
+            var deletedCount = 0
+            apkFiles.forEach { file ->
+                if (isOwnApk(context, file)) {
+                    val deleted = file.delete()
+                    Log.d("AppUpdate", "Delete ${file.name}: ${if (deleted) "SUCCESS" else "FAILED"}")
+                    if (deleted) deletedCount++
+                } else {
+                    Log.d("AppUpdate", "Skipping ${file.name} - package does not match app")
+                }
+            }
+            Log.i("AppUpdate", "Deleted $deletedCount/${apkFiles.size} update APK file(s)")
+        } catch (e: Exception) {
+            Log.e("AppUpdate", "Failed to delete downloaded APKs: ${e.message}", e)
+        }
+    }
+
     class InstallReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             Log.d("AppUpdate", "InstallReceiver.onReceive() called")
@@ -384,6 +512,8 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                 }
                 PackageInstaller.STATUS_SUCCESS -> {
                     Log.i("AppUpdate", "Installation succeeded! App update complete.")
+                    // Don't automatically relaunch - let the user open the app manually
+                    // Automatic relaunch can cause crashes during the installation process
                 }
                 PackageInstaller.STATUS_FAILURE -> {
                     val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
@@ -421,4 +551,3 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
         }
     }
 }
-

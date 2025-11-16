@@ -12,16 +12,23 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -65,9 +72,18 @@ fun StartScreen(
     screenSize: ScreenSize = ScreenSize.PHONE
 ) {
     val screenState by viewModel.startScreenState.collectAsStateWithLifecycle()
+    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
+    var showReleaseNotes by remember { mutableStateOf(false) }
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+
+    // Show release notes dialog when update is available
+    LaunchedEffect(updateState.isUpdateAvailable) {
+        if (updateState.isUpdateAvailable && updateState.releaseNotes.isNotEmpty()) {
+            showReleaseNotes = true
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.navigateToManageItem.collect { route ->
@@ -83,11 +99,39 @@ fun StartScreen(
         }
     }
 
+    // Release notes dialog
+    if (showReleaseNotes && updateState.isUpdateAvailable) {
+        AlertDialog(
+            onDismissRequest = { showReleaseNotes = false },
+            title = { Text("Nová verze ${updateState.latestVersion} k dispozici") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Co je nového:")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(updateState.releaseNotes, style = typography.labelSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Až se dokončí stahování aktualizace, povolte oprávnění instalovat a klikněte na \"Instalovat\". Poté znovu otevřete aplikaci.")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showReleaseNotes = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             if (screenSize.isTablet()) StartScreenTopBar(
                 navigateToOverview = navigateToOverview
             )
+        },
+        bottomBar = {
+            // Show update progress at the bottom
+            if (updateState.isDownloading || updateState.isInstalling) {
+                UpdateProgressBar(updateState = updateState)
+            }
         }
     ) { padding ->
         if (screenSize.isPhone()) {
@@ -419,4 +463,74 @@ fun StartScreenTopBar(modifier: Modifier = Modifier, navigateToOverview: () -> U
             )
         }
     )
+}
+
+@Composable
+private fun UpdateProgressBar(
+    updateState: eu.jelinek.hranolky.domain.UpdateState,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(colorScheme.primaryContainer)
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = when {
+                    updateState.isInstalling -> "Instalace aktualizace..."
+                    updateState.isDownloading -> "Stahování aktualizace..."
+                    else -> "Připravuji aktualizaci..."
+                },
+                style = typography.bodyMedium,
+                color = colorScheme.onPrimaryContainer
+            )
+
+            if (updateState.isDownloading) {
+                Text(
+                    text = "${updateState.downloadProgress}%",
+                    style = typography.bodySmall,
+                    color = colorScheme.onPrimaryContainer
+                )
+            } else if (updateState.isInstalling) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = colorScheme.onPrimaryContainer
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (updateState.isDownloading) {
+            LinearProgressIndicator(
+                progress = { updateState.downloadProgress / 100f },
+                modifier = Modifier.fillMaxWidth(),
+                color = colorScheme.primary,
+                trackColor = colorScheme.surfaceVariant
+            )
+        } else if (updateState.isInstalling) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = colorScheme.primary,
+                trackColor = colorScheme.surfaceVariant
+            )
+        }
+
+        if (updateState.error != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Chyba: ${updateState.error}",
+                style = typography.bodySmall,
+                color = colorScheme.error
+            )
+        }
+    }
 }

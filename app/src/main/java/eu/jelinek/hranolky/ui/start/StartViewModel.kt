@@ -29,6 +29,8 @@ class StartViewModel(
     private val _startScreenState = MutableStateFlow(StartUiState())
     val startScreenState get() = _startScreenState.asStateFlow()
 
+    val updateState = updateManager.updateState
+
     private val _navigateToManageItem = MutableSharedFlow<String>()
     val navigateToManageItem = _navigateToManageItem.asSharedFlow()
 
