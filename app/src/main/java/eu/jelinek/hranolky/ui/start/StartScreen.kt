@@ -51,6 +51,7 @@ import eu.jelinek.hranolky.ui.shared.NavigationActionButton
 import eu.jelinek.hranolky.ui.shared.ScannedCodeInput
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import eu.jelinek.hranolky.ui.shared.SignInStatus
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -65,6 +66,7 @@ fun StartScreen(
     val screenState by viewModel.startScreenState.collectAsStateWithLifecycle()
 
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         viewModel.navigateToManageItem.collect { route ->
@@ -94,14 +96,16 @@ fun StartScreen(
                 viewModel = viewModel,
                 navigateToHistory = navigateToHistory,
                 navigateToOverview = navigateToOverview,
-                keyboardController = keyboardController
+                keyboardController = keyboardController,
+                focusRequester = focusRequester
             )
         } else {
             StartScreenTabletLayout(
                 modifier = modifier.padding(padding),
                 screenState = screenState,
                 viewModel = viewModel,
-                navigateToManageItem = navigateToManageItem
+                navigateToManageItem = navigateToManageItem,
+                focusRequester = focusRequester
             )
         }
     }
@@ -114,9 +118,9 @@ private fun StartScreenPhoneLayout(
     viewModel: StartViewModel,
     navigateToHistory: () -> Unit,
     navigateToOverview: () -> Unit,
-    keyboardController: SoftwareKeyboardController?
+    keyboardController: SoftwareKeyboardController?,
+    focusRequester: FocusRequester
 ) {
-    val focusRequester = remember { FocusRequester() }
     var isManualInput by remember { mutableStateOf(false) }
 
     Column(
@@ -258,14 +262,21 @@ private fun StartScreenPhoneLayout(
             )
         }
     }
-    // Always request focus for the scanner input, which is always present (either visible or hidden).
-    // Combined focus + keyboard control: always keep focus for scanner, but forcibly hide keyboard when manual mode is off.
+
+    // FIX: Combined, robust logic for keyboard handling
     LaunchedEffect(isManualInput) {
-    }
-    if (isManualInput) {
-        keyboardController?.show()
-    } else {
-        keyboardController?.hide()
+        if (isManualInput) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        } else {
+            // Request focus for the scanner
+            focusRequester.requestFocus()
+            // CRITICAL: We must wait for the system to process the focus event
+            // (which triggers "Show Keyboard") before we send the "Hide Keyboard" command.
+            // If we hide too early, the system's "Show" wins.
+            delay(200)
+            keyboardController?.hide()
+        }
     }
 }
 
@@ -274,9 +285,9 @@ private fun StartScreenTabletLayout(
     modifier: Modifier = Modifier,
     screenState: StartUiState,
     viewModel: StartViewModel,
-    navigateToManageItem: (String) -> Unit
+    navigateToManageItem: (String) -> Unit,
+    focusRequester: FocusRequester
 ) {
-    val focusRequester = remember { FocusRequester() }
     var isManualInput by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -290,7 +301,7 @@ private fun StartScreenTabletLayout(
                 .padding(16.dp)
         ) {
             TabletSlotTable(
-                navigateToManageItem = { navigateToManageItem },
+                navigateToManageItem = navigateToManageItem,
             )
             Text(
                 text = "Terminál: " + screenState.shortenedDeviceId,
@@ -357,14 +368,17 @@ private fun StartScreenTabletLayout(
         }
     }
 
-    // Always request focus for the scanner input.
-    // Combined focus + keyboard control for tablet layout as well.
+    // FIX: Combined, robust logic for keyboard handling
     LaunchedEffect(isManualInput) {
-    }
-    if (isManualInput) {
-        keyboardController?.show()
-    } else {
-        keyboardController?.hide()
+        if (isManualInput) {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        } else {
+            focusRequester.requestFocus()
+            // CRITICAL: Wait for system to register focus and show keyboard, then hide it.
+            delay(300)
+            keyboardController?.hide()
+        }
     }
 }
 
