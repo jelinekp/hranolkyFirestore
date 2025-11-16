@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -172,6 +173,13 @@ private fun StartScreenPhoneLayout(
             },
             modifier = Modifier
                 .padding(vertical = 8.dp)
+                // FIX: Immediately hide keyboard on focus when manual input is disabled.
+                // This runs synchronously on focus change, reducing/eliminating the flash.
+                .onFocusChanged {
+                    if (it.isFocused && !isManualInput) {
+                        keyboardController?.hide()
+                    }
+                }
                 .then(
                     if (!isManualInput) Modifier.height(0.dp)
                     else Modifier
@@ -263,18 +271,15 @@ private fun StartScreenPhoneLayout(
         }
     }
 
-    // FIX: Combined, robust logic for keyboard handling
     LaunchedEffect(isManualInput) {
         if (isManualInput) {
             focusRequester.requestFocus()
             keyboardController?.show()
         } else {
-            // Request focus for the scanner
             focusRequester.requestFocus()
-            // CRITICAL: We must wait for the system to process the focus event
-            // (which triggers "Show Keyboard") before we send the "Hide Keyboard" command.
-            // If we hide too early, the system's "Show" wins.
-            delay(200)
+            // Backup: Wait a tiny bit to ensure system "Show" is overridden if onFocusChanged missed it.
+            // Reduced delay to 10ms to minimize visual flash.
+            delay(10)
             keyboardController?.hide()
         }
     }
@@ -352,7 +357,14 @@ private fun StartScreenTabletLayout(
                         viewModel.onSubmit()
                     }
                 },
-                modifier = if (!isManualInput) Modifier.height(0.dp) else Modifier
+                modifier = Modifier
+                    // FIX: Immediately hide keyboard on focus when manual input is disabled.
+                    .onFocusChanged {
+                        if (it.isFocused && !isManualInput) {
+                            keyboardController?.hide()
+                        }
+                    }
+                    .then(if (!isManualInput) Modifier.height(0.dp) else Modifier)
             )
 
             if (screenState.isFormatError) {
@@ -368,15 +380,15 @@ private fun StartScreenTabletLayout(
         }
     }
 
-    // FIX: Combined, robust logic for keyboard handling
     LaunchedEffect(isManualInput) {
         if (isManualInput) {
             focusRequester.requestFocus()
             keyboardController?.show()
         } else {
             focusRequester.requestFocus()
-            // CRITICAL: Wait for system to register focus and show keyboard, then hide it.
-            delay(300)
+            // Backup: Wait a tiny bit to ensure system "Show" is overridden if onFocusChanged missed it.
+            // Reduced delay to 10ms to minimize visual flash.
+            delay(10)
             keyboardController?.hide()
         }
     }
