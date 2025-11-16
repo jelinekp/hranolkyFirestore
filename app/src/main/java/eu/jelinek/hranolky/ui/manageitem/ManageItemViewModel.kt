@@ -36,7 +36,9 @@ class ManageItemViewModel(
 
     val slotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
     private val _screenStateStream =
-        MutableStateFlow<ManageItemScreenState>(ManageItemScreenState())
+        MutableStateFlow<ManageItemScreenState>(ManageItemScreenState(
+            screenTitle = this.slotId ?: ""
+        ))
     val screenStateStream get() = _screenStateStream.asStateFlow()
 
     private val _validationSharedFlowStream = MutableSharedFlow<AddActionValidationState>()
@@ -115,6 +117,19 @@ class ManageItemViewModel(
         return Settings.Secure.getString(getApplication<Application>().contentResolver, Settings.Secure.ANDROID_ID)
     }
 
+    private fun updateSlotAndTitleScreen(slot: WarehouseSlot) {
+
+        val slotTitle = slot.getScreenTitle()
+
+        _screenStateStream.update {
+            it.copy(
+                slot = slot,
+                screenTitle = slotTitle,
+                resultStatus = ResultStatus.SUCCESS
+            )
+        }
+    }
+
     private fun fetchSlotData() {
         slotId?.let { id ->
             viewModelScope.launch {
@@ -125,9 +140,8 @@ class ManageItemViewModel(
                     // This lambda will be called whenever slot or actions change
                     if (slot != null) {
                         val parsedSlot = slot.parsePropertiesFromProductId().copy(slotActions = actions)
-                        _screenStateStream.update {
-                            it.copy(slot = parsedSlot, resultStatus = ResultStatus.SUCCESS)
-                        }
+                        updateSlotAndTitleScreen(parsedSlot)
+
                         // After updating the slot with actions, if inventory check is enabled,
                         // the collector in init will pick up the change and call checkInventoryDone.
                         // Or, you could call it explicitly here too if preferred,
@@ -311,6 +325,7 @@ class ManageItemViewModel(
 
 data class ManageItemScreenState(
     val slot: WarehouseSlot? = null,
+    val screenTitle: String = "",
     val resultStatus: ResultStatus = ResultStatus.LOADING,
     val error: String? = null,
     val isOnline: Boolean = true,

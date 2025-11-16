@@ -81,6 +81,8 @@ data class WarehouseSlot(
             null -> ""
             "DUB-A|A" -> "DUB A/A"
             "DUB-A|B" -> "DUB A/B"
+            "DUB-B|B" -> "DUB B/B"
+            "DUB-B|A" -> "DUB B/A"
             "DUB-ABP" -> "DUB A/B-P"
             "DUB-RST" -> "DUB RUSTIK"
             "DUB-CNK" -> "DUB CINK"
@@ -101,7 +103,33 @@ data class WarehouseSlot(
     fun hasAllProperties(): Boolean {
         return this.quality != null && this.width != null && this.thickness != null && this.length != null
     }
-/*
+
+    private fun Float.formatDimension(): String {
+        return if (this % 1.0f == 0f) {
+            // It's a whole number, remove the .0
+            this.toInt().toString()
+        } else {
+            // It has decimals, keep them
+            this.toString()
+        }
+    }
+
+    fun getScreenTitle(): String {
+        val type = when (this.slotType) {
+            SlotType.Beam -> "Hranolek"
+            SlotType.Jointer -> "Spárovka"
+            else -> ""
+        }
+
+        if (!hasAllProperties())
+            return "$type ${this.productId}"
+
+        val widthFormatted = this.width?.formatDimension() ?: ""
+        val thicknessFormatted = this.thickness?.formatDimension() ?: ""
+
+        return "$type ${this.getFullQualityName()}\n$widthFormatted x $thicknessFormatted x ${this.length} mm"
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -112,7 +140,7 @@ data class WarehouseSlot(
 
     override fun hashCode(): Int {
         return productId.toInt()
-    }*/
+    }
 }
 
 data class FirestoreSlot(

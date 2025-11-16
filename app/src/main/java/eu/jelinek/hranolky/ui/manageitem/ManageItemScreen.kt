@@ -41,7 +41,6 @@ fun ManageItemScreen(
     screenSize: ScreenSize,
     viewModel: ManageItemViewModel = koinViewModel()
 ) {
-    val slotId = viewModel.slotId
     val screenState by viewModel.screenStateStream.collectAsStateWithLifecycle()
     val quantity = viewModel.quantityState.value
     val validationState by viewModel.validationSharedFlowStream.collectAsStateWithLifecycle(
@@ -67,11 +66,6 @@ fun ManageItemScreen(
         handleBack()
     }
 
-    val header = if (slotId?.first() == 'S')
-        "Spárovka"
-    else
-        "Hranolek"
-
     if (screenState.isInventoryCheckEnabled)
         ConfirmSettingPopup(
             modifier = Modifier,
@@ -87,7 +81,7 @@ fun ManageItemScreen(
     Scaffold(
         topBar = {
             ShowLastActionsTopBar(
-                text = "$header $slotId",
+                text = screenState.screenTitle,
                 navigateUp = handleBack,
             )
         }
@@ -215,7 +209,7 @@ fun ShowLastActionsTopBar(
     TopAppBar(
         title = {
             Row(
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.Start,
                 modifier = Modifier
                     .padding(end = 48.dp)
                     .fillMaxWidth()
