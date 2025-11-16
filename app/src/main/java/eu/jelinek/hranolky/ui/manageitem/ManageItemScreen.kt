@@ -1,5 +1,6 @@
 package eu.jelinek.hranolky.ui.manageitem
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,9 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -46,17 +48,22 @@ fun ManageItemScreen(
         initialValue = AddActionValidationState()
     )
     val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
 
     // Create a unified back handler that clears focus, hides keyboard, and navigates
     val handleBack: () -> Unit = {
-        focusManager.clearFocus()
+        Log.d("ManageItemScreen-Debug", "handleBack called - clearing focus and hiding keyboard")
+        focusRequester.freeFocus()
+        Log.d("ManageItemScreen-Debug", "Focus cleared and fred, now navigating up")
         keyboardController?.hide()
+        Log.d("ManageItemScreen-Debug", "Keyboard hidden")
         navigateUp()
+        Log.d("ManageItemScreen-Debug", "navigateUp() called")
     }
 
     // Handle system back button press
     BackHandler {
+        Log.d("ManageItemScreen-Debug", "System back button pressed")
         handleBack()
     }
 
@@ -117,11 +124,13 @@ fun ManageItemScreen(
                             } else {
                                 AddAction(
                                     quantity = quantity,
-                                    onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
+                                    onQuantityChanged = viewModel::onQuantityChanged,
                                     validationState = validationState,
                                     onAddActionClick = { actionType ->
                                         viewModel.addActionToTheSlot(actionType)
                                     },
+                                    quantityFocusRequester = focusRequester,
+                                    keyboardController = keyboardController
                                 )
                             }
                             LastActions(slot.slotActions)
@@ -143,12 +152,17 @@ fun ManageItemScreen(
                                         .weight(5f)
                                         .padding(horizontal = 64.dp), forceExpanded = true, fontSize = 18.sp)
                                     Spacer(modifier = Modifier.weight(1f))
-                                    AddAction(quantity = quantity,
-                                        onQuantityChanged = viewModel::onQuantityChanged, // Or { newValue -> viewModel.onQuantityChanged(newValue) }
+                                    AddAction(
+                                        quantity = quantity,
+                                        onQuantityChanged = viewModel::onQuantityChanged,
                                         validationState = validationState,
                                         onAddActionClick = { actionType ->
                                             viewModel.addActionToTheSlot(actionType)
-                                        }, modifier = Modifier.weight(10f))
+                                        },
+                                        quantityFocusRequester = focusRequester,
+                                        keyboardController = keyboardController,
+                                        modifier = Modifier.weight(10f)
+                                    )
                                 }
                             }
                         }

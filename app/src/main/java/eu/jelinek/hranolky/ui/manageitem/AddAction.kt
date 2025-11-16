@@ -20,13 +20,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,11 +45,11 @@ fun AddAction(
     onQuantityChanged: (String) -> Unit,
     validationState: AddActionValidationState,
     onAddActionClick: (ActionType) -> Unit,
+    quantityFocusRequester: FocusRequester,
+    keyboardController: SoftwareKeyboardController?,
     modifier: Modifier = Modifier,
     label: String = "Přidat pohyb:"
 ) {
-    val quantityFocusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),

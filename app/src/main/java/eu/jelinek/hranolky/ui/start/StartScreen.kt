@@ -37,6 +37,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,8 @@ fun StartScreen(
 ) {
     val screenState by viewModel.startScreenState.collectAsStateWithLifecycle()
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     LaunchedEffect(Unit) {
         viewModel.navigateToManageItem.collect { route ->
             navigateToManageItem(route)
@@ -72,6 +75,8 @@ fun StartScreen(
     DisposableEffect(Unit) {
         onDispose {
             viewModel.clearScannedCode()
+            // hide keyboard on screen exit
+            keyboardController?.hide()
         }
     }
 
@@ -88,7 +93,8 @@ fun StartScreen(
                 screenState = screenState,
                 viewModel = viewModel,
                 navigateToHistory = navigateToHistory,
-                navigateToOverview = navigateToOverview
+                navigateToOverview = navigateToOverview,
+                keyboardController = keyboardController
             )
         } else {
             StartScreenTabletLayout(
@@ -107,11 +113,11 @@ private fun StartScreenPhoneLayout(
     screenState: StartUiState,
     viewModel: StartViewModel,
     navigateToHistory: () -> Unit,
-    navigateToOverview: () -> Unit
+    navigateToOverview: () -> Unit,
+    keyboardController: SoftwareKeyboardController?
 ) {
     val focusRequester = remember { FocusRequester() }
     var isManualInput by remember { mutableStateOf(false) }
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(
         modifier = modifier
@@ -252,7 +258,6 @@ private fun StartScreenPhoneLayout(
             )
         }
     }
-
     // Always request focus for the scanner input, which is always present (either visible or hidden).
     // Combined focus + keyboard control: always keep focus for scanner, but forcibly hide keyboard when manual mode is off.
     LaunchedEffect(isManualInput) {
