@@ -1,9 +1,14 @@
 package eu.jelinek.hranolky.ui.start
 
+import android.view.KeyEvent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -13,8 +18,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,10 +51,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
@@ -75,8 +84,30 @@ fun StartScreen(
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
     var showReleaseNotes by remember { mutableStateOf(false) }
 
+    var isL1Pressed by remember { mutableStateOf(false) }
+    var isR1Pressed by remember { mutableStateOf(false) }
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+
+    // Animate the pads sliding in from the edges
+    val leftPadOffset by animateFloatAsState(
+        targetValue = if (isL1Pressed) -25f else -35f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "leftPadOffset"
+    )
+
+    val rightPadOffset by animateFloatAsState(
+        targetValue = if (isR1Pressed) 25f else 35f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "rightPadOffset"
+    )
 
     // Show release notes dialog when update is available
     LaunchedEffect(updateState.isUpdateAvailable) {
@@ -122,6 +153,19 @@ fun StartScreen(
     }
 
     Scaffold(
+        modifier = Modifier.onKeyEvent { keyEvent ->
+            when (keyEvent.nativeKeyEvent.keyCode) {
+                KeyEvent.KEYCODE_BUTTON_L1 -> {
+                    isL1Pressed = keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
+                    true
+                }
+                KeyEvent.KEYCODE_BUTTON_R1 -> {
+                    isR1Pressed = keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN
+                    true
+                }
+                else -> false
+            }
+        },
         topBar = {
             if (screenSize.isTablet()) StartScreenTopBar(
                 navigateToOverview = navigateToOverview
@@ -134,26 +178,53 @@ fun StartScreen(
             }
         }
     ) { padding ->
-        if (screenSize.isPhone()) {
-            StartScreenPhoneLayout(
-                modifier = modifier.padding(padding),
-                screenState = screenState,
-                viewModel = viewModel,
-                navigateToHistory = navigateToHistory,
-                navigateToOverview = navigateToOverview,
-                keyboardController = keyboardController,
-                focusRequester = focusRequester
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Main content
+            if (screenSize.isPhone()) {
+                StartScreenPhoneLayout(
+                    modifier = modifier.padding(padding),
+                    screenState = screenState,
+                    viewModel = viewModel,
+                    navigateToHistory = navigateToHistory,
+                    navigateToOverview = navigateToOverview,
+                    keyboardController = keyboardController,
+                    focusRequester = focusRequester
+                )
+            } else {
+                StartScreenTabletLayout(
+                    modifier = modifier.padding(padding),
+                    screenState = screenState,
+                    viewModel = viewModel,
+                    navigateToManageItem = navigateToManageItem,
+                    focusRequester = focusRequester
+                )
+            }
+
+            // Button indicator pads
+            ButtonPad(
+                offset = leftPadOffset,
+                modifier = Modifier.align(Alignment.TopStart)
             )
-        } else {
-            StartScreenTabletLayout(
-                modifier = modifier.padding(padding),
-                screenState = screenState,
-                viewModel = viewModel,
-                navigateToManageItem = navigateToManageItem,
-                focusRequester = focusRequester
+            ButtonPad(
+                offset = rightPadOffset,
+                modifier = Modifier.align(Alignment.TopEnd)
             )
         }
     }
+}
+
+@Composable
+private fun ButtonPad(
+    offset: Float,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(40.dp)
+            .height(122.dp)
+            .offset { IntOffset(offset.dp.roundToPx(), 55.dp.roundToPx()) }
+            .background(Color(0xFFFAB436), RoundedCornerShape(50.dp))
+    )
 }
 
 @Composable
