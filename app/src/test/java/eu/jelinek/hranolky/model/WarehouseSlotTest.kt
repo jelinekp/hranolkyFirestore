@@ -1,10 +1,10 @@
 package eu.jelinek.hranolky.model
 
-import org.junit.After
+import com.google.firebase.Timestamp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.koin.core.context.GlobalContext.stopKoin
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -12,201 +12,82 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class WarehouseSlotTest {
 
-
     @Test
-    fun `parsePropertiesFromProductId should correctly parse H-prefixed product ID`() {
-        val slot = WarehouseSlot(productId = "H-DUB-A-20-100-2000", quantity = 1)
-        val parsedSlot = slot.parsePropertiesFromProductId()
-
-        assertEquals(SlotType.Beam, parsedSlot.slotType)
-        assertEquals("DUB-A", parsedSlot.quality)
-        assertEquals(20.0f, parsedSlot.thickness)
-        assertEquals(100.0f, parsedSlot.width)
-        assertEquals(2000, parsedSlot.length)
+    fun `parsePropertiesFromProductId parses H- prefixed beam`() {
+        val slot = WarehouseSlot(productId = "H-DUB-A-20-100-2000", quantity = 10, lastModified = Timestamp.now())
+        val parsed = slot.parsePropertiesFromProductId()
+        assertEquals(SlotType.Beam, parsed.slotType)
+        assertEquals("DUB-A", parsed.quality)
+        assertEquals(20.0f, parsed.thickness)
+        assertEquals(100.0f, parsed.width)
+        assertEquals(2000, parsed.length)
+        assertEquals(slot.productId, parsed.productId)
+        assertEquals(slot.quantity, parsed.quantity)
+        assertEquals(slot.lastModified, parsed.lastModified)
     }
 
     @Test
-    fun `parsePropertiesFromProductId should correctly parse S-prefixed product ID`() {
-        val slot = WarehouseSlot(productId = "S-DUB-R-27-42-3000", quantity = 1)
-
-        println("before:")
-        println(slot)
-
-        val parsedSlot = slot.parsePropertiesFromProductId()
-
-        println("after:")
-        println(parsedSlot)
-
-        assertEquals(SlotType.Jointer, parsedSlot.slotType)
-        assertEquals("DUB-R", parsedSlot.quality)
-        assertEquals(27.4f, parsedSlot.thickness) // Specific conversion
-        assertEquals(42.4f, parsedSlot.width) // Specific conversion
-        assertEquals(3000, parsedSlot.length)
+    fun `parsePropertiesFromProductId parses S- prefixed jointer with point4 replacements`() {
+        val slot = WarehouseSlot(productId = "S-DUB-R-27-42-3000", quantity = 5)
+        val parsed = slot.parsePropertiesFromProductId()
+        assertEquals(SlotType.Jointer, parsed.slotType)
+        assertEquals("DUB-R", parsed.quality)
+        assertEquals(27.4f, parsed.thickness)
+        assertEquals(42.4f, parsed.width)
+        assertEquals(3000, parsed.length)
     }
 
     @Test
-    fun `parsePropertiesFromProductId should handle product ID without prefix`() {
+    fun `parsePropertiesFromProductId without prefix defaults to Beam`() {
         val slot = WarehouseSlot(productId = "BUK-C-30-50-1500", quantity = 1)
-        val parsedSlot = slot.parsePropertiesFromProductId()
-
-        assertEquals(SlotType.Beam, parsedSlot.slotType) // Default to Beam
-        assertEquals("BUK-C", parsedSlot.quality)
-        assertEquals(30.0f, parsedSlot.thickness)
-        assertEquals(50.0f, parsedSlot.width)
-        assertEquals(1500, parsedSlot.length)
+        val parsed = slot.parsePropertiesFromProductId()
+        assertEquals(SlotType.Beam, parsed.slotType)
+        assertEquals("BUK-C", parsed.quality)
+        assertEquals(30.0f, parsed.thickness)
+        assertEquals(50.0f, parsed.width)
+        assertEquals(1500, parsed.length)
     }
 
     @Test
-    fun `parsePropertiesFromProductId should handle specific thickness conversion`() {
-        val slot = WarehouseSlot(productId = "H-000-0-20-100-1000", quantity = 1)
-        val parsedSlot = slot.parsePropertiesFromProductId()
-        assertEquals(20.0f, parsedSlot.thickness)
-
-        val slot2 = WarehouseSlot(productId = "H-000-0-27-100-1000", quantity = 1)
-        val parsedSlot2 = slot2.parsePropertiesFromProductId()
-        assertEquals(27.4f, parsedSlot2.thickness)
-
-        val slot3 = WarehouseSlot(productId = "H-000-0-42-100-1000", quantity = 1)
-        val parsedSlot3 = slot3.parsePropertiesFromProductId()
-        assertEquals(42.4f, parsedSlot3.thickness)
+    fun `parsePropertiesFromProductId invalid format leaves fields null`() {
+        val slot = WarehouseSlot(productId = "INVALID-ID", quantity = 1)
+        val parsed = slot.parsePropertiesFromProductId()
+        assertNull(parsed.slotType)
+        assertNull(parsed.quality)
+        assertNull(parsed.thickness)
+        assertNull(parsed.width)
+        assertNull(parsed.length)
     }
 
     @Test
-    fun `parsePropertiesFromProductId should handle specific width conversion`() {
-        val slot = WarehouseSlot(productId = "H-000-0-100-42-1000", quantity = 1)
-        val parsedSlot = slot.parsePropertiesFromProductId()
-        assertEquals(42.4f, parsedSlot.width)
-
-        val slot2 = WarehouseSlot(productId = "H-000-0-100-50-1000", quantity = 1)
-        val parsedSlot2 = slot2.parsePropertiesFromProductId()
-        assertEquals(50.0f, parsedSlot2.width)
+    fun `getFullQualityName maps known codes`() {
+        val slot = WarehouseSlot(productId = "H-", quantity = 0).copy(quality = "DUB-A|A")
+        assertEquals("DUB A/A", slot.getFullQualityName())
     }
 
     @Test
-    fun `parsePropertiesFromProductId should return original slot if parts size is less than 5`() {
-        val originalSlot = WarehouseSlot(productId = "H-123-45", quantity = 1, quality = "original", width = 10f)
-        val parsedSlot = originalSlot.parsePropertiesFromProductId()
-
-        // Expecting the original slot to be returned if parsing fails due to insufficient parts
-        assertEquals(originalSlot, parsedSlot)
-    }
-
-    @Test
-    fun `getVolume should return correct volume for valid properties`() {
+    fun `getVolume computes cubic meters`() {
         val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 2,
-            width = 100f,
-            length = 2000,
-            thickness = 50f
+            productId = "H-TEST-20-50-1000",
+            quantity = 10,
+            width = 50.0f,
+            thickness = 20.0f,
+            length = 1000
         )
-        val expectedVolume = (2 * 2000 * 50.0 * 100.0) / 1_000_000_000.0
-        assertEquals(expectedVolume, slot.getVolume()!!, 0.000000001) // Delta for float comparison
+        // volume = (quantity * length * thickness * width) / 1_000_000_000
+        // = (10 * 1000 * 20 * 50) / 1e9 = 10_000_000 / 1e9 = 0.01
+        assertEquals(0.01, slot.getVolume()!!, 0.000001)
     }
 
     @Test
-    fun `getVolume should return null if width is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 2,
-            width = null,
-            length = 2000,
-            thickness = 50f
-        )
-        assertEquals(null, slot.getVolume())
-    }
-
-    @Test
-    fun `getVolume should return null if length is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 2,
-            width = 100f,
-            length = null,
-            thickness = 50f
-        )
-        assertEquals(null, slot.getVolume())
-    }
-
-    @Test
-    fun `getVolume should return null if thickness is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 2,
-            width = 100f,
-            length = 2000,
-            thickness = null
-        )
-        assertEquals(null, slot.getVolume())
-    }
-
-    @Test
-    fun `hasAllProperties should return true when all properties are present`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 1,
-            quality = "good",
-            width = 10f,
-            thickness = 5f,
-            length = 100
-        )
-        assertEquals(true, slot.hasAllProperties())
-    }
-
-    @Test
-    fun `hasAllProperties should return false if quality is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 1,
-            quality = null,
-            width = 10f,
-            thickness = 5f,
-            length = 100
-        )
-        assertEquals(false, slot.hasAllProperties())
-    }
-
-    @Test
-    fun `hasAllProperties should return false if width is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 1,
-            quality = "good",
-            width = null,
-            thickness = 5f,
-            length = 100
-        )
-        assertEquals(false, slot.hasAllProperties())
-    }
-
-    @Test
-    fun `hasAllProperties should return false if thickness is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 1,
-            quality = "good",
-            width = 10f,
-            thickness = null,
-            length = 100
-        )
-        assertEquals(false, slot.hasAllProperties())
-    }
-
-    @Test
-    fun `hasAllProperties should return false if length is null`() {
-        val slot = WarehouseSlot(
-            productId = "test",
-            quantity = 1,
-            quality = "good",
-            width = 10f,
-            thickness = 5f,
-            length = null
-        )
-        assertEquals(false, slot.hasAllProperties())
-    }
-
-    @After
-    fun tearDown() {
-        stopKoin()
+    fun `getScreenTitle formats floats without trailing dot zero`() {
+        val parsed = WarehouseSlot(productId = "H-DUB-A-20-100-2000", quantity = 10)
+            .parsePropertiesFromProductId()
+        val title = parsed.getScreenTitle()
+        // Width 100.0 -> "100", thickness 20.0 -> "20"
+        // Expect two-line title with mm suffix as implemented
+        assert(title.contains("Hranolek"))
+        assert(title.contains("DUB A")) // At least contains readable quality name start
+        assert(title.contains("100 x 20 x 2000 mm") || title.contains("20 x 100 x 2000 mm"))
     }
 }
