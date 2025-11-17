@@ -129,7 +129,7 @@ data class WarehouseSlot(
 
         return "$type ${this.getFullQualityName()}\n$thicknessFormatted x $widthFormatted x ${this.length} mm"
     }
-
+/*
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -140,7 +140,7 @@ data class WarehouseSlot(
 
     override fun hashCode(): Int {
         return productId.toInt()
-    }
+    }*/
 }
 
 data class FirestoreSlot(
