@@ -1,7 +1,5 @@
 package eu.jelinek.hranolky.ui.di
 
-import eu.jelinek.hranolky.domain.DeviceManager
-import eu.jelinek.hranolky.domain.UpdateManager
 import eu.jelinek.hranolky.ui.history.HistoryViewModel
 import eu.jelinek.hranolky.ui.manageitem.ManageItemViewModel
 import eu.jelinek.hranolky.ui.overview.OverViewModel
@@ -14,6 +12,4 @@ val uiModule get() = module {
     viewModel { StartViewModel(get(), get(), get(), get(), get()) }
     viewModel { OverViewModel(get()) }
     viewModel { HistoryViewModel(get(), get()) }
-    single { UpdateManager(get()) }
-    single { DeviceManager(get()) }
 }

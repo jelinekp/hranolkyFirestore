@@ -11,7 +11,7 @@ import android.net.Uri
 import android.os.Environment
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.google.firebase.firestore.FirebaseFirestore
+import eu.jelinek.hranolky.data.AppConfigRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.FileInputStream
 
@@ -33,27 +32,32 @@ data class UpdateState(
     val error: String? = null
 )
 
-class UpdateManager(private val firestoreDb: FirebaseFirestore) {
+class UpdateManager(private val appConfigRepository: AppConfigRepository) {
     private val _updateState = MutableStateFlow(UpdateState())
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
     suspend fun checkForUpdate(currentVersionCode: Int, context: Context) {
         Log.d("AppUpdate", "checkForUpdate() started - currentVersionCode: $currentVersionCode")
+
+        if (currentVersionCode == -1) {
+            Log.w("AppUpdate", "Current version code is invalid (-1), skipping update check")
+            return
+        }
+
         try {
-            Log.d("AppUpdate", "Fetching latest version info from Firestore...")
-            val document = firestoreDb.collection("app_config").document("latest").get().await()
+            val updateInfo = appConfigRepository.getLatestAppVersion()
 
-            if (document.exists()) {
-                val latestVersionCode = document.getLong("versionCode")?.toInt() ?: -1
-                val downloadUrl = document.getString("downloadUrl")
-                val latestVersion = document.getString("version") ?: "Unknown"
-                val releaseNotes = document.getString("releaseNotes") ?: ""
+            if (updateInfo != null) {
+                val latestVersionCode = updateInfo.versionCode
+                val downloadUrl = updateInfo.downloadUrl
+                val latestVersion = updateInfo.version
+                val releaseNotes = updateInfo.releaseNotes
 
-                Log.d("AppUpdate", "Current version: $currentVersionCode, Latest version from Firestore: $latestVersionCode")
-                Log.d("AppUpdate", "Download URL from Firestore: $downloadUrl")
+                Log.d("AppUpdate", "Current version: $currentVersionCode, Latest version: $latestVersionCode")
+                Log.d("AppUpdate", "Download URL: $downloadUrl")
                 Log.d("AppUpdate", "Release notes: $releaseNotes")
 
-                if (currentVersionCode != -1 && latestVersionCode > currentVersionCode) {
+                if (latestVersionCode > currentVersionCode) {
                     Log.i("AppUpdate", "New app version found! Upgrading from v$currentVersionCode to v$latestVersionCode")
 
                     // Update state to show update is available
@@ -73,8 +77,6 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                             error = "Download URL is missing"
                         )
                     }
-                } else if (currentVersionCode == -1) {
-                    Log.w("AppUpdate", "Current version code is invalid (-1), skipping update check")
                 } else if (latestVersionCode == currentVersionCode) {
                     Log.d("AppUpdate", "App is up to date (both at version $currentVersionCode). Cleaning any stale downloaded APKs.")
                     deleteDownloadedApks(context)
@@ -83,7 +85,7 @@ class UpdateManager(private val firestoreDb: FirebaseFirestore) {
                     deleteDownloadedApks(context)
                 }
             } else {
-                Log.w("AppUpdate", "Could not find 'latest' app_config document in Firestore.")
+                Log.w("AppUpdate", "Could not find latest app version info")
             }
         } catch (e: Exception) {
             Log.e("AppUpdate", "Error checking for update: ${e.message}", e)

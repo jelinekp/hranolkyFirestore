@@ -5,13 +5,10 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.util.Log
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.SetOptions
+import eu.jelinek.hranolky.data.DeviceRepository
 import eu.jelinek.hranolky.ui.start.StartUiState
-import kotlinx.coroutines.tasks.await
 
-class DeviceManager(private val firestoreDb: FirebaseFirestore) {
+class DeviceManager(private val deviceRepository: DeviceRepository) {
     @SuppressLint("HardwareIds")
     fun getDeviceId(context: Context): String {
         return Settings.Secure.getString(
@@ -20,7 +17,7 @@ class DeviceManager(private val firestoreDb: FirebaseFirestore) {
         )
     }
 
-    fun logDeviceId(context: Context, state: StartUiState): StartUiState {
+    suspend fun logDeviceId(context: Context, state: StartUiState): StartUiState {
         val deviceId = getDeviceId(context)
 
         val appVersion = try {
@@ -44,20 +41,11 @@ class DeviceManager(private val firestoreDb: FirebaseFirestore) {
             -1
         }
 
-        val deviceData = hashMapOf(
-            "lastSeen" to FieldValue.serverTimestamp(),
-            "appVersion" to appVersion
-        )
-
-        firestoreDb.collection("devices").document(deviceId)
-            .set(deviceData, SetOptions.merge())
-            .addOnSuccessListener {
-                Log.d(
-                    "Firestore",
-                    "Device document created/updated for ID: $deviceId"
-                )
-            }
-            .addOnFailureListener { e -> Log.w("Firestore", "Error writing document", e) }
+        try {
+            deviceRepository.updateDeviceInfo(deviceId, appVersion ?: "Unknown")
+        } catch (e: Exception) {
+            Log.w("DeviceManager", "Error updating device info", e)
+        }
 
         return state.copy(
             shortenedDeviceId = deviceId.substring(0..2),
@@ -68,29 +56,29 @@ class DeviceManager(private val firestoreDb: FirebaseFirestore) {
 
     suspend fun fetchDeviceNameAndInventoryPermit(context: Context, state: StartUiState): StartUiState {
         val deviceId = getDeviceId(context)
-        Log.d("StartViewModel", "Fetching device name for ID: $deviceId")
-        try {
-            val documentSnapshot = firestoreDb.collection("devices").document(deviceId).get().await()
+        Log.d("DeviceManager", "Fetching device info for ID: $deviceId")
 
-            if (documentSnapshot.exists()) {
-                val deviceName = documentSnapshot.getString("deviceName")
-                val isInventoryCheckPermitted = documentSnapshot.getBoolean("isInventoryCheckPermitted") ?: false
+        return try {
+            val deviceInfo = deviceRepository.getDeviceInfo(deviceId)
 
-                return state.copy(
-                    deviceName = deviceName,
-                    isInventoryCheckPermitted = isInventoryCheckPermitted
+            if (deviceInfo != null) {
+                state.copy(
+                    deviceName = deviceInfo.deviceName,
+                    isInventoryCheckPermitted = deviceInfo.isInventoryCheckPermitted
                 )
-
             } else {
-                Log.d("StartViewModel", "Device document not found for ID: $deviceId. Cannot fetch device name.")
-                return state.copy(
+                Log.d("DeviceManager", "Device document not found for ID: $deviceId")
+                state.copy(
                     deviceName = null,
-                    isInventoryCheckPermitted = false,
+                    isInventoryCheckPermitted = false
                 )
             }
         } catch (e: Exception) {
-            Log.e("StartViewModel", "Error fetching device name for ID: $deviceId", e)
-            return state.copy(deviceName = null)
+            Log.e("DeviceManager", "Error fetching device info for ID: $deviceId", e)
+            state.copy(
+                deviceName = null,
+                isInventoryCheckPermitted = false
+            )
         }
     }
 }
