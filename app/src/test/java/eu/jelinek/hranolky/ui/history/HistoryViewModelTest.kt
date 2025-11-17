@@ -1,7 +1,6 @@
 package eu.jelinek.hranolky.ui.history
 
 import android.app.Application
-import eu.jelinek.hranolky.data.LastModifiedSlots
 import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.SlotAction

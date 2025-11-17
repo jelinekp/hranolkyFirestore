@@ -19,8 +19,8 @@ class FirestoreSlotTest {
             quantity = 5,
             lastModified = Timestamp.now()
         )
-        val productId = "H-DUB-A-20-100-2000"
-        val warehouseSlot = firestoreSlot.toWarehouseSlot(productId)
+        val productId = "DUB-A-20-100-2000"
+        val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
         assertEquals(productId, warehouseSlot.productId)
         assertEquals(5, warehouseSlot.quantity)
@@ -38,8 +38,8 @@ class FirestoreSlotTest {
             quantity = 10,
             lastModified = Timestamp.now()
         )
-        val productId = "S-DUB-R-27-42-3000"
-        val warehouseSlot = firestoreSlot.toWarehouseSlot(productId)
+        val productId = "DUB-R-27-42-3000"
+        val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Jointer, productId)
 
         assertEquals(productId, warehouseSlot.productId)
         assertEquals(10, warehouseSlot.quantity)
@@ -58,7 +58,7 @@ class FirestoreSlotTest {
             lastModified = Timestamp.now()
         )
         val productId = "BUK-C-30-50-1500"
-        val warehouseSlot = firestoreSlot.toWarehouseSlot(productId)
+        val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
         assertEquals(productId, warehouseSlot.productId)
         assertEquals(15, warehouseSlot.quantity)
@@ -77,7 +77,7 @@ class FirestoreSlotTest {
             lastModified = Timestamp.now()
         )
         val productId = "INVALID-ID"
-        val warehouseSlot = firestoreSlot.toWarehouseSlot(productId)
+        val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
         assertEquals(productId, warehouseSlot.productId)
         assertEquals(1, warehouseSlot.quantity)
