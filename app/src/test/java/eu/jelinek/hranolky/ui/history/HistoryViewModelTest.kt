@@ -20,10 +20,10 @@ import org.robolectric.annotation.Config
 class HistoryViewModelTest {
 
     private class FakeRepo(private val flow: Flow<LastModifiedSlots>) : SlotRepository {
-        override fun getSlot(slotId: String): Flow<WarehouseSlot?> = flowOf(null)
-        override fun getSlotActions(slotId: String): Flow<List<SlotAction>> = flowOf(emptyList())
-        override suspend fun addSlotAction(slotId: String, actionType: ActionType, quantity: Long, currentQuantity: Long, deviceId: String) { }
-        override suspend fun createNewSlot(slotId: String, quantity: Long) { }
+        override fun getSlot(fullSlotId: String): Flow<WarehouseSlot?> = flowOf(null)
+        override fun getSlotActions(fullSlotId: String): Flow<List<SlotAction>> = flowOf(emptyList())
+        override suspend fun addSlotAction(fullSlotId: String, actionType: ActionType, quantity: Long, currentQuantity: Long, deviceId: String) { }
+        override suspend fun createNewSlot(fullSlotId: String, quantity: Long) { }
         override fun getLastModifiedSlots(): Flow<LastModifiedSlots> = flow
         override fun getAllSlots(slotType: SlotType): Flow<List<WarehouseSlot>> = flowOf(emptyList())
     }

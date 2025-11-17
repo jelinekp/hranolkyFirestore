@@ -19,6 +19,13 @@ enum class SlotType {
         }
     }
 
+    fun toFirestoreCollectionName(): String {
+        return when (this) {
+            Beam -> "Hranolky"
+            Jointer -> "Sparovky"
+        }
+    }
+
     fun icon() : Int {
         return when (this) {
             Beam -> R.drawable.ic_launcher_foreground

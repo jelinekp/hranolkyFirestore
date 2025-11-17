@@ -26,7 +26,7 @@ class AddSlotActionUseCase(
         return if (validationResult.isSuccess) {
             try {
                 slotRepository.addSlotAction(
-                    slotId = slotId,
+                    fullSlotId = slotId,
                     actionType = actionType,
                     quantity = validationResult.getOrThrow(),
                     currentQuantity = currentQuantity,

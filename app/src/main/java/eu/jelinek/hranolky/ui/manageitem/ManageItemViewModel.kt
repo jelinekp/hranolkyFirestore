@@ -34,10 +34,10 @@ class ManageItemViewModel(
 
     val TAG = "ManageItemViewModel"
 
-    val slotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
+    val fullSlotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
     private val _screenStateStream =
         MutableStateFlow<ManageItemScreenState>(ManageItemScreenState(
-            screenTitle = this.slotId ?: ""
+            screenTitle = this.fullSlotId ?: ""
         ))
     val screenStateStream get() = _screenStateStream.asStateFlow()
 
@@ -131,7 +131,7 @@ class ManageItemViewModel(
     }
 
     private fun fetchSlotData() {
-        slotId?.let { id ->
+        fullSlotId?.let { id ->
             viewModelScope.launch {
                 combine(
                     slotRepository.getSlot(id),
@@ -139,7 +139,7 @@ class ManageItemViewModel(
                 ) { slot, actions ->
                     // This lambda will be called whenever slot or actions change
                     if (slot != null) {
-                        val parsedSlot = slot.parsePropertiesFromProductId().copy(slotActions = actions)
+                        val parsedSlot = slot.copy(slotActions = actions)
                         updateSlotAndTitleScreen(parsedSlot)
 
                         // After updating the slot with actions, if inventory check is enabled,
@@ -172,7 +172,7 @@ class ManageItemViewModel(
     fun addActionToTheSlot(actionType: ActionType) {
         viewModelScope.launch {
             val currentSlot = screenStateStream.value.slot
-            if (slotId == null || currentSlot == null) {
+            if (fullSlotId == null || currentSlot == null) {
                 Log.e(TAG, "addActionToTheSlot: slotId or currentSlot is null.")
                 _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Položka nenalezena."))
                 return@launch
@@ -197,7 +197,7 @@ class ManageItemViewModel(
             // For INVENTORY_CHECK, quantityLong is the *new total* quantity.
             // For ADD/REMOVE, quantityLong is the *change* in quantity.
             val result = addSlotActionUseCase(
-                slotId = slotId,
+                slotId = fullSlotId,
                 slot = currentSlot,
                 actionType = actionType,
                 quantity = quantityLong.toString(), // Use the parsed Long

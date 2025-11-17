@@ -146,13 +146,21 @@ data class WarehouseSlot(
 data class FirestoreSlot(
     val quantity: Long = 0L,
     val lastModified: com.google.firebase.Timestamp? = null,
+    val quality: String? = null,
+    val width: Double? = null,
+    val thickness: Double? = null,
+    val length: Long? = null,
 ) {
-    fun toWarehouseSlot(productId: String): WarehouseSlot {
-        val slot = WarehouseSlot(
+    fun toWarehouseSlot(slotType: SlotType, productId: String): WarehouseSlot {
+        return WarehouseSlot(
             productId = productId,
+            slotType = slotType,
             quantity = this.quantity,
             lastModified = this.lastModified,
+            quality = this.quality,
+            width = this.width?.toFloat(),
+            thickness = this.thickness?.toFloat(),
+            length = this.length?.toInt(),
         )
-        return slot.parsePropertiesFromProductId()
     }
 }
