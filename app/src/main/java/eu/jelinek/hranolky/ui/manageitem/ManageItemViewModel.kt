@@ -121,6 +121,8 @@ class ManageItemViewModel(
 
         val slotTitle = slot.getScreenTitle()
 
+        Log.d(TAG, "updateSlotAndTitleScreen: Updating screen state - slot: ${slot.productId}, actions count: ${slot.slotActions.size}")
+
         _screenStateStream.update {
             it.copy(
                 slot = slot,
@@ -128,40 +130,50 @@ class ManageItemViewModel(
                 resultStatus = ResultStatus.SUCCESS
             )
         }
+
+        Log.d(TAG, "updateSlotAndTitleScreen: Screen state updated - current actions count: ${_screenStateStream.value.slot?.slotActions?.size}")
     }
 
     private fun fetchSlotData() {
         fullSlotId?.let { id ->
             viewModelScope.launch {
-                combine(
-                    slotRepository.getSlot(id),
-                    slotRepository.getSlotActions(id) // Ensure this flow also emits when actions change
-                ) { slot, actions ->
-                    // This lambda will be called whenever slot or actions change
-                    if (slot != null) {
-                        val parsedSlot = slot.copy(slotActions = actions)
-                        updateSlotAndTitleScreen(parsedSlot)
+                try {
+                    combine(
+                        slotRepository.getSlot(id),
+                        slotRepository.getSlotActions(id) // Ensure this flow also emits when actions change
+                    ) { slot, actions ->
+                        // This lambda will be called whenever slot or actions change
+                        Log.d(TAG, "fetchSlotData: combine triggered - slot: ${slot?.productId}, actions count: ${actions.size}")
+                        if (slot != null) {
+                            val parsedSlot = slot.copy(slotActions = actions)
+                            updateSlotAndTitleScreen(parsedSlot)
 
-                        // After updating the slot with actions, if inventory check is enabled,
-                        // the collector in init will pick up the change and call checkInventoryDone.
-                        // Or, you could call it explicitly here too if preferred,
-                        // but the collector pattern is more robust for ongoing updates.
-                        if (_screenStateStream.value.isInventoryCheckEnabled) {
-                            checkInventoryDone()
+                            // After updating the slot with actions, if inventory check is enabled,
+                            // the collector in init will pick up the change and call checkInventoryDone.
+                            // Or, you could call it explicitly here too if preferred,
+                            // but the collector pattern is more robust for ongoing updates.
+                            if (_screenStateStream.value.isInventoryCheckEnabled) {
+                                checkInventoryDone()
+                            }
+                        } else {
+                            // Slot not found, potentially create it or handle error
+                            // If creating new, slotActions will be empty initially.
+                            Log.d(TAG, "fetchSlotData: Slot with ID $id not found. Attempting to create.")
+                            slotRepository.createNewSlot(id, 0) // This might then trigger another emission
+                            _screenStateStream.update {
+                                it.copy(slot = null, resultStatus = ResultStatus.DATA_ERROR, error = "Slot not found")
+                            }
                         }
-                    } else {
-                        // Slot not found, potentially create it or handle error
-                        // If creating new, slotActions will be empty initially.
-                        Log.d(TAG, "fetchSlotData: Slot with ID $id not found. Attempting to create.")
-                        slotRepository.createNewSlot(id, 0) // This might then trigger another emission
-                        _screenStateStream.update {
-                            it.copy(slot = null, resultStatus = ResultStatus.DATA_ERROR, error = "Slot not found")
-                        }
+                    }.collect {
+                        // Collection is handled by the combine operator.
+                        // The block inside combine is the actual processing per emission.
+                        Log.d(TAG, "fetchSlotData: combine block collected.")
                     }
-                }.collect {
-                    // Collection is handled by the combine operator.
-                    // The block inside combine is the actual processing per emission.
-                    Log.d(TAG, "fetchSlotData: combine block executed.")
+                } catch (e: Exception) {
+                    Log.e(TAG, "fetchSlotData: Error in flow collection", e)
+                    _screenStateStream.update {
+                        it.copy(resultStatus = ResultStatus.OTHER_ERROR, error = "Error fetching data: ${e.message}")
+                    }
                 }
             }
         } ?: run {
@@ -197,7 +209,7 @@ class ManageItemViewModel(
             // For INVENTORY_CHECK, quantityLong is the *new total* quantity.
             // For ADD/REMOVE, quantityLong is the *change* in quantity.
             val result = addSlotActionUseCase(
-                slotId = fullSlotId,
+                fullSlotId = fullSlotId,
                 slot = currentSlot,
                 actionType = actionType,
                 quantity = quantityLong.toString(), // Use the parsed Long

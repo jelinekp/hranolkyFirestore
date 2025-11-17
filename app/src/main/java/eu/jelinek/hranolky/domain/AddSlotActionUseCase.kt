@@ -14,7 +14,7 @@ class AddSlotActionUseCase(
     private val inputValidator: InputValidator
 ) {
     suspend operator fun invoke(
-        slotId: String,
+        fullSlotId: String,
         slot: WarehouseSlot,
         actionType: ActionType,
         quantity: String,
@@ -26,14 +26,14 @@ class AddSlotActionUseCase(
         return if (validationResult.isSuccess) {
             try {
                 slotRepository.addSlotAction(
-                    fullSlotId = slotId,
+                    fullSlotId = fullSlotId,
                     actionType = actionType,
                     quantity = validationResult.getOrThrow(),
                     currentQuantity = currentQuantity,
                     deviceId = deviceId
                 )
 
-                if (slotId.first() == 'S') {
+                if (fullSlotId.first() == 'S') {
                     val sampleRowData = JointerReportingRow(
                         quality = slot.getFullQualityName(),
                         thickness = slot.thickness.toCustomCommaDecimalString(),
@@ -57,7 +57,7 @@ class AddSlotActionUseCase(
                         // but log it. The primary slot action succeeded.
                         Log.e(
                             "AddSlotActionUseCase",
-                            "Slot action succeeded but SheetDB logging failed for slot $slotId: ${sheetDbError.message}",
+                            "Slot action succeeded but SheetDB logging failed for slot $fullSlotId: ${sheetDbError.message}",
                             sheetDbError
                         )
                         Result.success(Unit) // Still consider the main operation successful
@@ -70,7 +70,7 @@ class AddSlotActionUseCase(
             } catch (e: Exception) {
                 Log.e(
                     "AddSlotActionUseCase",
-                    "Error during slot action or preparing SheetDB log for slot $slotId: ${e.message}",
+                    "Error during slot action or preparing SheetDB log for slot $fullSlotId: ${e.message}",
                     e
                 )
                 Result.failure(e)

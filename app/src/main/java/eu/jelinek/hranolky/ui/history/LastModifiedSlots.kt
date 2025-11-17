@@ -27,6 +27,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,10 +37,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import eu.jelinek.hranolky.data.helpers.formatShortDate
 import eu.jelinek.hranolky.model.SlotType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.ui.shared.ScreenSize
-import eu.jelinek.hranolky.data.helpers.formatShortDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -52,6 +53,7 @@ fun SlotTable(
     lastModifiedJointerSlots: List<WarehouseSlot>,
     navigateToManageItem: (String) -> Unit,
     screenSize: ScreenSize,
+    onLoadJointerSlots: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val pagerState = rememberPagerState(pageCount = { SlotType.entries.size })
@@ -73,7 +75,13 @@ fun SlotTable(
         )
 
         TabHeader(pagerState, coroutineScope)
-        TabContent(pagerState, lastModifiedBeamSlots, lastModifiedJointerSlots, navigateToManageItem)
+        TabContent(
+            pagerState = pagerState,
+            lastModifiedBeamSlots = lastModifiedBeamSlots,
+            lastModifiedJointerSlots = lastModifiedJointerSlots,
+            navigateToManageItem = navigateToManageItem,
+            onLoadJointerSlots = onLoadJointerSlots,
+        )
     }
 }
 
@@ -82,11 +90,16 @@ private fun TabContent(
     pagerState: PagerState,
     lastModifiedBeamSlots: List<WarehouseSlot>,
     lastModifiedJointerSlots: List<WarehouseSlot>,
-    navigateToManageItem: (String) -> Unit
+    navigateToManageItem: (String) -> Unit,
+    onLoadJointerSlots: () -> Unit,
 ) {
     HorizontalPager(
         state = pagerState,
     ) { pageIndex ->
+        // Trigger loading when the Jointer page is composed and still empty
+        if (pageIndex == 1 && lastModifiedJointerSlots.isEmpty()) {
+            LaunchedEffect(Unit) { onLoadJointerSlots() }
+        }
         val currentSlots = when (pageIndex) {
             0 -> lastModifiedBeamSlots
             1 -> lastModifiedJointerSlots

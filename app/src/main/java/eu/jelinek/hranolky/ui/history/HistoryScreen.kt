@@ -48,6 +48,7 @@ fun HistoryScreen(
                 screenState.lastModifiedJointerSlots,
                 screenSize = screenSize,
                 navigateToManageItem = navigateToManageItem,
+                onLoadJointerSlots = { viewModel.loadJointerLastModifiedSlots() },
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -98,5 +99,6 @@ fun TabletSlotTable(
         screenState.lastModifiedJointerSlots,
         screenSize = ScreenSize.TABLET,
         navigateToManageItem = navigateToManageItem,
+        onLoadJointerSlots = { viewModel.loadJointerLastModifiedSlots() },
     )
 }

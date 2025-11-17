@@ -127,7 +127,7 @@ data class WarehouseSlot(
         val widthFormatted = this.width?.formatDimension() ?: ""
         val thicknessFormatted = this.thickness?.formatDimension() ?: ""
 
-        return "$type ${this.getFullQualityName()}\n$widthFormatted x $thicknessFormatted x ${this.length} mm"
+        return "$type ${this.getFullQualityName()}\n$thicknessFormatted x $widthFormatted x ${this.length} mm"
     }
 
     override fun equals(other: Any?): Boolean {
