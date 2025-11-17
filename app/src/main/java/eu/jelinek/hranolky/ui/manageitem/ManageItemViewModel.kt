@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -164,11 +165,13 @@ class ManageItemViewModel(
                                 it.copy(slot = null, resultStatus = ResultStatus.DATA_ERROR, error = "Slot not found")
                             }
                         }
-                    }.collect {
-                        // Collection is handled by the combine operator.
-                        // The block inside combine is the actual processing per emission.
-                        Log.d(TAG, "fetchSlotData: combine block collected.")
                     }
+                        .distinctUntilChanged() // Prevent duplicate emissions when slot data hasn't actually changed
+                        .collect {
+                            // Collection is handled by the combine operator.
+                            // The block inside combine is the actual processing per emission.
+                            Log.d(TAG, "fetchSlotData: combine block collected.")
+                        }
                 } catch (e: Exception) {
                     Log.e(TAG, "fetchSlotData: Error in flow collection", e)
                     _screenStateStream.update {
