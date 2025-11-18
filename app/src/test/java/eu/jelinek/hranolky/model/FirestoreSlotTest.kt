@@ -22,7 +22,7 @@ class FirestoreSlotTest {
         val productId = "DUB-A-20-100-2000"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
-        assertEquals(productId, warehouseSlot.productId)
+        assertEquals(productId, warehouseSlot.fullProductId)
         assertEquals(5, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         assertEquals(SlotType.Beam, warehouseSlot.slotType)
@@ -41,7 +41,7 @@ class FirestoreSlotTest {
         val productId = "DUB-R-27-42-3000"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Jointer, productId)
 
-        assertEquals(productId, warehouseSlot.productId)
+        assertEquals(productId, warehouseSlot.fullProductId)
         assertEquals(10, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         assertEquals(SlotType.Jointer, warehouseSlot.slotType)
@@ -60,7 +60,7 @@ class FirestoreSlotTest {
         val productId = "BUK-C-30-50-1500"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
-        assertEquals(productId, warehouseSlot.productId)
+        assertEquals(productId, warehouseSlot.fullProductId)
         assertEquals(15, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         assertEquals(SlotType.Beam, warehouseSlot.slotType) // Default to Beam
@@ -79,7 +79,7 @@ class FirestoreSlotTest {
         val productId = "INVALID-ID"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
-        assertEquals(productId, warehouseSlot.productId)
+        assertEquals(productId, warehouseSlot.fullProductId)
         assertEquals(1, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         // Assert that properties derived from product ID are null or default if parsing fails

@@ -14,21 +14,21 @@ class WarehouseSlotTest {
 
     @Test
     fun `parsePropertiesFromProductId parses H- prefixed beam`() {
-        val slot = WarehouseSlot(productId = "H-DUB-A-20-100-2000", quantity = 10, lastModified = Timestamp.now())
+        val slot = WarehouseSlot(fullProductId = "H-DUB-A-20-100-2000", quantity = 10, lastModified = Timestamp.now())
         val parsed = slot.parsePropertiesFromProductId()
         assertEquals(SlotType.Beam, parsed.slotType)
         assertEquals("DUB-A", parsed.quality)
         assertEquals(20.0f, parsed.thickness)
         assertEquals(100.0f, parsed.width)
         assertEquals(2000, parsed.length)
-        assertEquals(slot.productId, parsed.productId)
+        assertEquals(slot.fullProductId, parsed.fullProductId)
         assertEquals(slot.quantity, parsed.quantity)
         assertEquals(slot.lastModified, parsed.lastModified)
     }
 
     @Test
     fun `parsePropertiesFromProductId parses S- prefixed jointer with point4 replacements`() {
-        val slot = WarehouseSlot(productId = "S-DUB-R-27-42-3000", quantity = 5)
+        val slot = WarehouseSlot(fullProductId = "S-DUB-R-27-42-3000", quantity = 5)
         val parsed = slot.parsePropertiesFromProductId()
         assertEquals(SlotType.Jointer, parsed.slotType)
         assertEquals("DUB-R", parsed.quality)
@@ -39,7 +39,7 @@ class WarehouseSlotTest {
 
     @Test
     fun `parsePropertiesFromProductId without prefix defaults to Beam`() {
-        val slot = WarehouseSlot(productId = "BUK-C-30-50-1500", quantity = 1)
+        val slot = WarehouseSlot(fullProductId = "BUK-C-30-50-1500", quantity = 1)
         val parsed = slot.parsePropertiesFromProductId()
         assertEquals(SlotType.Beam, parsed.slotType)
         assertEquals("BUK-C", parsed.quality)
@@ -50,7 +50,7 @@ class WarehouseSlotTest {
 
     @Test
     fun `parsePropertiesFromProductId invalid format leaves fields null`() {
-        val slot = WarehouseSlot(productId = "INVALID-ID", quantity = 1)
+        val slot = WarehouseSlot(fullProductId = "INVALID-ID", quantity = 1)
         val parsed = slot.parsePropertiesFromProductId()
         assertNull(parsed.slotType)
         assertNull(parsed.quality)
@@ -61,14 +61,14 @@ class WarehouseSlotTest {
 
     @Test
     fun `getFullQualityName maps known codes`() {
-        val slot = WarehouseSlot(productId = "H-", quantity = 0).copy(quality = "DUB-A|A")
-        assertEquals("DUB A/A", slot.getFullQualityName())
+        val slot = WarehouseSlot(fullProductId = "H-", quantity = 0).copy(quality = "DUB A|A")
+        assertEquals("DUB A/A", slot.quality)
     }
 
     @Test
     fun `getVolume computes cubic meters`() {
         val slot = WarehouseSlot(
-            productId = "H-TEST-20-50-1000",
+            fullProductId = "H-TEST-20-50-1000",
             quantity = 10,
             width = 50.0f,
             thickness = 20.0f,
@@ -81,7 +81,7 @@ class WarehouseSlotTest {
 
     @Test
     fun `getScreenTitle formats floats without trailing dot zero`() {
-        val parsed = WarehouseSlot(productId = "H-DUB-A-20-100-2000", quantity = 10)
+        val parsed = WarehouseSlot(fullProductId = "H-DUB-A-20-100-2000", quantity = 10)
             .parsePropertiesFromProductId()
         val title = parsed.getScreenTitle()
         // Width 100.0 -> "100", thickness 20.0 -> "20"

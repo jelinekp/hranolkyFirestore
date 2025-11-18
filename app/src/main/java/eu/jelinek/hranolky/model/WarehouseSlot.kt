@@ -3,7 +3,7 @@ package eu.jelinek.hranolky.model
 import android.util.Log
 
 data class WarehouseSlot(
-    val productId: String,
+    val fullProductId: String,
     val quantity: Long,
     val slotActions: List<SlotAction> = emptyList(),
     val slotType: SlotType? = null,
@@ -15,10 +15,14 @@ data class WarehouseSlot(
 ) {
     fun parsePropertiesFromProductId(): WarehouseSlot {
 
-        val initialProductId = this.productId // Use a consistent name for the original product ID
+        val initialProductId =
+            this.fullProductId // Use a consistent name for the original product ID
 
         // Determine the type and update productId using a 'let' block for scope
-        val (type, processedProductId) = if (initialProductId.startsWith("H") || initialProductId.startsWith("S")) {
+        val (type, processedProductId) = if (initialProductId.startsWith("H") || initialProductId.startsWith(
+                "S"
+            )
+        ) {
             initialProductId.take(1) to initialProductId.substring(2)
         } else {
             "" to initialProductId // No type prefix, so type is empty and product ID remains unchanged
@@ -55,7 +59,8 @@ data class WarehouseSlot(
                     "H" -> SlotType.Beam
                     "S" -> SlotType.Jointer
                     else -> {
-                        SlotType.Beam}
+                        SlotType.Beam
+                    }
                 },
                 quality = quality,
                 thickness = thickness,
@@ -100,6 +105,14 @@ data class WarehouseSlot(
         }
     }
 
+    fun getShortQualityName(): String {
+        return when (slotType) {
+            SlotType.Beam -> this.fullProductId[2] + this.fullProductId.substring(5, 7)
+            SlotType.Jointer -> this.fullProductId[2] + this.fullProductId.substring(5, 9).replace('|', '/')
+            null -> this.quality ?: ""
+        }
+    }
+
     fun hasAllProperties(): Boolean {
         return this.quality != null && this.width != null && this.thickness != null && this.length != null
     }
@@ -122,25 +135,25 @@ data class WarehouseSlot(
         }
 
         if (!hasAllProperties())
-            return "$type ${this.productId}"
+            return "$type ${this.fullProductId}"
 
         val widthFormatted = this.width?.formatDimension() ?: ""
         val thicknessFormatted = this.thickness?.formatDimension() ?: ""
 
-        return "$type ${this.getFullQualityName()}\n$thicknessFormatted x $widthFormatted x ${this.length} mm"
+        return "$type ${this.quality}\n$thicknessFormatted x $widthFormatted x ${this.length} mm"
     }
-/*
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+    /*
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
 
-        other as WarehouseSlot
-        return productId == other.productId
-    }
+            other as WarehouseSlot
+            return productId == other.productId
+        }
 
-    override fun hashCode(): Int {
-        return productId.toInt()
-    }*/
+        override fun hashCode(): Int {
+            return productId.toInt()
+        }*/
 }
 
 data class FirestoreSlot(
@@ -153,7 +166,7 @@ data class FirestoreSlot(
 ) {
     fun toWarehouseSlot(slotType: SlotType, productId: String): WarehouseSlot {
         return WarehouseSlot(
-            productId = productId,
+            fullProductId = getFullProductId(slotType = slotType, productId = productId),
             slotType = slotType,
             quantity = this.quantity,
             lastModified = this.lastModified,
@@ -162,5 +175,12 @@ data class FirestoreSlot(
             thickness = this.thickness?.toFloat(),
             length = this.length?.toInt(),
         )
+    }
+}
+
+private fun getFullProductId(slotType: SlotType, productId: String): String {
+    return when (slotType) {
+        SlotType.Beam -> "H-$productId"
+        SlotType.Jointer -> "S-$productId"
     }
 }

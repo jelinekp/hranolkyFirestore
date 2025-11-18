@@ -16,8 +16,8 @@ android {
         applicationId = "eu.jelinek.hranolky"
         minSdk = 27
         targetSdk = 36
-        versionCode = 14
-        versionName = "3.0"
+        versionCode = 16
+        versionName = "3.0.2 (auto-update)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

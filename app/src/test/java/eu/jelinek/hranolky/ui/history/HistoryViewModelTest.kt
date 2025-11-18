@@ -30,8 +30,8 @@ class HistoryViewModelTest {
     @Test
     fun `collects last modified slots into state`() {
         val slots = LastModifiedSlots(
-            beamSlots = listOf(WarehouseSlot(productId = "H-X-20-40-1000", quantity = 1)),
-            jointerSlots = listOf(WarehouseSlot(productId = "S-Y-27-42-2000", quantity = 2))
+            beamSlots = listOf(WarehouseSlot(fullProductId = "H-X-20-40-1000", quantity = 1)),
+            jointerSlots = listOf(WarehouseSlot(fullProductId = "S-Y-27-42-2000", quantity = 2))
         )
         val vm = HistoryViewModel(Application(), FakeRepo(flowOf(slots)))
         val state = vm.historyScreenState.value

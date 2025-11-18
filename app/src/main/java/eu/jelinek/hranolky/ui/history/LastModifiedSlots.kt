@@ -220,11 +220,11 @@ fun SlotRow(
         )
 
         Text(
-            text = slot.productId,
+            text = slot.fullProductId,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .weight(11f)
-                .clickable { navigateToShowLastActions(slot.productId) },
+                .clickable { navigateToShowLastActions(slot.fullProductId) },
             color = MaterialTheme.colorScheme.primary, // Keep primary for clickable
             fontWeight = FontWeight.Bold
         )

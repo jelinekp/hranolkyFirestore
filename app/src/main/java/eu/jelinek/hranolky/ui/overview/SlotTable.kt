@@ -1,5 +1,6 @@
 package eu.jelinek.hranolky.ui.overview
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,7 +39,7 @@ fun AllSlotsContent(
     sortingBy: String,
     sortingDirection: SortingDirection,
     updateSorting: (String) -> Unit,
-    navigateToShowLastActions: (String) -> Unit,
+    navigateToManageItemScreen: (String) -> Unit,
     modifier: Modifier = Modifier,
     screenSize: ScreenSize = ScreenSize.TABLET
 ) {
@@ -65,7 +66,7 @@ fun AllSlotsContent(
             ) { index, slot ->
                 OverviewRow(
                     slot = slot,
-                    navigateToShowLastActions = navigateToShowLastActions,
+                    navigateToManageItemScreen = navigateToManageItemScreen,
                     modifier = modifier,
                     screenSize = screenSize,
                     backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceVariant
@@ -230,7 +231,7 @@ fun HeaderItem(
 @Composable
 fun OverviewRow(
     slot: WarehouseSlot,
-    navigateToShowLastActions: (String) -> Unit,
+    navigateToManageItemScreen: (String) -> Unit,
     modifier: Modifier = Modifier,
     screenSize: ScreenSize = ScreenSize.TABLET,
     backgroundColor: Color = MaterialTheme.colorScheme.surface,
@@ -240,7 +241,8 @@ fun OverviewRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
             .clickable {
-                navigateToShowLastActions(slot.productId)
+                Log.d("OverviewScreen", "Clicked on ${slot.fullProductId}")
+                navigateToManageItemScreen(slot.fullProductId)
             }
             .fillMaxWidth()
             .background(color = backgroundColor)
@@ -260,9 +262,7 @@ fun OverviewRow(
             //style = MaterialTheme.typography.bodySmall
         )*/
         Text(
-            text = if (screenSize.isTablet()) slot.quality.toString() else slot.quality?.getOrNull(0).toString() + "-" + if ((slot.quality?.length
-                    ?: 0) > 5
-            ) slot.quality?.substring(4, 7) else slot.quality?.getOrNull(4).toString(),
+            text = if (screenSize.isTablet()) slot.quality.toString() else slot.getShortQualityName(),
             modifier = if (screenSize.isTablet()) Modifier.weight(2f) else Modifier.weight(3f)
         )
         Text(

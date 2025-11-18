@@ -177,7 +177,7 @@ fun NavigationActionButton(
         onClick = onClick,
         // Apply a common modifier first, then any additional specific modifiers
         modifier = modifier, // Chain any passed-in modifier
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Icon(
             painter = iconPainter,

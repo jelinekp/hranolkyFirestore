@@ -57,7 +57,7 @@ fun HranolkyNavHost(
         composable(route = ScreenNames.OVERVIEW.name) {
             OverviewScreen(
                 navigateUp = { navController.navigate(Screen.StartScreen.route) },
-                navigateToShowLastActions = {
+                navigateToManageItemScreen = {
                     navController.navigate(Screen.ManageItemScreen(it).route)
                 },
                 screenSize = screenSize,

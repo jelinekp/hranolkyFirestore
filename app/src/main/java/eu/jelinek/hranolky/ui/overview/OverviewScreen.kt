@@ -53,7 +53,7 @@ fun OverviewScreen(
     modifier: Modifier = Modifier,
     screenSize: ScreenSize,
     navigateUp: () -> Unit,
-    navigateToShowLastActions: (String) -> Unit,
+    navigateToManageItemScreen: (String) -> Unit,
     viewModel: OverViewModel = koinViewModel()
 ) {
     val screenState by viewModel.overviewScreenState.collectAsStateWithLifecycle()
@@ -96,7 +96,7 @@ fun OverviewScreen(
                     sortingBy = screenState.sortingBy,
                     sortingDirection = screenState.sortingDirection,
                     updateSorting = { viewModel.updateSorting(it) },
-                    navigateToShowLastActions = navigateToShowLastActions,
+                    navigateToManageItemScreen = navigateToManageItemScreen,
                     modifier = Modifier.weight(25f)
                 )
 
@@ -119,7 +119,7 @@ fun OverviewScreen(
                 FiltersAndTable(
                     screenState = screenState,
                     viewModel = viewModel,
-                    navigateToShowLastActions = navigateToShowLastActions,
+                    navigateToManageItemScreen = navigateToManageItemScreen,
                     screenSize = screenSize,
                     loading = screenState.loading,
                 )
@@ -132,7 +132,7 @@ fun OverviewScreen(
 private fun FiltersAndTable(
     screenState: OverviewUiState,
     viewModel: OverViewModel,
-    navigateToShowLastActions: (String) -> Unit,
+    navigateToManageItemScreen: (String) -> Unit,
     screenSize: ScreenSize,
     loading: Boolean,
 ) {
@@ -210,7 +210,7 @@ private fun FiltersAndTable(
             sortingBy = screenState.sortingBy,
             sortingDirection = screenState.sortingDirection,
             updateSorting = { viewModel.updateSorting(it) },
-            navigateToShowLastActions = navigateToShowLastActions,
+            navigateToManageItemScreen = navigateToManageItemScreen,
             screenSize = screenSize,
         )
     }

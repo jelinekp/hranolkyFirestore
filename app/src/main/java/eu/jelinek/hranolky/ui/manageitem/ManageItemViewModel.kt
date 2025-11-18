@@ -122,7 +122,7 @@ class ManageItemViewModel(
 
         val slotTitle = slot.getScreenTitle()
 
-        Log.d(TAG, "updateSlotAndTitleScreen: Updating screen state - slot: ${slot.productId}, actions count: ${slot.slotActions.size}")
+        Log.d(TAG, "updateSlotAndTitleScreen: Updating screen state - slot: ${slot.fullProductId}, actions count: ${slot.slotActions.size}")
 
         _screenStateStream.update {
             it.copy(
@@ -144,7 +144,7 @@ class ManageItemViewModel(
                         slotRepository.getSlotActions(id) // Ensure this flow also emits when actions change
                     ) { slot, actions ->
                         // This lambda will be called whenever slot or actions change
-                        Log.d(TAG, "fetchSlotData: combine triggered - slot: ${slot?.productId}, actions count: ${actions.size}")
+                        Log.d(TAG, "fetchSlotData: combine triggered - slot: ${slot?.fullProductId}, actions count: ${actions.size}")
                         if (slot != null) {
                             val parsedSlot = slot.copy(slotActions = actions)
                             updateSlotAndTitleScreen(parsedSlot)

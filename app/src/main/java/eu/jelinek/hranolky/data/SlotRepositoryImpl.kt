@@ -168,7 +168,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
     }
 
     override suspend fun createNewSlot(fullSlotId: String, quantity: Long) {
-        val slot = WarehouseSlot(productId = fullSlotId, quantity = quantity)
+        val slot = WarehouseSlot(fullProductId = fullSlotId, quantity = quantity)
             .parsePropertiesFromProductId()
 
         if (!slot.hasAllProperties()) {
@@ -186,7 +186,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             return
         }
 
-        val documentPath = if (slot.productId[1] == '-') slot.productId.substring(2) else null
+        val documentPath = if (slot.fullProductId[1] == '-') slot.fullProductId.substring(2) else null
 
         if (documentPath == null) {
             Log.w(TAG, "createNewSlot: Cannot create slot $fullSlotId, wrong document path.")
@@ -210,7 +210,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                     // Document already exists, do nothing as per your requirement
                     Log.d(
                         TAG,
-                        "createNewSlot: Slot ${slot.slotType} ${slot.productId} already exists. No action taken."
+                        "createNewSlot: Slot ${slot.slotType} ${slot.fullProductId} already exists. No action taken."
                     )
                     null
                 } else {
@@ -218,15 +218,15 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
                     transaction.set(docRef, data)
                     Log.d(
                         TAG,
-                        "createNewSlot: Creating new slot with ID: ${slot.slotType} ${slot.productId}"
+                        "createNewSlot: Creating new slot with ID: ${slot.slotType} ${slot.fullProductId}"
                     )
                     null
                 }
             }.await() // await the completion of the transaction
-            Log.d(TAG, "createNewSlot: Transaction for creating slot ${slot.productId} completed.")
+            Log.d(TAG, "createNewSlot: Transaction for creating slot ${slot.fullProductId} completed.")
 
         } catch (e: Exception) {
-            Log.e(TAG, "createNewSlot: Error or conflict creating slot ${slot.productId}", e)
+            Log.e(TAG, "createNewSlot: Error or conflict creating slot ${slot.fullProductId}", e)
         }
     }
 
