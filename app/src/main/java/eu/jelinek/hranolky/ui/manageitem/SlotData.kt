@@ -65,10 +65,11 @@ fun SlotData(
             DataRow("Množství na skladě", slot.quantity.toString(), alternateRowModifier, fontSize = fontSize)
             DataRow("Objem dřeva", formattedVolume, fontSize = fontSize)
             if (isShowMore || forceExpanded) {
-                DataRow("Kvalita", slot.getFullQualityName(), alternateRowModifier, fontSize = fontSize)
+                DataRow("Kvalita", slot.quality, alternateRowModifier, fontSize = fontSize)
                 DataRow("Tloušťka", "${slot.thickness} mm", fontSize = fontSize)
                 DataRow("Šířka", "${slot.width} mm", alternateRowModifier, fontSize = fontSize)
                 DataRow("Délka", "${slot.length} mm", fontSize = fontSize)
+                DataRow("Kód", slot.fullProductId, fontSize = fontSize)
             }
         }
 

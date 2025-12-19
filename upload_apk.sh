@@ -25,6 +25,21 @@ fi
 # Get APK info
 APK_SIZE=$(du -h "$LOCAL_APK" | cut -f1)
 echo -e "Found APK: ${GREEN}$LOCAL_APK${NC} (${APK_SIZE})"
+
+# Extract version information from build.gradle.kts # TODO: This can be misleading
+BUILD_GRADLE="app/build.gradle.kts"
+if [ -f "$BUILD_GRADLE" ]; then
+    VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' "$BUILD_GRADLE")
+    VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' "$BUILD_GRADLE")
+
+    if [ -n "$VERSION_NAME" ] && [ -n "$VERSION_CODE" ]; then
+        echo -e "App Version: ${GREEN}$VERSION_NAME${NC} (code: $VERSION_CODE)"
+    else
+        echo -e "${YELLOW}Warning: Could not extract version info from $BUILD_GRADLE${NC}"
+    fi
+else
+    echo -e "${YELLOW}Warning: Build file not found at $BUILD_GRADLE${NC}"
+fi
 echo
 # Check for stored password
 if [ -f "$PASSWORD_FILE" ]; then

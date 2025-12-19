@@ -198,7 +198,7 @@ class ManageItemViewModel(
 
             if (parsedQuantityResult.isSuccess) {
                 quantityLong = parsedQuantityResult.getOrThrow()
-                if (quantityLong <= 0) { // Quantity must be positive
+                if (quantityLong < 0 && actionType == ActionType.INVENTORY_CHECK || quantityLong <= 0 && actionType != ActionType.INVENTORY_CHECK) { // Quantity must be positive or zero for INVENTORY_CHECK
                     _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Zadané množství musí být kladné."))
                     return@launch
                 }
@@ -306,6 +306,11 @@ class ManageItemViewModel(
             }
             return Result.success(sum)
         }
+
+        // TODO If it's not a number, let's check if it's a different item code, if so, redirect to this item
+        val itemCode = quantityStr.trim()
+        // TODO use item scanned code checking from StartViewModel
+
         // If it's not a simple number and not a valid sum, it's an invalid format
         return Result.failure(NumberFormatException("Neplatný formát množství."))
     }

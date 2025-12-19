@@ -38,6 +38,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ManageItemScreen(
     modifier: Modifier = Modifier,
     navigateUp: () -> Unit,
+    navigateToAnotherItem: (String) -> Unit,
     screenSize: ScreenSize,
     viewModel: ManageItemViewModel = koinViewModel()
 ) {

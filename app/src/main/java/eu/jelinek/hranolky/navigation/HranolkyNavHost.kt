@@ -50,6 +50,9 @@ fun HranolkyNavHost(
         ) {
             ManageItemScreen(
                 navigateUp = { navController.navigateUp() },
+                navigateToAnotherItem = {
+                    navController.navigate(Screen.ManageItemScreen(it).route)
+                },
                 screenSize = screenSize,
             )
         }
