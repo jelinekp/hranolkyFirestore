@@ -20,6 +20,7 @@ tasks.register<JavaExec>("updateConfig") {
     description = "Update AppConfig in Firestore with new version info"
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set("FirestoreConfigMainKt")
+    workingDir = rootProject.projectDir // Run from root project directory
     args = buildList {
         project.findProperty("version")?.let {
             add("--version")
