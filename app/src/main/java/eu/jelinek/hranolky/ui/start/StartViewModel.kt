@@ -1,12 +1,13 @@
 package eu.jelinek.hranolky.ui.start
 
 import android.app.Application
+import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import eu.jelinek.hranolky.domain.AuthManager
 import eu.jelinek.hranolky.domain.DeviceManager
 import eu.jelinek.hranolky.domain.InputValidator
 import eu.jelinek.hranolky.domain.UpdateManager
@@ -15,11 +16,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 class StartViewModel(
     application: Application,
-    private val auth: FirebaseAuth,
+    private val authManager: AuthManager,
     private val inputValidator: InputValidator,
     private val updateManager: UpdateManager,
     private val deviceManager: DeviceManager,
@@ -29,6 +29,7 @@ class StartViewModel(
     private val _startScreenState = MutableStateFlow(StartUiState())
     val startScreenState get() = _startScreenState.asStateFlow()
 
+    val authState = authManager.authState
     val updateState = updateManager.updateState
 
     private val _navigateToManageItem = MutableSharedFlow<String>()
@@ -43,34 +44,49 @@ class StartViewModel(
     }
 
     init {
-        signInAnonymously()
+        // Collect auth state changes
+        viewModelScope.launch {
+            authManager.authState.collect { authState ->
+                if (authState.isSignedIn && !authState.isLoading) {
+                    // User is signed in, initialize app data
+                    initializeAppData()
+                }
+            }
+        }
+
+        // Check if already signed in (persisted from previous session)
+        if (authManager.isSignedIn) {
+            viewModelScope.launch {
+                initializeAppData()
+            }
+        }
     }
 
-    private fun signInAnonymously() {
+    /**
+     * Initiates Google Sign-In. Call this from the UI when user taps sign-in button.
+     */
+    fun signInWithGoogle(context: Context) {
         viewModelScope.launch {
-            _startScreenState.value = _startScreenState.value.copy(isSigningIn = true)
-            try {
-                if (auth.currentUser == null) {
-                    auth.signInAnonymously().await()
-                    Log.d("Auth", "signInAnonymously:success. UID: ${auth.currentUser?.uid}")
-                } else {
-                    Log.d("Auth", "User already signed in with UID: ${auth.currentUser?.uid}")
-                }
+            authManager.signInWithGoogle(context)
+        }
+    }
 
-                _startScreenState.value = deviceManager.fetchDeviceNameAndInventoryPermit(context, _startScreenState.value)
-                if(_startScreenState.value.isInventoryCheckPermitted) loadInventoryCheckSetting()
-                else toggleInventoryCheck(false)
+    private suspend fun initializeAppData() {
+        _startScreenState.value = _startScreenState.value.copy(isSigningIn = true)
+        try {
+            _startScreenState.value = deviceManager.fetchDeviceNameAndInventoryPermit(context, _startScreenState.value)
+            if (_startScreenState.value.isInventoryCheckPermitted) loadInventoryCheckSetting()
+            else toggleInventoryCheck(false)
 
-                val state = deviceManager.logDeviceId(context, _startScreenState.value)
-                _startScreenState.value = state
-                updateManager.checkForUpdate(state.appVersionCode, context)
+            val state = deviceManager.logDeviceId(context, _startScreenState.value)
+            _startScreenState.value = state
+            updateManager.checkForUpdate(state.appVersionCode, context)
 
-            } catch (e: Exception) {
-                Log.w("Auth", "signInAnonymously:failure", e)
-                _startScreenState.value = _startScreenState.value.copy(isSignInProblem = true)
-            } finally {
-                _startScreenState.value = _startScreenState.value.copy(isSigningIn = false)
-            }
+        } catch (e: Exception) {
+            Log.w("StartViewModel", "Failed to initialize app data", e)
+            _startScreenState.value = _startScreenState.value.copy(isSignInProblem = true)
+        } finally {
+            _startScreenState.value = _startScreenState.value.copy(isSigningIn = false)
         }
     }
 
@@ -126,6 +142,11 @@ class StartViewModel(
         val isEnabled = sharedPreferences.getBoolean(PREF_INVENTORY_CHECK_ENABLED, false)
         _startScreenState.value = _startScreenState.value.copy(isInventoryCheckEnabled = isEnabled)
         Log.d("StartViewModel", "Loaded inventory check setting: $isEnabled")
+    }
+
+    fun signOut() {
+        authManager.signOut()
+        _startScreenState.value = StartUiState() // Reset state
     }
 }
 
