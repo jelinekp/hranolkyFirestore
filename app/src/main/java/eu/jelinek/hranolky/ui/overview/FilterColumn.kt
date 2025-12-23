@@ -1,8 +1,9 @@
 package eu.jelinek.hranolky.ui.overview
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -135,6 +136,7 @@ fun FilterMobileSlots(
 }
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> FilterChipGroup(
     label: String,
@@ -152,10 +154,10 @@ fun <T> FilterChipGroup(
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Row(
-                horizontalArrangement = Arrangement
-                    .spacedBy(10.dp),
-                modifier = Modifier.weight(8f).horizontalScroll(rememberScrollState())
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.weight(8f)
             ) {
                 filters.forEach { filter ->
                     val isSelected = selectedFilters.contains(filter)
@@ -200,6 +202,7 @@ fun <T> FilterChipGroup(
 }
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> FilterMobileChipGroup(
     label: String,
@@ -232,10 +235,9 @@ fun <T> FilterMobileChipGroup(
                 }
             }
         }
-        Row(
-            horizontalArrangement = Arrangement
-                .spacedBy(10.dp),
-            modifier = Modifier.horizontalScroll(rememberScrollState())
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             filters.forEach { filter ->
                 val isSelected = selectedFilters.contains(filter)

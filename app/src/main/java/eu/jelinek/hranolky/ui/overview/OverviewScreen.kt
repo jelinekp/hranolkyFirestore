@@ -115,7 +115,6 @@ fun OverviewScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.padding(paddingValues),
-                userScrollEnabled = false,
             ) {
                 FiltersAndTable(
                     screenState = screenState,
