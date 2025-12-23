@@ -25,6 +25,39 @@ fi
 # Get APK info
 APK_SIZE=$(du -h "$LOCAL_APK" | cut -f1)
 echo -e "Found APK: ${GREEN}$LOCAL_APK${NC} (${APK_SIZE})"
+
+# Extract version information directly from APK using aapt2
+AAPT2=$(find ~/Android/Sdk/build-tools -name aapt2 2>/dev/null | sort -V | tail -1)
+
+VERSION_NAME=""
+VERSION_CODE=""
+
+if [ -n "$AAPT2" ] && [ -f "$AAPT2" ]; then
+    echo -e "${YELLOW}Extracting version info from APK...${NC}"
+
+    # Use aapt2 dump badging to extract version info
+    BADGING=$("$AAPT2" dump badging "$LOCAL_APK" 2>/dev/null || true)
+
+    if [ -n "$BADGING" ]; then
+        VERSION_NAME=$(echo "$BADGING" | grep -oP "versionName='\K[^']+" | head -1)
+        VERSION_CODE=$(echo "$BADGING" | grep -oP "versionCode='\K[^']+" | head -1)
+    fi
+fi
+
+# Fallback to extracting from build.gradle.kts if aapt2 didn't work
+if [ -z "$VERSION_NAME" ] || [ -z "$VERSION_CODE" ]; then
+    BUILD_GRADLE="app/build.gradle.kts"
+    if [ -f "$BUILD_GRADLE" ]; then
+        VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' "$BUILD_GRADLE")
+        VERSION_CODE=$(grep -oP 'versionCode\s*=\s*\K\d+' "$BUILD_GRADLE")
+    fi
+fi
+
+if [ -n "$VERSION_NAME" ] && [ -n "$VERSION_CODE" ]; then
+    echo -e "App Version: ${GREEN}$VERSION_NAME${NC} (code: $VERSION_CODE)"
+else
+    echo -e "${YELLOW}Warning: Could not extract version info${NC}"
+fi
 echo
 # Check for stored password
 if [ -f "$PASSWORD_FILE" ]; then
