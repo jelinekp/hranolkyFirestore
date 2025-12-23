@@ -1,6 +1,8 @@
 package eu.jelinek.hranolky.ui.start
 
 import android.app.Application
+import eu.jelinek.hranolky.domain.AuthManager
+import eu.jelinek.hranolky.domain.AuthState
 import eu.jelinek.hranolky.domain.DeviceManager
 import eu.jelinek.hranolky.domain.InputValidator
 import eu.jelinek.hranolky.domain.UpdateManager
@@ -19,11 +21,13 @@ class StartViewModelTest {
     @Test
     fun `onScannedCodeChange emits navigate when valid`() = runBlocking {
         val app = mockk<Application>(relaxed = true)
-        val auth = mockk<com.google.firebase.auth.FirebaseAuth>(relaxed = true) {
-            every { currentUser } returns mockk(relaxed = true)
+        val authManager = mockk<AuthManager>(relaxed = true) {
+            every { isSignedIn } returns true
+            every { authState } returns MutableStateFlow(AuthState(isSignedIn = true))
         }
         val validator = mockk<InputValidator> {
             every { isValidScannedTextFormat(any()) } returns true
+            every { manipulateAndValidateItemCode(any()) } answers { firstArg() }
         }
         val updateManager = mockk<UpdateManager>(relaxed = true) {
             every { updateState } returns MutableStateFlow(eu.jelinek.hranolky.domain.UpdateState())
@@ -34,7 +38,7 @@ class StartViewModelTest {
             coEvery { logDeviceId(any(), any()) } answers { secondArg() }
         }
 
-        val vm = StartViewModel(app, auth, validator, updateManager, deviceManager)
+        val vm = StartViewModel(app, authManager, validator, updateManager, deviceManager)
 
         vm.onScannedCodeChange("H-TEST-20-40-1000", isManualInput = false)
         val destination = vm.navigateToManageItem

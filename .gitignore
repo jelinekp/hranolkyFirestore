@@ -34,9 +34,17 @@ google-services.json
 # Android Profiling
 *.hprof
 
-.github/
-GEMINI.md
+# Keystore files
+keystore.properties
+
+# Documentation files
 GOOGLE_SIGNIN_SETUP.md
+GEMINI.md
+
+# GitHub configuration
+.github/
+
+# App specific ignores
 app/.gitignore
 app/google-services-old.json
 app/proguard-rules.pro
@@ -52,6 +60,8 @@ app/src/main/res/mipmap-xxhdpi/
 app/src/main/res/mipmap-xxxhdpi/
 app/src/main/res/xml/
 app/src/test/java/eu/jelinek/hranolky/ExampleUnitTest.kt
+
+# Firestore module documentation
 firestore-dump/README.md
 firestore-up/BATCH_WRITING.md
 firestore-up/FIRESTORE_INDEXES_GUIDE.md
@@ -62,9 +72,13 @@ firestore-up/QUERY_EXAMPLES.kt
 firestore-up/QUICK_REFERENCE.md
 firestore-up/README.md
 firestore-up/src/main/kotlin/MigrationInstructions.md
+
+# Gradle properties and wrapper
 gradle.properties
 gradle/wrapper/
 gradlew
 gradlew.bat
+
+# App icon
 hranolky_tablet.png
-keystore.properties
+
