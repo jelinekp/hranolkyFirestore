@@ -1,17 +1,22 @@
 #!/bin/bash
 # APK Upload Script for Hranolky Firestore
 # Uploads app-release.apk to FTP server and renames it to update.apk
+# Optionally updates Firestore AppConfig with version info
 set -e  # Exit on error
+
 # Configuration
 FTP_HOST="ftp4.webzdarma.cz"
 FTP_USER="jelinekp.wz.cz"
 FTP_REMOTE_PATH="/app/update.apk"
 LOCAL_APK="app/release/app-release.apk"
 PASSWORD_FILE=".ftp_password"
+FIRESTORE_CREDENTIALS="firestore-config/private_secret.json"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 echo -e "${GREEN}=== Hranolky Firestore APK Upload ===${NC}"
 echo
@@ -59,6 +64,9 @@ else
     echo -e "${YELLOW}Warning: Could not extract version info${NC}"
 fi
 echo
+
+# === FTP Upload ===
+echo -e "${BLUE}=== FTP Upload ===${NC}"
 # Check for stored password
 if [ -f "$PASSWORD_FILE" ]; then
     echo -e "${YELLOW}Using stored FTP password${NC}"
@@ -92,7 +100,6 @@ if curl --ftp-create-dirs \
     echo -e "${GREEN}✓ Upload successful!${NC}"
     echo -e "APK uploaded to: ftp://$FTP_HOST$FTP_REMOTE_PATH"
     echo -e "Download URL: ${GREEN}https://jelinekp.cz/app/update.apk${NC}"
-    # Show file modification time
     echo
     echo "Upload completed at: $(date '+%Y-%m-%d %H:%M:%S')"
 else
@@ -105,3 +112,65 @@ else
     echo "  - Permission issues"
     exit 1
 fi
+echo
+
+# === Firestore AppConfig Update ===
+echo -e "${BLUE}=== Firestore AppConfig Update ===${NC}"
+read -p "Do you want to update Firestore AppConfig? (y/n): " UPDATE_FIRESTORE
+
+if [ "$UPDATE_FIRESTORE" = "y" ] || [ "$UPDATE_FIRESTORE" = "Y" ]; then
+    # Check for credentials file
+    if [ ! -f "$FIRESTORE_CREDENTIALS" ]; then
+        echo -e "${RED}Error: Firestore credentials not found at $FIRESTORE_CREDENTIALS${NC}"
+        echo "Please copy private_secret.json to firestore-config/"
+        exit 1
+    fi
+
+    # Check if version info is available
+    if [ -z "$VERSION_NAME" ] || [ -z "$VERSION_CODE" ]; then
+        echo -e "${RED}Error: Version info not available. Cannot update Firestore.${NC}"
+        exit 1
+    fi
+
+    # Get release notes from user
+    echo -e "${YELLOW}Enter release notes (press Enter when done):${NC}"
+    read -r RELEASE_NOTES
+
+    if [ -z "$RELEASE_NOTES" ]; then
+        echo -e "${RED}Error: Release notes cannot be empty${NC}"
+        exit 1
+    fi
+
+    echo
+    echo -e "${YELLOW}Firestore update summary:${NC}"
+    echo -e "  Version: ${GREEN}$VERSION_NAME${NC}"
+    echo -e "  Version Code: ${GREEN}$VERSION_CODE${NC}"
+    echo -e "  Release Notes: ${GREEN}$RELEASE_NOTES${NC}"
+    echo
+    read -p "Proceed with Firestore update? (y/n): " CONFIRM_FIRESTORE
+
+    if [ "$CONFIRM_FIRESTORE" = "y" ] || [ "$CONFIRM_FIRESTORE" = "Y" ]; then
+        echo -e "${YELLOW}Updating Firestore AppConfig...${NC}"
+
+        # Run the Gradle task to update Firestore
+        ./gradlew :firestore-config:updateConfig \
+            -Pversion="$VERSION_NAME" \
+            -PversionCode="$VERSION_CODE" \
+            -PreleaseNotes="$RELEASE_NOTES" \
+            -Pcredentials="$FIRESTORE_CREDENTIALS" \
+            --quiet
+
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓ Firestore AppConfig updated successfully!${NC}"
+        else
+            echo -e "${RED}✗ Firestore update failed!${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}Skipping Firestore update${NC}"
+    fi
+fi
+
+echo
+echo -e "${GREEN}=== All done! ===${NC}"
+

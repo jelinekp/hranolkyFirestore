@@ -1,0 +1,7 @@
+# Ignore service account credentials
+private_secret.json
+*.json
+
+# Build outputs
+build/
+

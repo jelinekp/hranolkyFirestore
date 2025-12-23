@@ -23,4 +23,5 @@ rootProject.name = "Hranolky Firestore"
 include(":app")
 include(":firestore-dump")
 include(":firestore-up")
+include(":firestore-config")
 
