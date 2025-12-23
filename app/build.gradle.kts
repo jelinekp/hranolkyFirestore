@@ -102,6 +102,7 @@ dependencies {
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.play.services.auth) // Legacy Google Sign-In for Android 7 compatibility
 
     testImplementation(libs.junit)
     testImplementation(libs.koin.test)

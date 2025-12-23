@@ -1,6 +1,9 @@
 package eu.jelinek.hranolky.domain
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -41,6 +44,7 @@ class AuthManager(
     // The Web Client ID looks like: 123456789-xxxx.apps.googleusercontent.com
     companion object {
         const val WEB_CLIENT_ID = "657740368257-25rd5mbgs9scckap948c8u4s4rtdlpku.apps.googleusercontent.com"
+        const val LEGACY_SIGN_IN_REQUEST_CODE = 9001
     }
 
     private val _authState = MutableStateFlow(AuthState())
@@ -63,29 +67,111 @@ class AuthManager(
             )
             Log.d(TAG, "User already signed in: ${user.email}")
         }
+
+        // Add Firebase auth state listener to detect sign-in completion
+        // This is crucial for legacy sign-in flow where auth happens asynchronously
+        auth.addAuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
+            if (user != null) {
+                Log.d(TAG, "Auth state changed: User signed in - ${user.email}")
+                _authState.value = AuthState(
+                    isSignedIn = true,
+                    userEmail = user.email,
+                    userName = user.displayName,
+                    isLoading = false
+                )
+            } else {
+                Log.d(TAG, "Auth state changed: User signed out")
+                _authState.value = AuthState(isLoading = false)
+            }
+        }
     }
 
     /**
-     * Initiates Google Sign-In using the Credential Manager API.
-     * Shows the Google account picker on first sign-in.
-     * If no accounts exist on device, shows the Google Sign-In button flow
-     * which allows adding a new account.
-     * Sign-in state is persisted and survives app updates.
+     * Initiates Google Sign-In using the Credential Manager API (Android 8+)
+     * or shows an error for Android 7 (Credential Manager not fully supported).
+     *
+     * For production use on Android 7, you should implement legacy GoogleSignInClient.
+     * For now, we show a helpful error message.
      */
     suspend fun signInWithGoogle(context: Context): Result<FirebaseUser> {
         _authState.value = _authState.value.copy(isLoading = true, error = null)
 
-        // First try with GetGoogleIdOption (for devices with existing accounts)
+        // Use legacy Google Sign-In Activity for Android 7 (API 27) and below
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1) {
+            Log.d(TAG, "Using legacy Google Sign-In Activity for Android ${Build.VERSION.SDK_INT}")
+            return signInWithLegacyActivity(context)
+        }
+
+        // Modern Credential Manager API for Android 8+
         val result = trySignInWithGoogleId(context)
 
         // If no credentials available, try with Sign In With Google button flow
         // This allows users to add a new Google account
-        if (result.isFailure && result.exceptionOrNull() is NoCredentialException) {
+        return if (result.isFailure && result.exceptionOrNull() is NoCredentialException) {
             Log.d(TAG, "No existing credentials, trying Sign In With Google flow")
-            return trySignInWithGoogleButton(context)
+            trySignInWithGoogleButton(context)
+        } else {
+            result
         }
+    }
 
-        return result
+    /**
+     * Sign in using legacy GoogleSignInClient through a dedicated Activity.
+     * This is required for Android 7 and below where Credential Manager doesn't work.
+     *
+     * The Activity handles the full sign-in flow and updates Firebase Auth.
+     * This method starts the activity and returns immediately - the auth state
+     * will be updated asynchronously when sign-in completes via Firebase's auth listener.
+     */
+    private fun signInWithLegacyActivity(context: Context): Result<FirebaseUser> {
+        try {
+            // Launch GoogleSignInActivity which will handle the sign-in flow
+            val intent = Intent(context, Class.forName("eu.jelinek.hranolky.ui.auth.GoogleSignInActivity"))
+
+            if (context is Activity) {
+                context.startActivityForResult(intent, LEGACY_SIGN_IN_REQUEST_CODE)
+                Log.d(TAG, "Started legacy sign-in activity")
+            } else {
+                // If context is not an Activity, start as new task
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(intent)
+                Log.d(TAG, "Started legacy sign-in activity as new task")
+            }
+
+            // Sign-in will complete asynchronously in the Activity
+            // Firebase auth state listener will automatically update the UI
+            // Keep loading state until Firebase auth completes
+            Log.d(TAG, "Legacy sign-in activity launched successfully - waiting for auth callback")
+
+            // Return a dummy success - auth state managed by Firebase listener
+            // We can't return the actual user yet because it's null until sign-in completes
+            // The non-null assertion will throw, which we catch below
+            return Result.success(auth.currentUser!!)
+        } catch (e: NullPointerException) {
+            // Expected - currentUser is null until sign-in completes
+            // Firebase auth listener will update state when ready
+            // Just return a failure but the auth flow continues in background
+            Log.d(TAG, "Sign-in pending - waiting for Firebase auth callback")
+            // We need to return something, but Result<FirebaseUser> requires non-null
+            // So we return failure here but keep loading state
+            // The Firebase listener will update to success when auth completes
+            return Result.failure(Exception("Sign-in in progress"))
+        } catch (e: ClassNotFoundException) {
+            Log.e(TAG, "GoogleSignInActivity not found", e)
+            _authState.value = _authState.value.copy(
+                isLoading = false,
+                error = "Chyba konfigurace přihlášení"
+            )
+            return Result.failure(e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start legacy sign-in activity", e)
+            _authState.value = _authState.value.copy(
+                isLoading = false,
+                error = "Nepodařilo se spustit přihlášení: ${e.message}"
+            )
+            return Result.failure(e)
+        }
     }
 
     /**
@@ -258,6 +344,26 @@ class AuthManager(
         auth.signOut()
         _authState.value = AuthState()
         Log.d(TAG, "User signed out")
+    }
+
+    /**
+     * Refresh auth state - checks current Firebase user and updates state accordingly.
+     * Used after legacy sign-in activity completes.
+     */
+    fun refreshAuthState() {
+        val user = auth.currentUser
+        if (user != null) {
+            _authState.value = AuthState(
+                isSignedIn = true,
+                userEmail = user.email,
+                userName = user.displayName,
+                isLoading = false
+            )
+            Log.d(TAG, "Auth state refreshed: user signed in as ${user.email}")
+        } else {
+            _authState.value = AuthState(isLoading = false)
+            Log.d(TAG, "Auth state refreshed: no user signed in")
+        }
     }
 }
 

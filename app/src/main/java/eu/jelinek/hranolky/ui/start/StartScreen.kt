@@ -304,7 +304,8 @@ private fun GoogleSignInScreen(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
                         style = typography.bodySmall,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
             }
