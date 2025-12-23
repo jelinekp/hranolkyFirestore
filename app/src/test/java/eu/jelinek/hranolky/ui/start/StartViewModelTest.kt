@@ -31,6 +31,7 @@ class StartViewModelTest {
         }
         val updateManager = mockk<UpdateManager>(relaxed = true) {
             every { updateState } returns MutableStateFlow(eu.jelinek.hranolky.domain.UpdateState())
+            every { checkIfJustUpdated(any(), any()) } returns false
             coEvery { checkForUpdate(any(), any()) } returns Unit
         }
         val deviceManager = mockk<DeviceManager>(relaxed = true) {

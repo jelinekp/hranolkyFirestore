@@ -24,6 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,6 +72,16 @@ fun StartScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show success snackbar when app was just updated
+    LaunchedEffect(updateState.justUpdated) {
+        if (updateState.justUpdated) {
+            snackbarHostState.showSnackbar(
+                message = "Aplikace byla úspěšně aktualizována! 🎉"
+            )
+        }
+    }
 
     // Animate the pads sliding in from the edges with smooth motion
     val leftPadOffset by animateFloatAsState(
@@ -132,6 +145,12 @@ fun StartScreen(
         )
     }
 
+    // Show full-screen installation overlay when installing (blocks all interaction)
+    if (updateState.isInstalling) {
+        InstallationOverlay(updateState = updateState)
+        return
+    }
+
     // Show sign-in screen if not authenticated
     if (!authState.isSignedIn) {
         GoogleSignInScreen(
@@ -164,6 +183,15 @@ fun StartScreen(
             // Show update progress at the bottom
             if (updateState.isDownloading || updateState.isInstalling) {
                 UpdateProgressBar(updateState = updateState)
+            }
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = colorScheme.primaryContainer,
+                    contentColor = colorScheme.onPrimaryContainer
+                )
             }
         }
     ) { padding ->

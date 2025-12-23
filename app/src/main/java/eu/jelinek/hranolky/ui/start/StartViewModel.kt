@@ -80,6 +80,10 @@ class StartViewModel(
 
             val state = deviceManager.logDeviceId(context, _startScreenState.value)
             _startScreenState.value = state
+
+            // Check if app was just updated (before checking for new updates)
+            updateManager.checkIfJustUpdated(context, state.appVersionCode)
+
             updateManager.checkForUpdate(state.appVersionCode, context)
 
         } catch (e: Exception) {

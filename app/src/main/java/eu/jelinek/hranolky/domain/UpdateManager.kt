@@ -28,13 +28,76 @@ data class UpdateState(
     val isInstalling: Boolean = false,
     val downloadProgress: Int = 0,
     val latestVersion: String = "",
+    val latestVersionCode: Int = 0,
     val releaseNotes: String = "",
-    val error: String? = null
+    val error: String? = null,
+    val justUpdated: Boolean = false // True if app just completed an update
 )
 
 class UpdateManager(private val appConfigRepository: AppConfigRepository) {
     private val _updateState = MutableStateFlow(UpdateState())
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
+
+    companion object {
+        private const val PREFS_NAME = "update_manager_prefs"
+        private const val PREF_INSTALLING_VERSION = "installing_version_code"
+        private const val PREF_INSTALLING_VERSION_NAME = "installing_version_name"
+    }
+
+    /**
+     * Check if the app was just updated (called on app start).
+     * Returns true if we detect that an update was in progress and now complete.
+     */
+    fun checkIfJustUpdated(context: Context, currentVersionCode: Int): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val installingVersionCode = prefs.getInt(PREF_INSTALLING_VERSION, -1)
+        val installingVersionName = prefs.getString(PREF_INSTALLING_VERSION_NAME, "") ?: ""
+
+        Log.d("AppUpdate", "checkIfJustUpdated: current=$currentVersionCode, wasInstalling=$installingVersionCode")
+
+        if (installingVersionCode > 0 && installingVersionCode == currentVersionCode) {
+            // Clear the persisted state
+            prefs.edit()
+                .remove(PREF_INSTALLING_VERSION)
+                .remove(PREF_INSTALLING_VERSION_NAME)
+                .apply()
+
+            Log.i("AppUpdate", "App was just updated to version $installingVersionName (code: $currentVersionCode)")
+            _updateState.value = _updateState.value.copy(justUpdated = true)
+            return true
+        }
+
+        // If we had an installing version but it doesn't match current, the update may have failed
+        if (installingVersionCode > 0) {
+            Log.w("AppUpdate", "Update may have failed - was installing $installingVersionCode but current is $currentVersionCode")
+            prefs.edit()
+                .remove(PREF_INSTALLING_VERSION)
+                .remove(PREF_INSTALLING_VERSION_NAME)
+                .apply()
+        }
+
+        return false
+    }
+
+    /**
+     * Persist that we're about to install a specific version.
+     * This allows us to detect successful updates after app restart.
+     */
+    private fun persistInstallingState(context: Context, versionCode: Int, versionName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putInt(PREF_INSTALLING_VERSION, versionCode)
+            .putString(PREF_INSTALLING_VERSION_NAME, versionName)
+            .apply()
+        Log.d("AppUpdate", "Persisted installing state: version=$versionName, code=$versionCode")
+    }
+
+    /**
+     * Clear the "just updated" flag after it has been displayed to the user.
+     */
+    fun clearJustUpdatedFlag() {
+        _updateState.value = _updateState.value.copy(justUpdated = false)
+    }
 
     suspend fun checkForUpdate(currentVersionCode: Int, context: Context) {
         Log.d("AppUpdate", "checkForUpdate() started - currentVersionCode: $currentVersionCode")
@@ -64,6 +127,7 @@ class UpdateManager(private val appConfigRepository: AppConfigRepository) {
                     _updateState.value = UpdateState(
                         isUpdateAvailable = true,
                         latestVersion = latestVersion,
+                        latestVersionCode = latestVersionCode,
                         releaseNotes = releaseNotes
                     )
 
@@ -387,6 +451,14 @@ class UpdateManager(private val appConfigRepository: AppConfigRepository) {
 
     private fun installUpdateSilently(context: Context, apkFile: File) {
         Log.i("AppUpdate", "installUpdateSilently() called for file: ${apkFile.absolutePath}")
+
+        // Persist installation state before starting - this allows us to detect
+        // successful updates after the app restarts
+        val currentState = _updateState.value
+        if (currentState.latestVersionCode > 0) {
+            persistInstallingState(context, currentState.latestVersionCode, currentState.latestVersion)
+        }
+
         try {
             Log.d("AppUpdate", "Getting PackageInstaller...")
             val packageInstaller = context.packageManager.packageInstaller
