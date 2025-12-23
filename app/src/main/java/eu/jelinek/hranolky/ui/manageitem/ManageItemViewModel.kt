@@ -27,6 +27,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
+/**
+ * Data class representing an action that can be undone
+ */
+data class UndoableAction(
+    val fullSlotId: String,
+    val actionDocumentId: String,
+    val quantityChange: Long,
+    val actionType: ActionType
+)
+
 class ManageItemViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
@@ -51,6 +61,14 @@ class ManageItemViewModel(
 
     private val _navigateToAnotherItem = MutableSharedFlow<String>()
     val navigateToAnotherItem = _navigateToAnotherItem.asSharedFlow()
+
+    // Undo snackbar events
+    private val _undoSnackbarEvent = MutableSharedFlow<UndoableAction>()
+    val undoSnackbarEvent = _undoSnackbarEvent.asSharedFlow()
+
+    // Error snackbar events (for undo failures)
+    private val _errorSnackbarEvent = MutableSharedFlow<String>()
+    val errorSnackbarEvent = _errorSnackbarEvent.asSharedFlow()
 
     var quantityState = mutableStateOf("")
         private set
@@ -289,7 +307,18 @@ class ManageItemViewModel(
             )
 
             if (result.isSuccess) {
+                val actionResult = result.getOrThrow()
                 resetFields()
+
+                // Emit undo event for snackbar
+                _undoSnackbarEvent.emit(
+                    UndoableAction(
+                        fullSlotId = fullSlotId,
+                        actionDocumentId = actionResult.actionDocumentId,
+                        quantityChange = actionResult.quantityChange,
+                        actionType = actionType
+                    )
+                )
             } else {
                 val exception = result.exceptionOrNull()
                 Log.e(TAG, "addActionToTheSlot: Error adding action.", exception)
@@ -309,6 +338,23 @@ class ManageItemViewModel(
                     )
                 }
                 _validationSharedFlowStream.emit(validationState)
+            }
+        }
+    }
+
+    fun undoLastAction(undoableAction: UndoableAction) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "undoLastAction: Undoing action ${undoableAction.actionDocumentId}")
+                slotRepository.undoSlotAction(
+                    fullSlotId = undoableAction.fullSlotId,
+                    actionDocumentId = undoableAction.actionDocumentId,
+                    quantityChange = undoableAction.quantityChange
+                )
+                Log.d(TAG, "undoLastAction: Successfully undid action ${undoableAction.actionDocumentId}")
+            } catch (e: Exception) {
+                Log.e(TAG, "undoLastAction: Failed to undo action", e)
+                _errorSnackbarEvent.emit("Nepodařilo se vrátit změnu: ${e.message ?: "Chyba sítě"}")
             }
         }
     }

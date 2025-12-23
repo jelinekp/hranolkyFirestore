@@ -80,7 +80,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
 
                 if (querySnapshot != null && !querySnapshot.isEmpty) {
                     val lastActions = querySnapshot.documents.mapNotNull { document ->
-                        document.toObject(SlotAction::class.java)
+                        document.toObject(SlotAction::class.java)?.copy(documentId = document.id)
                     }
                     Log.d(TAG, "getSlotActions ($normalizedId): Received ${lastActions.size} actions")
                     trySend(lastActions).isSuccess
@@ -103,7 +103,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         quantity: Long,
         currentQuantity: Long,
         deviceId: String
-    ) {
+    ): String {
         val change = when (actionType) {
             ActionType.ADD -> quantity
             ActionType.REMOVE -> -quantity
@@ -158,11 +158,49 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             "timestamp" to FieldValue.serverTimestamp(),
         )
 
-        try {
+        val actionDocRef = try {
             docRef.collection("SlotActions").add(slotAction).await()
-            Log.d(TAG, "addSlotAction: Added slot action to $normalizedId")
         } catch (e: Exception) {
             Log.e(TAG, "addSlotAction: Error logging slot action for $normalizedId", e)
+            throw e
+        }
+
+        Log.d(TAG, "addSlotAction: Added slot action to $normalizedId with ID ${actionDocRef.id}")
+        return actionDocRef.id
+    }
+
+    override suspend fun undoSlotAction(
+        fullSlotId: String,
+        actionDocumentId: String,
+        quantityChange: Long
+    ) {
+        val (normalizedId, slotType) = getNormalizedIdAndSlotType(fullSlotId)
+        val collectionName = slotType.toFirestoreCollectionName()
+
+        Log.d(TAG, "undoSlotAction: Undoing action $actionDocumentId for $normalizedId in $collectionName")
+
+        val docRef = firestoreDb.collection(collectionName).document(normalizedId)
+        val actionDocRef = docRef.collection("SlotActions").document(actionDocumentId)
+
+        try {
+            firestoreDb.runTransaction { transaction ->
+                // Reverse the quantity change
+                val reverseChange = -quantityChange
+                transaction.update(docRef, mapOf(
+                    "quantity" to FieldValue.increment(reverseChange),
+                    "lastModified" to FieldValue.serverTimestamp()
+                ))
+
+                // Delete the action document
+                transaction.delete(actionDocRef)
+
+                Log.d(TAG, "undoSlotAction: Transaction prepared - reversing $quantityChange, deleting $actionDocumentId")
+                null
+            }.await()
+
+            Log.d(TAG, "undoSlotAction: Successfully undid action $actionDocumentId for $normalizedId")
+        } catch (e: Exception) {
+            Log.e(TAG, "undoSlotAction: Error undoing action $actionDocumentId for $normalizedId", e)
             throw e
         }
     }

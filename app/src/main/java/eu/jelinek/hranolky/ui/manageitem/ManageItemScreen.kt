@@ -16,6 +16,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -32,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import eu.jelinek.hranolky.R
+import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.ui.shared.ScreenSize
 import org.koin.androidx.compose.koinViewModel
 
@@ -50,12 +56,56 @@ fun ManageItemScreen(
     )
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Collect navigation events to redirect to another item
     LaunchedEffect(Unit) {
         viewModel.navigateToAnotherItem.collect { itemCode ->
             Log.d("ManageItemScreen", "Navigating to another item: $itemCode")
             navigateToAnotherItem(itemCode)
+        }
+    }
+
+    // Collect undo snackbar events
+    LaunchedEffect(Unit) {
+        viewModel.undoSnackbarEvent.collect { undoableAction ->
+            val actionName = when (undoableAction.actionType) {
+                ActionType.ADD -> "Přidáno"
+                ActionType.REMOVE -> "Odebráno"
+                ActionType.INVENTORY_CHECK -> "Inventura"
+            }
+            val changeText = if (undoableAction.quantityChange >= 0) {
+                "+${undoableAction.quantityChange}"
+            } else {
+                "${undoableAction.quantityChange}"
+            }
+
+            val result = snackbarHostState.showSnackbar(
+                message = "$actionName ($changeText)",
+                actionLabel = "Vrátit zpět",
+                duration = SnackbarDuration.Long,
+                withDismissAction = true
+            )
+
+            when (result) {
+                SnackbarResult.ActionPerformed -> {
+                    Log.d("ManageItemScreen", "Undo action clicked")
+                    viewModel.undoLastAction(undoableAction)
+                }
+                SnackbarResult.Dismissed -> {
+                    Log.d("ManageItemScreen", "Snackbar dismissed")
+                }
+            }
+        }
+    }
+
+    // Collect error snackbar events
+    LaunchedEffect(Unit) {
+        viewModel.errorSnackbarEvent.collect { errorMessage ->
+            snackbarHostState.showSnackbar(
+                message = errorMessage,
+                duration = SnackbarDuration.Short
+            )
         }
     }
 
@@ -94,6 +144,16 @@ fun ManageItemScreen(
                 text = screenState.screenTitle,
                 navigateUp = handleBack,
             )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    actionColor = MaterialTheme.colorScheme.inversePrimary
+                )
+            }
         }
     ) { padding ->
         Column(
