@@ -8,6 +8,14 @@ import eu.jelinek.hranolky.data.network.JointerReportingRow
 import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.WarehouseSlot
 
+/**
+ * Result of adding a slot action, containing the document ID for potential undo
+ */
+data class AddSlotActionResult(
+    val actionDocumentId: String,
+    val quantityChange: Long
+)
+
 class AddSlotActionUseCase(
     private val slotRepository: SlotRepository,
     private val sheetDbRepository: SheetDbRepository,
@@ -20,15 +28,24 @@ class AddSlotActionUseCase(
         quantity: String,
         currentQuantity: Long,
         deviceId: String
-    ): Result<Unit> {
+    ): Result<AddSlotActionResult> {
         val validationResult = inputValidator.validateQuantity(quantity, currentQuantity, actionType)
 
         return if (validationResult.isSuccess) {
             try {
-                slotRepository.addSlotAction(
+                val validatedQuantity = validationResult.getOrThrow()
+
+                // Calculate the actual quantity change for undo
+                val quantityChange = when (actionType) {
+                    ActionType.ADD -> validatedQuantity
+                    ActionType.REMOVE -> -validatedQuantity
+                    ActionType.INVENTORY_CHECK -> validatedQuantity - currentQuantity
+                }
+
+                val actionDocumentId = slotRepository.addSlotAction(
                     fullSlotId = fullSlotId,
                     actionType = actionType,
-                    quantity = validationResult.getOrThrow(),
+                    quantity = validatedQuantity,
                     currentQuantity = currentQuantity,
                     deviceId = deviceId
                 )
@@ -66,7 +83,7 @@ class AddSlotActionUseCase(
                     }
                 }
 
-                Result.success(Unit)
+                Result.success(AddSlotActionResult(actionDocumentId, quantityChange))
             } catch (e: Exception) {
                 Log.e(
                     "AddSlotActionUseCase",
