@@ -246,12 +246,12 @@ private fun GoogleSignInScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(6.dp)
         ) {
             Image(
                 painter = painterResource(R.drawable.logo_jelinek),
                 contentDescription = "Logo JELÍNEK",
-                modifier = Modifier.padding(horizontal = 48.dp),
+                modifier = Modifier.padding(horizontal = 68.dp),
                 colorFilter = if (isSystemInDarkTheme()) {
                     ColorFilter.tint(colorScheme.onBackground)
                 } else {
@@ -259,12 +259,12 @@ private fun GoogleSignInScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Image(
                 painter = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo aplikace Hranolky",
-                modifier = Modifier.size(200.dp),
+                modifier = Modifier.size(120.dp),
             )
 
             Text(
@@ -273,7 +273,7 @@ private fun GoogleSignInScreen(
                 color = colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Je potřeba se přihlásit",
@@ -281,7 +281,7 @@ private fun GoogleSignInScreen(
                 color = colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (authState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(48.dp))
