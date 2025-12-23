@@ -8,7 +8,8 @@ class InputValidator {
 
         return when {
             quantityAsLong == null -> Result.failure(Exception("Neplatné množství"))
-            quantityAsLong <= 0 -> Result.failure(Exception("Množství musí být kladné číslo"))
+            quantityAsLong < 0 -> Result.failure(Exception("Množství musí být kladné číslo"))
+            quantityAsLong == 0L && actionType != ActionType.INVENTORY_CHECK -> Result.failure(Exception("Pohyb nemůže být nulový"))
             actionType == ActionType.REMOVE && quantityAsLong > currentQuantity -> Result.failure(Exception("Nedostatek množství na skladě"))
             else -> Result.success(quantityAsLong)
         }
