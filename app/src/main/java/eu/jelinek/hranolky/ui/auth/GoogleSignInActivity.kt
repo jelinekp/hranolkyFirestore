@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.koin.android.ext.android.inject
 
 /**
  * Dedicated Activity for handling Google Sign-In on Android 7 and below.
@@ -30,6 +31,7 @@ class GoogleSignInActivity : ComponentActivity() {
     private val TAG = "GoogleSignInActivity"
     private lateinit var googleSignInClient: GoogleSignInClient
     private val auth = FirebaseAuth.getInstance()
+    private val authManager: AuthManager by inject() // Inject AuthManager to reset loading state
 
     companion object {
         const val RC_SIGN_IN = 9001
@@ -87,6 +89,7 @@ class GoogleSignInActivity : ComponentActivity() {
                     finish()
                 } catch (e: Exception) {
                     Log.e(TAG, "Firebase authentication failed", e)
+                    authManager.resetLoadingState() // Reset loading state on error
                     val resultIntent = Intent().apply {
                         putExtra(EXTRA_RESULT_ERROR, "Firebase přihlášení selhalo: ${e.message}")
                     }
@@ -96,6 +99,9 @@ class GoogleSignInActivity : ComponentActivity() {
             }
         } catch (e: ApiException) {
             Log.w(TAG, "Google sign-in failed with code: ${e.statusCode}", e)
+
+            // Reset loading state when sign-in fails or is cancelled
+            authManager.resetLoadingState()
 
             val errorMessage = when (e.statusCode) {
                 12501 -> null // User cancelled - don't show error

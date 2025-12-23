@@ -347,6 +347,14 @@ class AuthManager(
     }
 
     /**
+     * Reset loading state - used when sign-in is cancelled or fails before Firebase auth changes.
+     */
+    fun resetLoadingState() {
+        _authState.value = _authState.value.copy(isLoading = false)
+        Log.d(TAG, "Loading state reset")
+    }
+
+    /**
      * Refresh auth state - checks current Firebase user and updates state accordingly.
      * Used after legacy sign-in activity completes.
      */
