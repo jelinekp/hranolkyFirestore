@@ -115,6 +115,7 @@ fun OverviewScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.padding(paddingValues),
+                userScrollEnabled = false,
             ) {
                 FiltersAndTable(
                     screenState = screenState,
@@ -137,9 +138,7 @@ private fun FiltersAndTable(
     loading: Boolean,
 ) {
     Column {
-        var expanded by rememberSaveable {
-            mutableStateOf(false)
-        }
+        var expanded by rememberSaveable { mutableStateOf(false) }
 
         Row(
             modifier = Modifier
