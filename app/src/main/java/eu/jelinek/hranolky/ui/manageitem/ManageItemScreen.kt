@@ -19,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,6 +50,14 @@ fun ManageItemScreen(
     )
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+
+    // Collect navigation events to redirect to another item
+    LaunchedEffect(Unit) {
+        viewModel.navigateToAnotherItem.collect { itemCode ->
+            Log.d("ManageItemScreen", "Navigating to another item: $itemCode")
+            navigateToAnotherItem(itemCode)
+        }
+    }
 
     // Create a unified back handler that clears focus, hides keyboard, and navigates
     val handleBack: () -> Unit = {

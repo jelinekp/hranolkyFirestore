@@ -50,4 +50,30 @@ class InputValidator {
         // If neither rule matched, it's not a valid format
         return false
     }
+
+    /**
+     * Manipulates item code by adding "H-" prefix for 16-character codes if needed.
+     * Returns the manipulated code if valid, null otherwise.
+     */
+    fun manipulateAndValidateItemCode(code: String): String? {
+        var manipulatedCode = code.uppercase()
+        val textLength = manipulatedCode.length
+
+        if (textLength == 16) {
+            if (manipulatedCode[1] != '-'
+                && manipulatedCode[textLength - 5] == '-'
+                && manipulatedCode.substring(textLength - 4).all(Char::isDigit)
+            ) {
+                if (manipulatedCode.first() != 'S') {
+                    manipulatedCode = "H-$manipulatedCode"
+                }
+            }
+        }
+
+        return if (isValidScannedTextFormat(manipulatedCode)) {
+            manipulatedCode
+        } else {
+            null
+        }
+    }
 }

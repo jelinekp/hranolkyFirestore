@@ -106,15 +106,7 @@ class StartViewModel(
     }
 
     private suspend fun processAndNavigate(code: String) {
-        var manipulatedCode = code
-        val textLength = manipulatedCode.length
-        if (textLength == 16) {
-            if (manipulatedCode[1] != '-' && manipulatedCode[textLength - 5] == '-' && manipulatedCode.substring(textLength - 4).all(Char::isDigit)) {
-                if (manipulatedCode.first() != 'S') {
-                    manipulatedCode = "H-$manipulatedCode"
-                }
-            }
-        }
+        val manipulatedCode = inputValidator.manipulateAndValidateItemCode(code) ?: code
         _navigateToManageItem.emit(manipulatedCode)
         // Clear the scanned code immediately after navigation to prevent re-navigation when coming back
         clearScannedCode()

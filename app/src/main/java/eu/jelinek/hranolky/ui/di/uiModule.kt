@@ -8,7 +8,7 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 val uiModule get() = module {
-    viewModel { ManageItemViewModel(get(), get(), get(), get()) }
+    viewModel { ManageItemViewModel(get(), get(), get(), get(), get()) }
     viewModel { StartViewModel(get(), get(), get(), get(), get()) }
     viewModel { OverViewModel(get()) }
     viewModel { HistoryViewModel(get(), get()) }

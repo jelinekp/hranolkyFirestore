@@ -13,6 +13,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.domain.AddSlotActionUseCase
+import eu.jelinek.hranolky.domain.InputValidator
 import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
@@ -30,20 +31,26 @@ class ManageItemViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val slotRepository: SlotRepository,
-    private val addSlotActionUseCase: AddSlotActionUseCase
+    private val addSlotActionUseCase: AddSlotActionUseCase,
+    private val inputValidator: InputValidator
 ) : AndroidViewModel(application) {
 
     val TAG = "ManageItemViewModel"
 
     val fullSlotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
     private val _screenStateStream =
-        MutableStateFlow<ManageItemScreenState>(ManageItemScreenState(
-            screenTitle = this.fullSlotId ?: ""
-        ))
+        MutableStateFlow<ManageItemScreenState>(
+            ManageItemScreenState(
+                screenTitle = this.fullSlotId ?: ""
+            )
+        )
     val screenStateStream get() = _screenStateStream.asStateFlow()
 
     private val _validationSharedFlowStream = MutableSharedFlow<AddActionValidationState>()
     val validationSharedFlowStream get() = _validationSharedFlowStream.asSharedFlow()
+
+    private val _navigateToAnotherItem = MutableSharedFlow<String>()
+    val navigateToAnotherItem = _navigateToAnotherItem.asSharedFlow()
 
     var quantityState = mutableStateOf("")
         private set
@@ -83,10 +90,10 @@ class ManageItemViewModel(
             return
         }
 
-        // Calculate the date 80 days ago
-        val calendar80DaysAgo = Calendar.getInstance()
-        calendar80DaysAgo.add(Calendar.DAY_OF_YEAR, -80)
-        val limitDate = calendar80DaysAgo.time // This is a java.util.Date
+        // Calculate the date 75 days ago
+        val calendar75DaysAgo = Calendar.getInstance()
+        calendar75DaysAgo.add(Calendar.DAY_OF_YEAR, -75)
+        val limitDate = calendar75DaysAgo.time // This is a java.util.Date
 
         Log.d(TAG, "checkInventoryDone: Checking for INVENTORY_CHECK actions newer than $limitDate")
 
@@ -94,10 +101,14 @@ class ManageItemViewModel(
             // Assuming slotAction.action is a String that matches ActionType enum names
             // And slotAction.timestamp is a com.google.firebase.Timestamp
             if (slotAction.action == ActionType.INVENTORY_CHECK.toString() && slotAction.timestamp != null) {
-                val actionDate = slotAction.timestamp.toDate() // Convert Firebase Timestamp to java.util.Date
+                val actionDate =
+                    slotAction.timestamp.toDate() // Convert Firebase Timestamp to java.util.Date
                 val isRecent = actionDate.after(limitDate)
                 if (isRecent) {
-                    Log.d(TAG, "checkInventoryDone: Found recent INVENTORY_CHECK action: $slotAction at $actionDate")
+                    Log.d(
+                        TAG,
+                        "checkInventoryDone: Found recent INVENTORY_CHECK action: $slotAction at $actionDate"
+                    )
                 }
                 isRecent
             } else {
@@ -107,22 +118,34 @@ class ManageItemViewModel(
 
         if (_screenStateStream.value.isInventoryCheckDone != recentInventoryCheckExists) {
             _screenStateStream.update { it.copy(isInventoryCheckDone = recentInventoryCheckExists) }
-            Log.d(TAG, "checkInventoryDone: Updated isInventoryCheckDone to $recentInventoryCheckExists")
+            Log.d(
+                TAG,
+                "checkInventoryDone: Updated isInventoryCheckDone to $recentInventoryCheckExists"
+            )
         } else {
-            Log.d(TAG, "checkInventoryDone: isInventoryCheckDone state is already $recentInventoryCheckExists, no update.")
+            Log.d(
+                TAG,
+                "checkInventoryDone: isInventoryCheckDone state is already $recentInventoryCheckExists, no update."
+            )
         }
     }
 
     @SuppressLint("HardwareIds")
     private fun getDeviceId(): String {
-        return Settings.Secure.getString(getApplication<Application>().contentResolver, Settings.Secure.ANDROID_ID)
+        return Settings.Secure.getString(
+            getApplication<Application>().contentResolver,
+            Settings.Secure.ANDROID_ID
+        )
     }
 
     private fun updateSlotAndTitleScreen(slot: WarehouseSlot) {
 
         val slotTitle = slot.getScreenTitle()
 
-        Log.d(TAG, "updateSlotAndTitleScreen: Updating screen state - slot: ${slot.fullProductId}, actions count: ${slot.slotActions.size}")
+        Log.d(
+            TAG,
+            "updateSlotAndTitleScreen: Updating screen state - slot: ${slot.fullProductId}, actions count: ${slot.slotActions.size}"
+        )
 
         _screenStateStream.update {
             it.copy(
@@ -132,7 +155,10 @@ class ManageItemViewModel(
             )
         }
 
-        Log.d(TAG, "updateSlotAndTitleScreen: Screen state updated - current actions count: ${_screenStateStream.value.slot?.slotActions?.size}")
+        Log.d(
+            TAG,
+            "updateSlotAndTitleScreen: Screen state updated - current actions count: ${_screenStateStream.value.slot?.slotActions?.size}"
+        )
     }
 
     private fun fetchSlotData() {
@@ -144,7 +170,10 @@ class ManageItemViewModel(
                         slotRepository.getSlotActions(id) // Ensure this flow also emits when actions change
                     ) { slot, actions ->
                         // This lambda will be called whenever slot or actions change
-                        Log.d(TAG, "fetchSlotData: combine triggered - slot: ${slot?.fullProductId}, actions count: ${actions.size}")
+                        Log.d(
+                            TAG,
+                            "fetchSlotData: combine triggered - slot: ${slot?.fullProductId}, actions count: ${actions.size}"
+                        )
                         if (slot != null) {
                             val parsedSlot = slot.copy(slotActions = actions)
                             updateSlotAndTitleScreen(parsedSlot)
@@ -159,10 +188,20 @@ class ManageItemViewModel(
                         } else {
                             // Slot not found, potentially create it or handle error
                             // If creating new, slotActions will be empty initially.
-                            Log.d(TAG, "fetchSlotData: Slot with ID $id not found. Attempting to create.")
-                            slotRepository.createNewSlot(id, 0) // This might then trigger another emission
+                            Log.d(
+                                TAG,
+                                "fetchSlotData: Slot with ID $id not found. Attempting to create."
+                            )
+                            slotRepository.createNewSlot(
+                                id,
+                                0
+                            ) // This might then trigger another emission
                             _screenStateStream.update {
-                                it.copy(slot = null, resultStatus = ResultStatus.DATA_ERROR, error = "Slot not found")
+                                it.copy(
+                                    slot = null,
+                                    resultStatus = ResultStatus.DATA_ERROR,
+                                    error = "Slot not found"
+                                )
                             }
                         }
                     }
@@ -175,12 +214,20 @@ class ManageItemViewModel(
                 } catch (e: Exception) {
                     Log.e(TAG, "fetchSlotData: Error in flow collection", e)
                     _screenStateStream.update {
-                        it.copy(resultStatus = ResultStatus.OTHER_ERROR, error = "Error fetching data: ${e.message}")
+                        it.copy(
+                            resultStatus = ResultStatus.OTHER_ERROR,
+                            error = "Error fetching data: ${e.message}"
+                        )
                     }
                 }
             }
         } ?: run {
-            _screenStateStream.update { it.copy(resultStatus = ResultStatus.DATA_ERROR, error = "Slot ID is null") }
+            _screenStateStream.update {
+                it.copy(
+                    resultStatus = ResultStatus.DATA_ERROR,
+                    error = "Slot ID is null"
+                )
+            }
         }
     }
 
@@ -189,7 +236,12 @@ class ManageItemViewModel(
             val currentSlot = screenStateStream.value.slot
             if (fullSlotId == null || currentSlot == null) {
                 Log.e(TAG, "addActionToTheSlot: slotId or currentSlot is null.")
-                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Položka nenalezena."))
+                _validationSharedFlowStream.emit(
+                    AddActionValidationState(
+                        isQuantityError = true,
+                        errorMessage = "Položka nenalezena."
+                    )
+                )
                 return@launch
             }
 
@@ -198,14 +250,30 @@ class ManageItemViewModel(
 
             if (parsedQuantityResult.isSuccess) {
                 quantityLong = parsedQuantityResult.getOrThrow()
-                if (quantityLong < 0 && actionType == ActionType.INVENTORY_CHECK || quantityLong <= 0 && actionType != ActionType.INVENTORY_CHECK) { // Quantity must be positive or zero for INVENTORY_CHECK
-                    _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Zadané množství musí být kladné."))
+                // Quantity must be positive or zero for INVENTORY_CHECK
+                if (quantityLong < 0 && actionType == ActionType.INVENTORY_CHECK || quantityLong <= 0 && actionType != ActionType.INVENTORY_CHECK) {
+                    _validationSharedFlowStream.emit(
+                        AddActionValidationState(
+                            isQuantityError = true,
+                            errorMessage = "Zadané množství musí být kladné."
+                        )
+                    )
                     return@launch
                 }
             } else {
-                val errorMessage = parsedQuantityResult.exceptionOrNull()?.message ?: "Neplatný formát množství."
-                Log.e(TAG, "addActionToTheSlot: Invalid quantity format: ${quantityState.value}", parsedQuantityResult.exceptionOrNull())
-                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = errorMessage))
+                val errorMessage =
+                    parsedQuantityResult.exceptionOrNull()?.message ?: "Neplatný formát množství."
+                Log.e(
+                    TAG,
+                    "addActionToTheSlot: Invalid quantity format: ${quantityState.value}",
+                    parsedQuantityResult.exceptionOrNull()
+                )
+                _validationSharedFlowStream.emit(
+                    AddActionValidationState(
+                        isQuantityError = true,
+                        errorMessage = errorMessage
+                    )
+                )
                 return@launch
             }
 
@@ -226,9 +294,19 @@ class ManageItemViewModel(
                 val exception = result.exceptionOrNull()
                 Log.e(TAG, "addActionToTheSlot: Error adding action.", exception)
                 val validationState = when (exception) {
-                    is IllegalArgumentException -> AddActionValidationState(isQuantityError = true, errorMessage = exception.message)
-                    is IllegalStateException -> AddActionValidationState(isRemovedError = true, errorMessage = exception.message)
-                    else -> AddActionValidationState(errorMessage = exception?.message ?: "Neznámá chyba.")
+                    is IllegalArgumentException -> AddActionValidationState(
+                        isQuantityError = true,
+                        errorMessage = exception.message
+                    )
+
+                    is IllegalStateException -> AddActionValidationState(
+                        isRemovedError = true,
+                        errorMessage = exception.message
+                    )
+
+                    else -> AddActionValidationState(
+                        errorMessage = exception?.message ?: "Neznámá chyba."
+                    )
                 }
                 _validationSharedFlowStream.emit(validationState)
             }
@@ -244,13 +322,28 @@ class ManageItemViewModel(
             if (parsedQuantityResult.isSuccess) {
                 enteredQuantityLong = parsedQuantityResult.getOrThrow()
                 if (enteredQuantityLong < 0) { // For inventory check, new quantity cannot be negative
-                    _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = "Nové množství nemůže být záporné."))
+                    _validationSharedFlowStream.emit(
+                        AddActionValidationState(
+                            isQuantityError = true,
+                            errorMessage = "Nové množství nemůže být záporné."
+                        )
+                    )
                     return@launch
                 }
             } else {
-                val errorMessage = parsedQuantityResult.exceptionOrNull()?.message ?: "Neplatný formát množství."
-                Log.e(TAG, "showSettingPopup: Invalid quantity format: ${quantityState.value}", parsedQuantityResult.exceptionOrNull())
-                _validationSharedFlowStream.emit(AddActionValidationState(isQuantityError = true, errorMessage = errorMessage))
+                val errorMessage =
+                    parsedQuantityResult.exceptionOrNull()?.message ?: "Neplatný formát množství."
+                Log.e(
+                    TAG,
+                    "showSettingPopup: Invalid quantity format: ${quantityState.value}",
+                    parsedQuantityResult.exceptionOrNull()
+                )
+                _validationSharedFlowStream.emit(
+                    AddActionValidationState(
+                        isQuantityError = true,
+                        errorMessage = errorMessage
+                    )
+                )
                 return@launch
             }
 
@@ -307,11 +400,22 @@ class ManageItemViewModel(
             return Result.success(sum)
         }
 
-        // TODO If it's not a number, let's check if it's a different item code, if so, redirect to this item
-        val itemCode = quantityStr.trim()
-        // TODO use item scanned code checking from StartViewModel
+        // If it's not a number, check if it's a different item code
+        val itemCode = quantityStr.trim().uppercase()
+        val validatedItemCode = inputValidator.manipulateAndValidateItemCode(itemCode)
 
-        // If it's not a simple number and not a valid sum, it's an invalid format
+        if (validatedItemCode != null) {
+            // It's a valid item code - trigger navigation
+            viewModelScope.launch {
+                Log.d(TAG, "parseQuantityStringToLong: Valid item code detected: $validatedItemCode. Triggering navigation.")
+                _navigateToAnotherItem.emit(validatedItemCode)
+                resetFields()
+            }
+            // Return a special error to indicate navigation is happening
+            return Result.failure(NumberFormatException("Přesměrování na jinou položku..."))
+        }
+
+        // If it's not a simple number and not a valid sum or item code, it's an invalid format
         return Result.failure(NumberFormatException("Neplatný formát množství."))
     }
 
@@ -366,7 +470,7 @@ enum class ResultStatus {
     LOADING, SUCCESS, NETWORK_ERROR, DATA_ERROR, OTHER_ERROR
 }
 
-data class InventoryCheckPopupMessage (
+data class InventoryCheckPopupMessage(
     val diff: Long = 0,
     val compareString: String = "stejný",
 )
