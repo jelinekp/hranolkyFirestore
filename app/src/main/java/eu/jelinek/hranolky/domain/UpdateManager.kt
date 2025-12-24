@@ -528,7 +528,7 @@ class UpdateManager(private val appConfigRepository: AppConfigRepository) {
     }
 
     private fun isOwnApk(context: Context, file: File): Boolean {
-        if (!file.name.startsWith("hranolky_update_v") || !file.name.endsWith(".apk")) return false
+        if (!file.name.startsWith("update") || !file.name.endsWith(".apk")) return false
         val pm = context.packageManager
         val pkgInfo = pm.getPackageArchiveInfo(file.path, 0)
         val matches = pkgInfo?.packageName == context.packageName
@@ -544,7 +544,7 @@ class UpdateManager(private val appConfigRepository: AppConfigRepository) {
                 return
             }
             val apkFiles = downloadsDir.listFiles { file ->
-                file.isFile && file.name.endsWith(".apk") && file.name.startsWith("hranolky_update_v")
+                file.isFile && file.name.endsWith(".apk") && file.name.startsWith("update")
             } ?: emptyArray()
             if (apkFiles.isEmpty()) {
                 Log.d("AppUpdate", "No matching update APK files to delete in ${downloadsDir.absolutePath}")

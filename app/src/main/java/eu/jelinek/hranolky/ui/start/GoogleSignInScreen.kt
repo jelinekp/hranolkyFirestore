@@ -42,12 +42,12 @@ fun GoogleSignInScreen(
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(8.dp)
         ) {
             Image(
                 painter = painterResource(R.drawable.logo_jelinek),
                 contentDescription = "Logo JELÍNEK",
-                modifier = Modifier.padding(horizontal = 48.dp),
+                modifier = Modifier.padding(horizontal = 72.dp),
                 colorFilter = if (isSystemInDarkTheme()) {
                     ColorFilter.tint(colorScheme.onBackground)
                 } else {
@@ -55,12 +55,12 @@ fun GoogleSignInScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Image(
                 painter = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo aplikace Hranolky",
-                modifier = Modifier.size(200.dp),
+                modifier = Modifier.size(100.dp),
             )
 
             Text(
@@ -69,7 +69,7 @@ fun GoogleSignInScreen(
                 color = colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = "Je potřeba se přihlásit",
@@ -77,11 +77,11 @@ fun GoogleSignInScreen(
                 color = colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             if (authState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(48.dp))
-                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator(modifier = Modifier.size(40.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = "Přihlašování...",
                     style = typography.bodyMedium
@@ -95,7 +95,7 @@ fun GoogleSignInScreen(
                 }
 
                 authState.error?.let { error ->
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
