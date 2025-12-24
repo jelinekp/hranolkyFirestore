@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -65,7 +66,8 @@ fun StartScreen(
     LaunchedEffect(updateState.justUpdated) {
         if (updateState.justUpdated) {
             snackbarHostState.showSnackbar(
-                message = "Aplikace byla úspěšně aktualizována! 🎉"
+                message = "Aplikace byla úspěšně aktualizována! 🎉",
+                duration = SnackbarDuration.Long
             )
         }
     }

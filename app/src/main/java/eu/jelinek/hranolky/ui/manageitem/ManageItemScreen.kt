@@ -81,7 +81,7 @@ fun ManageItemScreen(
             }
 
             val result = snackbarHostState.showSnackbar(
-                message = "$actionName ($changeText)",
+                message = "$actionName $changeText",
                 actionLabel = "Vrátit zpět",
                 duration = SnackbarDuration.Long,
                 withDismissAction = true
