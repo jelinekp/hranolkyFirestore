@@ -104,14 +104,20 @@ class GoogleSignInActivity : ComponentActivity() {
             authManager.resetLoadingState()
 
             val errorMessage = when (e.statusCode) {
-                12501 -> null // User cancelled - don't show error
-                else -> "Přihlášení Google selhalo (${e.statusCode}): ${e.message}"
+                12501 -> "Přihlášení bylo zrušeno." // User cancelled
+                10 -> "Chyba konfigurace (kód 10).\n\n" +
+                        "SHA-1 fingerprint není registrován v Firebase Console.\n" +
+                        "Kontaktujte správce aplikace."
+                else -> "Přihlášení Google selhalo (kód ${e.statusCode})"
             }
 
+            // Set error in auth manager so it shows in UI
+            authManager.setError(errorMessage)
+
             val resultIntent = Intent().apply {
-                errorMessage?.let { putExtra(EXTRA_RESULT_ERROR, it) }
+                putExtra(EXTRA_RESULT_ERROR, errorMessage)
             }
-            setResult(Activity.RESULT_CANCELED, resultIntent)
+            setResult(RESULT_CANCELED, resultIntent)
             finish()
         }
     }

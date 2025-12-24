@@ -66,6 +66,16 @@ class AuthManager(
                 isLoading = false
             )
             Log.d(TAG, "User already signed in: ${user.email}")
+
+            // Force ID token refresh to ensure it's valid for Firestore
+            // This prevents PERMISSION_DENIED errors when accessing Firestore immediately after app start
+            user.getIdToken(true).addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d(TAG, "ID token refreshed successfully")
+                } else {
+                    Log.w(TAG, "Failed to refresh ID token", task.exception)
+                }
+            }
         }
 
         // Add Firebase auth state listener to detect sign-in completion
@@ -236,34 +246,43 @@ class AuthManager(
             // Use Sign In With Google option - shows the Google sign-in button
             // This allows users to sign in even without an existing account on device
             val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(WEB_CLIENT_ID)
+                .setNonce(System.currentTimeMillis().toString()) // Add nonce for security
                 .build()
 
             val request = GetCredentialRequest.Builder()
                 .addCredentialOption(signInWithGoogleOption)
                 .build()
 
+            Log.d(TAG, "Starting Sign In With Google flow...")
             val result = credentialManager.getCredential(
                 request = request,
                 context = context
             )
+            Log.d(TAG, "Sign In With Google flow completed successfully")
 
             handleSignInResult(result)
         } catch (e: GetCredentialCancellationException) {
             Log.d(TAG, "Sign-in cancelled by user")
-            _authState.value = _authState.value.copy(isLoading = false, error = null)
+            _authState.value = _authState.value.copy(
+                isLoading = false,
+                error = "Přihlášení bylo zrušeno. Zkuste to znovu."
+            )
             Result.failure(e)
         } catch (e: NoCredentialException) {
             Log.e(TAG, "No credentials available even with Google Sign-In flow", e)
             _authState.value = _authState.value.copy(
                 isLoading = false,
-                error = "Nelze se přihlásit. Zkontrolujte připojení k internetu."
+                error = "Nepodařilo se najít Google účet. Zkontrolujte:\n" +
+                        "• Připojení k internetu\n" +
+                        "• Zda máte přidaný Google účet v nastavení zařízení\n" +
+                        "• Nebo kontaktujte správce (chyba konfigurace SHA-1)"
             )
             Result.failure(e)
         } catch (e: GetCredentialException) {
             Log.e(TAG, "Credential error in Google Sign-In flow", e)
             _authState.value = _authState.value.copy(
                 isLoading = false,
-                error = "Chyba při přihlašování: ${e.message}"
+                error = "Chyba při přihlašování: ${e.message}\n\nKontaktujte správce."
             )
             Result.failure(e)
         } catch (e: Exception) {
@@ -352,6 +371,14 @@ class AuthManager(
     fun resetLoadingState() {
         _authState.value = _authState.value.copy(isLoading = false)
         Log.d(TAG, "Loading state reset")
+    }
+
+    /**
+     * Set an error message to display in the UI.
+     */
+    fun setError(error: String?) {
+        _authState.value = _authState.value.copy(isLoading = false, error = error)
+        Log.d(TAG, "Error set: $error")
     }
 
     /**
