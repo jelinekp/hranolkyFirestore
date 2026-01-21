@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.firebase.crashlytics)
+    jacoco
 }
 
 // Load keystore properties
@@ -43,6 +44,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -75,6 +79,9 @@ kotlin {
         jvmTarget = JvmTarget.fromTarget("21")
     }
 }
+
+// Code coverage: Run ./gradlew :app:createDebugUnitTestCoverageReport
+// Report is generated at app/build/reports/coverage/test/debug/index.html
 
 dependencies {
 
