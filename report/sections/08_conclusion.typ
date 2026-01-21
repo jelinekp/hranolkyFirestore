@@ -81,58 +81,32 @@ Several advanced features that were initially planned as "future work" have been
 - Configuration includes quality mappings, dimension adjustments, and inventory check periods
 - Changes can now be deployed without app releases
 
-*✓ Partial ViewModel Decomposition (Completed):*
-- Extracted `QuantityParser` (40+ lines, 18 tests) from ManageItemViewModel
-- Extracted `CheckInventoryStatusUseCase` (17 tests) for inventory date validation
-- Created composite UI states (`StartUiStates.kt`, `ManageItemUiStates.kt`) for better separation
+*✓ Complete ManageItemViewModel Decomposition (Completed):*
+ManageItemViewModel has been fully refactored from 522 lines to 486 lines by extracting all embedded concerns into dedicated components:
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Extracted Component*], [*Responsibility*], [*Tests*],
+    [`QuantityParser`], [Parsing and validating quantity input strings], [18],
+    [`CheckInventoryStatusUseCase`], [Inventory check date validation], [17],
+    [`InventoryCheckPreferencesRepository`], [SharedPreferences for inventory toggle], [4],
+    [`UndoSlotActionUseCase`], [Undo operation coordination], [8],
+    [`ManageItemNavigationCoordinator`], [Item code scanning redirect logic], [6],
+    [`AddSlotActionUseCase`], [Adding actions to slots], [12],
+  ),
+  caption: [Components extracted from ManageItemViewModel]
+)
+
+The refactored ViewModel now follows the Dependency Inversion Principle:
+- All dependencies are injected via constructor (10 dependencies)
+- ViewModel orchestrates extracted components rather than containing logic
+- Each component can be tested and evolved independently
+- 13 new decomposition tests verify the integration
 
 === Remaining Opportunities
-
-==== Complete ManageItemViewModel Decomposition
-
-ManageItemViewModel (currently ~450 lines, down from 522) could benefit from further extraction:
-
-*Remaining concerns:*
-- SharedPreferences access for inventory check toggle
-- Navigation coordination (`navigateToAnotherItem` flow)
-- Snackbar event orchestration (undo/error events)
-
-*Recommended extractions:*
-1. *InventoryCheckPreferences:* Move SharedPreferences logic to a dedicated repository
-2. *NavigationCoordinator:* Extract item code scanning redirect logic
-3. *SnackbarEventCoordinator:* Centralize snackbar event management
-
-*Implementation effort:* ~6-8 hours
-
-==== Action Versioning
-
-The `SlotActionOperation` and `UndoSlotActionOperation` interfaces are prepared for versioning but not yet implemented. This would enable:
-
-*Benefits:*
-- Different action formats across app versions
-- Backward-compatible action replay from audit logs
-- Version metadata in action documents
-- Graceful migration of legacy actions
-
-*Implementation approach:*
-```kotlin
-interface VersionedSlotActionOperation : SlotActionOperation {
-    val version: Int
-    fun canHandle(actionVersion: Int): Boolean
-}
-
-class SlotActionOperationFactory {
-    fun getOperation(version: Int): SlotActionOperation
-}
-
-// Add version field to SlotAction documents
-data class VersionedSlotAction(
-    val version: Int = CURRENT_VERSION,
-    // ...existing fields
-)
-```
-
-*Implementation effort:* ~8-12 hours including tests and migration logic
 
 ==== Configuration Cache Optimization
 
@@ -154,7 +128,6 @@ While remote configuration loading is implemented, cache optimization could furt
     inset: 8pt,
     align: left,
     [*Improvement*], [*Effort*], [*Priority*],
-    [Complete ViewModel Decomposition], [6-8 hours], [Low],
     [Action Versioning], [8-12 hours], [Low],
     [Config Cache Optimization], [4-6 hours], [Low],
   ),
@@ -167,7 +140,7 @@ All remaining improvements are low priority because the major NS violations have
 
 This refactoring demonstrates that Normalized Systems Theory provides actionable guidance for improving Android application maintainability. The four theorems—SoC, DVT, AVT, and SoS—offer a systematic approach to identifying and addressing architectural issues that cause combinatorial effects.
 
-The investment in a comprehensive test suite (155 tests) proved essential: it enabled confident refactoring while ensuring full backward compatibility. All existing functionality remains intact, verified through automated testing.
+The investment in a comprehensive test suite (240+ tests) proved essential: it enabled confident refactoring while ensuring full backward compatibility. All existing functionality remains intact, verified through automated testing.
 
 The extracted modules now enable changes to configuration, parsing logic, business rules, and state management without triggering modifications across multiple files—achieving the *linear scalability* promised by Normalized Systems Theory.
 
