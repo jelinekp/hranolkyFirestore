@@ -1,5 +1,7 @@
 package eu.jelinek.hranolky.config
 
+import eu.jelinek.hranolky.data.config.LocalConfigDefaults
+
 /**
  * Application-wide configuration following Data Version Transparency (DVT) principle.
  *
@@ -8,18 +10,53 @@ package eu.jelinek.hranolky.config
  * 1. Easy modification of business rules
  * 2. Potential future externalization to remote config
  * 3. Clear documentation of system parameters
+ *
+ * Supports loading from remote configuration with fallback to local defaults.
  */
 object AppConfig {
+
+    /**
+     * Remote inventory check period loaded from Firestore.
+     * Null until loaded from remote config.
+     */
+    private var remoteInventoryCheckPeriodDays: Int? = null
 
     /**
      * Inventory check configuration
      */
     object InventoryCheck {
         /** Number of days after which a slot is considered "due for inventory check" */
+        val staleDays: Int
+            get() = remoteInventoryCheckPeriodDays ?: LocalConfigDefaults.inventoryCheckPeriodDays
+
+        /** Legacy constant for backward compatibility */
+        @Deprecated("Use staleDays property instead", ReplaceWith("staleDays"))
         const val STALE_DAYS = 75
 
         /** Prefix shown on slots that need inventory check */
         const val INDICATOR_PREFIX = "📋 "
+    }
+
+    /**
+     * Update inventory check period from remote configuration.
+     * Called during app initialization when remote config is loaded.
+     */
+    fun updateInventoryCheckPeriod(days: Int) {
+        if (days > 0) {
+            remoteInventoryCheckPeriodDays = days
+        }
+    }
+
+    /**
+     * Check if remote config is loaded.
+     */
+    fun isRemoteConfigLoaded(): Boolean = remoteInventoryCheckPeriodDays != null
+
+    /**
+     * Reset to local defaults (for testing).
+     */
+    fun resetToDefaults() {
+        remoteInventoryCheckPeriodDays = null
     }
 
     /**

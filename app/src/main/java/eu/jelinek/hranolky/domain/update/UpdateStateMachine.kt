@@ -124,11 +124,20 @@ enum class UpdatePhase {
 
 /**
  * Update flow state machine that validates transitions.
+ * Includes state history for debugging.
  */
 class UpdateStateMachine(
-    private val onStateChange: (UpdateFlowState) -> Unit
+    private val onStateChange: (UpdateFlowState) -> Unit,
+    private val maxHistorySize: Int = 10
 ) {
     private var currentState: UpdateFlowState = UpdateFlowState.Idle
+
+    private val _stateHistory = mutableListOf<StateHistoryEntry>()
+
+    /**
+     * History of state transitions for debugging.
+     */
+    val stateHistory: List<StateHistoryEntry> get() = _stateHistory.toList()
 
     val state: UpdateFlowState get() = currentState
 
@@ -256,10 +265,38 @@ class UpdateStateMachine(
     }
 
     private fun transition(newState: UpdateFlowState) {
+        val entry = StateHistoryEntry(
+            fromState = currentState,
+            toState = newState,
+            timestamp = System.currentTimeMillis()
+        )
+        _stateHistory.add(entry)
+
+        // Keep history bounded
+        while (_stateHistory.size > maxHistorySize) {
+            _stateHistory.removeAt(0)
+        }
+
         currentState = newState
         onStateChange(newState)
     }
+
+    /**
+     * Clear state history.
+     */
+    fun clearHistory() {
+        _stateHistory.clear()
+    }
 }
+
+/**
+ * Entry in the state history.
+ */
+data class StateHistoryEntry(
+    val fromState: UpdateFlowState,
+    val toState: UpdateFlowState,
+    val timestamp: Long
+)
 
 /**
  * Extension to convert UpdateFlowState to legacy UpdateState

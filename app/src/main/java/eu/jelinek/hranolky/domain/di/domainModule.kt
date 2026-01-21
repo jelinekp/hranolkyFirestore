@@ -9,6 +9,8 @@ import eu.jelinek.hranolky.domain.InputValidator
 import eu.jelinek.hranolky.domain.QuantityParser
 import eu.jelinek.hranolky.domain.UndoSlotActionUseCase
 import eu.jelinek.hranolky.domain.UpdateManager
+import eu.jelinek.hranolky.domain.config.ConfigInitializer
+import eu.jelinek.hranolky.domain.navigation.ManageItemNavigationCoordinator
 import org.koin.dsl.module
 
 val domainModule = module {
@@ -21,4 +23,6 @@ val domainModule = module {
     single { InputValidator() }
     single { QuantityParser() }
     single { CheckInventoryStatusUseCase() }
+    factory { ManageItemNavigationCoordinator(get()) }
+    single { ConfigInitializer(get()) }
 }

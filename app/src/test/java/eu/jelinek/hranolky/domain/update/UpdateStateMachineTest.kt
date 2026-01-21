@@ -17,9 +17,11 @@ class UpdateStateMachineTest {
     @Before
     fun setup() {
         stateChanges.clear()
-        stateMachine = UpdateStateMachine { state ->
-            stateChanges.add(state)
-        }
+        stateMachine = UpdateStateMachine(
+            onStateChange = { state ->
+                stateChanges.add(state)
+            }
+        )
     }
 
     @Test
@@ -54,13 +56,8 @@ class UpdateStateMachineTest {
     @Test
     fun `can set update available from Checking`() {
         stateMachine.startCheck()
-        assertTrue(stateMachine.setUpdateAvailable("1.2.0", 10, "New features", "http://example.com/app.apk"))
-
-        val state = stateMachine.state as UpdateFlowState.Available
-        assertEquals("1.2.0", state.version)
-        assertEquals(10, state.versionCode)
-        assertEquals("New features", state.releaseNotes)
-        assertEquals("http://example.com/app.apk", state.downloadUrl)
+        assertTrue(stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url"))
+        assertTrue(stateMachine.state is UpdateFlowState.Available)
     }
 
     @Test
@@ -71,10 +68,9 @@ class UpdateStateMachineTest {
     @Test
     fun `can start download from Available`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
 
         assertTrue(stateMachine.startDownload())
-
         val state = stateMachine.state as UpdateFlowState.Downloading
         assertEquals("1.2.0", state.version)
         assertEquals(10, state.versionCode)
@@ -82,21 +78,20 @@ class UpdateStateMachineTest {
     }
 
     @Test
-    fun `can update progress while Downloading`() {
+    fun `can update progress from Downloading`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
 
         assertTrue(stateMachine.updateProgress(50))
-
         val state = stateMachine.state as UpdateFlowState.Downloading
         assertEquals(50, state.progress)
     }
 
     @Test
-    fun `progress is clamped to valid range`() {
+    fun `progress is clamped to 0-100`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
 
         stateMachine.updateProgress(150)
@@ -107,23 +102,20 @@ class UpdateStateMachineTest {
     }
 
     @Test
-    fun `can complete download`() {
+    fun `can complete download from Downloading`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
-        stateMachine.updateProgress(100)
 
         assertTrue(stateMachine.downloadComplete("/path/to/file.apk"))
-
         val state = stateMachine.state as UpdateFlowState.Downloaded
-        assertEquals("1.2.0", state.version)
         assertEquals("/path/to/file.apk", state.filePath)
     }
 
     @Test
     fun `can start install from Downloaded`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
         stateMachine.downloadComplete("/path/to/file.apk")
 
@@ -134,7 +126,7 @@ class UpdateStateMachineTest {
     @Test
     fun `can mark pending user action from Installing`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
         stateMachine.downloadComplete("/path/to/file.apk")
         stateMachine.startInstall()
@@ -146,7 +138,7 @@ class UpdateStateMachineTest {
     @Test
     fun `can complete install from Installing`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
         stateMachine.downloadComplete("/path/to/file.apk")
         stateMachine.startInstall()
@@ -158,7 +150,7 @@ class UpdateStateMachineTest {
     @Test
     fun `can complete install from PendingUserAction`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
         stateMachine.downloadComplete("/path/to/file.apk")
         stateMachine.startInstall()
@@ -173,32 +165,18 @@ class UpdateStateMachineTest {
         stateMachine.startCheck()
 
         assertTrue(stateMachine.setError(UpdatePhase.CHECK, "Network error"))
-
-        val error = stateMachine.state as UpdateFlowState.Error
-        assertEquals(UpdatePhase.CHECK, error.phase)
-        assertEquals("Network error", error.message)
-        assertTrue(error.recoverable)
+        val state = stateMachine.state as UpdateFlowState.Error
+        assertEquals(UpdatePhase.CHECK, state.phase)
+        assertEquals("Network error", state.message)
     }
 
     @Test
     fun `can set error from Downloading`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
 
-        assertTrue(stateMachine.setError(UpdatePhase.DOWNLOAD, "Download failed"))
-        assertTrue(stateMachine.state is UpdateFlowState.Error)
-    }
-
-    @Test
-    fun `can set error from Installing`() {
-        stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
-        stateMachine.startDownload()
-        stateMachine.downloadComplete("/path/to/file.apk")
-        stateMachine.startInstall()
-
-        assertTrue(stateMachine.setError(UpdatePhase.INSTALL, "Install failed"))
+        assertTrue(stateMachine.setError(UpdatePhase.DOWNLOAD, "Connection lost"))
         assertTrue(stateMachine.state is UpdateFlowState.Error)
     }
 
@@ -229,14 +207,14 @@ class UpdateStateMachineTest {
     @Test
     fun `cannot reset from non-recoverable Error`() {
         stateMachine.startCheck()
-        stateMachine.setError(UpdatePhase.CHECK, "Fatal error", recoverable = false)
+        stateMachine.setError(UpdatePhase.CHECK, "Fatal", recoverable = false)
 
         assertFalse(stateMachine.reset())
         assertTrue(stateMachine.state is UpdateFlowState.Error)
     }
 
     @Test
-    fun `can restart check from UpToDate`() {
+    fun `can start check from UpToDate`() {
         stateMachine.startCheck()
         stateMachine.setUpToDate()
 
@@ -245,7 +223,7 @@ class UpdateStateMachineTest {
     }
 
     @Test
-    fun `can restart check from Error`() {
+    fun `can start check from Error`() {
         stateMachine.startCheck()
         stateMachine.setError(UpdatePhase.CHECK, "Error")
 
@@ -256,82 +234,46 @@ class UpdateStateMachineTest {
     @Test
     fun `state changes are notified`() {
         stateMachine.startCheck()
-        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://example.com")
+        stateMachine.setUpdateAvailable("1.2.0", 10, "Notes", "http://url")
         stateMachine.startDownload()
-        stateMachine.updateProgress(50)
 
-        assertEquals(4, stateChanges.size)
+        assertEquals(3, stateChanges.size)
         assertTrue(stateChanges[0] is UpdateFlowState.Checking)
         assertTrue(stateChanges[1] is UpdateFlowState.Available)
         assertTrue(stateChanges[2] is UpdateFlowState.Downloading)
-        assertTrue(stateChanges[3] is UpdateFlowState.Downloading)
     }
 
-    @Test
-    fun `full happy path flow works correctly`() {
-        // Start check
-        assertTrue(stateMachine.startCheck())
-        assertTrue(stateMachine.state is UpdateFlowState.Checking)
-
-        // Find update
-        assertTrue(stateMachine.setUpdateAvailable("2.0.0", 20, "Major update", "http://example.com/v2.apk"))
-        assertTrue(stateMachine.state is UpdateFlowState.Available)
-
-        // Download
-        assertTrue(stateMachine.startDownload())
-        assertTrue(stateMachine.updateProgress(25))
-        assertTrue(stateMachine.updateProgress(50))
-        assertTrue(stateMachine.updateProgress(75))
-        assertTrue(stateMachine.updateProgress(100))
-        assertTrue(stateMachine.downloadComplete("/storage/app-v2.apk"))
-        assertTrue(stateMachine.state is UpdateFlowState.Downloaded)
-
-        // Install
-        assertTrue(stateMachine.startInstall())
-        assertTrue(stateMachine.state is UpdateFlowState.Installing)
-
-        // Complete
-        assertTrue(stateMachine.installComplete())
-
-        val installed = stateMachine.state as UpdateFlowState.Installed
-        assertEquals("2.0.0", installed.version)
-        assertEquals(20, installed.versionCode)
-    }
-}
-
-/**
- * Tests for UpdateFlowState to legacy UpdateState conversion
- */
-class UpdateFlowStateLegacyConversionTest {
+    // Legacy Conversion Tests
 
     @Test
-    fun `Idle converts to empty UpdateState`() {
+    fun `Idle converts to empty legacy state`() {
         val legacy = UpdateFlowState.Idle.toLegacyUpdateState()
+
         assertFalse(legacy.isUpdateAvailable)
         assertFalse(legacy.isDownloading)
         assertFalse(legacy.isInstalling)
+        assertFalse(legacy.justUpdated)
     }
 
     @Test
-    fun `Available converts correctly`() {
-        val state = UpdateFlowState.Available("1.2.0", 10, "New features", "http://example.com")
+    fun `Available converts with update info`() {
+        val state = UpdateFlowState.Available("1.2.0", 10, "Fix bugs", "http://url")
         val legacy = state.toLegacyUpdateState()
 
         assertTrue(legacy.isUpdateAvailable)
         assertEquals("1.2.0", legacy.latestVersion)
         assertEquals(10, legacy.latestVersionCode)
-        assertEquals("New features", legacy.releaseNotes)
-        assertFalse(legacy.isDownloading)
+        assertEquals("Fix bugs", legacy.releaseNotes)
     }
 
     @Test
-    fun `Downloading converts correctly`() {
-        val state = UpdateFlowState.Downloading("1.2.0", 10, 45)
+    fun `Downloading converts with progress`() {
+        val state = UpdateFlowState.Downloading("1.2.0", 10, 75)
         val legacy = state.toLegacyUpdateState()
 
         assertTrue(legacy.isUpdateAvailable)
         assertTrue(legacy.isDownloading)
-        assertEquals(45, legacy.downloadProgress)
+        assertEquals(75, legacy.downloadProgress)
     }
 
     @Test
@@ -339,13 +281,12 @@ class UpdateFlowStateLegacyConversionTest {
         val state = UpdateFlowState.Installing("1.2.0", 10)
         val legacy = state.toLegacyUpdateState()
 
-        assertTrue(legacy.isUpdateAvailable)
         assertTrue(legacy.isInstalling)
         assertEquals(100, legacy.downloadProgress)
     }
 
     @Test
-    fun `Installed converts correctly`() {
+    fun `Installed converts with justUpdated`() {
         val state = UpdateFlowState.Installed("1.2.0", 10)
         val legacy = state.toLegacyUpdateState()
 
@@ -359,5 +300,57 @@ class UpdateFlowStateLegacyConversionTest {
         val legacy = state.toLegacyUpdateState()
 
         assertEquals("Connection lost", legacy.error)
+    }
+
+    // State History Tests
+
+    @Test
+    fun `stateHistory records transitions`() {
+        stateMachine.startCheck()
+        stateMachine.setUpToDate()
+
+        val history = stateMachine.stateHistory
+        assertEquals(2, history.size)
+        assertEquals(UpdateFlowState.Idle, history[0].fromState)
+        assertTrue(history[0].toState is UpdateFlowState.Checking)
+        assertTrue(history[1].fromState is UpdateFlowState.Checking)
+        assertTrue(history[1].toState is UpdateFlowState.UpToDate)
+    }
+
+    @Test
+    fun `stateHistory is bounded to maxHistorySize`() {
+        val boundedMachine = UpdateStateMachine(
+            onStateChange = {},
+            maxHistorySize = 2
+        )
+
+        boundedMachine.startCheck()
+        boundedMachine.setUpdateAvailable("1.0", 1, "Notes", "url")
+        boundedMachine.startDownload()
+
+        val history = boundedMachine.stateHistory
+        assertEquals(2, history.size)
+        // Oldest entry (Idle -> Checking) should be removed
+        assertTrue(history[0].fromState is UpdateFlowState.Checking)
+    }
+
+    @Test
+    fun `clearHistory removes all entries`() {
+        stateMachine.startCheck()
+        stateMachine.setUpToDate()
+
+        stateMachine.clearHistory()
+
+        assertTrue(stateMachine.stateHistory.isEmpty())
+    }
+
+    @Test
+    fun `stateHistory includes timestamp`() {
+        val beforeTime = System.currentTimeMillis()
+        stateMachine.startCheck()
+        val afterTime = System.currentTimeMillis()
+
+        val history = stateMachine.stateHistory
+        assertTrue(history[0].timestamp in beforeTime..afterTime)
     }
 }

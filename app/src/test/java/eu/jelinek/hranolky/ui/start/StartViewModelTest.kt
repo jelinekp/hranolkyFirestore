@@ -2,13 +2,12 @@ package eu.jelinek.hranolky.ui.start
 
 import android.app.Application
 import eu.jelinek.hranolky.domain.AuthManager
-import eu.jelinek.hranolky.domain.auth.AuthState
 import eu.jelinek.hranolky.domain.DeviceManager
 import eu.jelinek.hranolky.domain.InputValidator
 import eu.jelinek.hranolky.domain.UpdateManager
+import eu.jelinek.hranolky.domain.auth.AuthState
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +27,7 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [33])
 class StartViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
@@ -43,7 +42,10 @@ class StartViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
 
-        app = mockk(relaxed = true)
+        app = mockk(relaxed = true) {
+            // Mock SharedPreferences to avoid NPE
+            every { getSharedPreferences(any(), any()) } returns mockk(relaxed = true)
+        }
 
         // Create auth state flow - user not signed in to avoid triggering initializeAppData
         authStateFlow = MutableStateFlow(AuthState(isSignedIn = false, isLoading = false))

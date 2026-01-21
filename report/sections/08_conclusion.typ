@@ -52,15 +52,134 @@ The refactoring effort achieved measurable improvements across several dimension
 
 == Limitations and Future Work
 
-While this refactoring addressed the most impactful NS violations, several opportunities remain:
+While this refactoring addressed the most impactful NS violations, several opportunities remain for further improvement:
 
-- *Complete ViewModel Decomposition:* ManageItemViewModel still has multiple responsibilities; further extraction of validation and navigation logic would improve modularity.
+=== Complete ViewModel Decomposition
 
-- *State Machine Implementation:* The isolated states (UpdateStates.kt, AuthStates.kt) are prepared for state machine patterns but not yet implemented.
+ManageItemViewModel (522 lines) still handles multiple responsibilities that could be further extracted:
 
-- *External Configuration:* Config files could be loaded from Firestore/Remote Config for runtime updates without app releases.
+*Current concerns in ManageItemViewModel:*
+- Slot data loading and caching
+- Quantity input validation
+- Action execution (add/undo)
+- Inventory check toggle persistence
+- Navigation to other items
+- Snackbar event coordination
 
-- *Action Versioning:* The SlotActionOperations interfaces are prepared for versioning but not yet implemented for different operation versions.
+*Recommended extractions:*
+1. *NavigationCoordinator:* Extract navigation logic (`navigateToAnotherItem`, item code scanning redirect) into a dedicated class
+2. *InventoryCheckPreferences:* Move SharedPreferences operations for inventory check toggle into a repository
+3. *QuantityInputState:* Create a dedicated state holder for quantity input with its validation
+
+*Implementation effort:* ~8-12 hours for clean separation with tests
+
+=== State Machine Implementation
+
+The isolated states (`UpdateStates.kt`, `AuthStates.kt`) are semantically prepared for finite state machine patterns but currently use manual state transitions. A proper state machine would provide:
+
+*Benefits:*
+- Compile-time verification of valid state transitions
+- Elimination of impossible state combinations
+- Clearer documentation of the update/auth flows
+- Easier debugging with state history
+
+*Implementation approach:*
+```kotlin
+// Example state machine definition
+sealed class UpdateEvent {
+    data object CheckForUpdates : UpdateEvent()
+    data class UpdateFound(val info: UpdateInfo) : UpdateEvent()
+    data object StartDownload : UpdateEvent()
+    data class DownloadProgress(val percent: Int) : UpdateEvent()
+    data object InstallUpdate : UpdateEvent()
+}
+
+class UpdateStateMachine {
+    fun transition(event: UpdateEvent): CompositeUpdateState
+    fun canHandle(event: UpdateEvent): Boolean
+}
+```
+
+*Implementation effort:* ~6-10 hours using a library like Tinder StateMachine or custom implementation
+
+=== External Configuration
+
+Config files (`QualityConfig.kt`, `DimensionConfig.kt`, `FirestoreConfig.kt`) currently contain compile-time constants. Loading from Firestore Remote Config would enable:
+
+*Benefits:*
+- Quality code additions without app releases
+- A/B testing of dimension adjustments
+- Emergency configuration changes
+- Per-device or per-user configuration
+
+*Implementation approach:*
+1. Create `RemoteConfigRepository` interface
+2. Implement Firestore document-based config loading
+3. Add caching layer with expiration (e.g., 1 hour)
+4. Provide fallback to compiled defaults when offline
+
+```kotlin
+interface ConfigProvider {
+    suspend fun getQualityMappings(): Map<String, String>
+    suspend fun getDimensionAdjustments(): Map<Float, Float>
+}
+
+class RemoteConfigProvider(
+    private val firestore: FirebaseFirestore,
+    private val cache: ConfigCache
+) : ConfigProvider
+```
+
+*Implementation effort:* ~10-15 hours including offline handling and migration
+
+=== Action Versioning
+
+The `SlotActionOperation` and `UndoSlotActionOperation` interfaces are prepared for versioning but not yet implemented. This would allow:
+
+*Benefits:*
+- Different action formats for different app versions
+- Backward-compatible action replay
+- Audit trail with version metadata
+- Migration support for legacy actions
+
+*Implementation approach:*
+```kotlin
+interface VersionedSlotActionOperation : SlotActionOperation {
+    val version: Int
+    fun canHandle(actionVersion: Int): Boolean
+}
+
+class SlotActionOperationFactory {
+    fun getOperation(version: Int): SlotActionOperation
+    fun getCurrentVersion(): Int
+}
+
+// Action document would include version field
+data class VersionedSlotAction(
+    val version: Int = CURRENT_VERSION,
+    // ... existing fields
+)
+```
+
+*Implementation effort:* ~8-12 hours including migration logic and tests
+
+=== Summary of Future Work
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Improvement*], [*Effort*], [*Priority*],
+    [ViewModel Decomposition], [8-12 hours], [Medium],
+    [State Machine], [6-10 hours], [Low],
+    [External Configuration], [10-15 hours], [High],
+    [Action Versioning], [8-12 hours], [Low],
+  ),
+  caption: [Estimated effort for remaining improvements]
+)
+
+The *External Configuration* improvement has the highest priority as it would enable operational agility without requiring app store releases—a significant benefit for a warehouse management application.
 
 == Final Remarks
 

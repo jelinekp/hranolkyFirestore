@@ -1,32 +1,58 @@
 package eu.jelinek.hranolky.config
 
+import eu.jelinek.hranolky.data.config.LocalConfigDefaults
+
 /**
  * Dimension adjustment mappings following Data Version Transparency (DVT) principle.
  *
  * Maps nominal dimensions (as stored in product IDs) to actual dimensions (with tolerances).
  * These mappings account for manufacturing tolerances and drying shrinkage.
+ *
+ * Supports loading from remote configuration with fallback to local defaults.
  */
 object DimensionConfig {
 
     /**
-     * Maps nominal thickness values to actual thickness with tolerances.
-     * Key: Nominal thickness from product ID
-     * Value: Actual thickness for volume calculations
+     * Remote dimension adjustments loaded from Firestore.
+     * Null until loaded from remote config.
      */
-    val thicknessAdjustments: Map<Float, Float> = mapOf(
-        20.0f to 20.0f,   // 20mm stays 20mm
-        27.0f to 27.4f,   // 27mm nominal is actually 27.4mm
-        42.0f to 42.4f    // 42mm nominal is actually 42.4mm
-    )
+    private var remoteDimensionAdjustments: Map<Float, Float>? = null
+
+    /**
+     * Maps nominal thickness values to actual thickness with tolerances.
+     * Uses remote config if available, otherwise falls back to local defaults.
+     */
+    val thicknessAdjustments: Map<Float, Float>
+        get() = remoteDimensionAdjustments ?: LocalConfigDefaults.dimensionAdjustments
 
     /**
      * Maps nominal width values to actual width with tolerances.
-     * Key: Nominal width from product ID
-     * Value: Actual width for volume calculations
+     * Note: Width adjustments share the same values as thickness adjustments.
      */
-    val widthAdjustments: Map<Float, Float> = mapOf(
-        42.0f to 42.4f    // 42mm nominal is actually 42.4mm
-    )
+    val widthAdjustments: Map<Float, Float>
+        get() = remoteDimensionAdjustments ?: LocalConfigDefaults.dimensionAdjustments
+
+    /**
+     * Update dimension adjustments from remote configuration.
+     * Called during app initialization when remote config is loaded.
+     */
+    fun updateFromRemote(adjustments: Map<Float, Float>) {
+        if (adjustments.isNotEmpty()) {
+            remoteDimensionAdjustments = adjustments
+        }
+    }
+
+    /**
+     * Check if remote config is loaded.
+     */
+    fun isRemoteConfigLoaded(): Boolean = remoteDimensionAdjustments != null
+
+    /**
+     * Reset to local defaults (for testing).
+     */
+    fun resetToDefaults() {
+        remoteDimensionAdjustments = null
+    }
 
     /**
      * Adjusts a nominal thickness value to actual thickness.
