@@ -1,0 +1,141 @@
+@startuml architecture-after
+!theme plain
+skinparam componentStyle rectangle
+skinparam backgroundColor white
+skinparam defaultFontSize 10
+
+title Architecture AFTER NS Refactoring
+
+package "UI Layer" {
+    [StartScreen] as SS
+    [ManageItemScreen] as MIS
+    [OverviewScreen] as OS
+    [HistoryScreen] as HS
+
+    package "ViewModels (Focused)" {
+        [StartViewModel\nCoordination only] as SVM
+        [ManageItemViewModel\nDelegates to UseCases] as MIVM
+        [OverviewViewModel] as OVM
+        [HistoryViewModel] as HVM
+    }
+}
+
+package "Domain Layer" {
+    package "auth/" {
+        [AuthManager] as AM
+        [AuthStates ✓\n• AuthenticationStatus\n• SignInOperation\n• AuthError\n• CompositeAuthState] as AS #ccffcc
+    }
+
+    package "update/" {
+        [UpdateManager] as UM
+        [UpdateStates ✓\n• UpdateAvailability\n• DownloadState\n• InstallationState\n• PostUpdateState] as US #ccffcc
+    }
+
+    package "usecase/" {
+        [QuantityParser ✓\n18 tests] as QP #ccffcc
+        [CheckInventoryStatusUseCase ✓\n17 tests] as CIS #ccffcc
+        [AddSlotActionUseCase] as ASA
+        [UndoSlotActionUseCase ✓] as USA #ccffcc
+        [SlotActionOperations ✓\nInterfaces] as SAO #ccffcc
+    }
+
+    [DeviceManager] as DM
+    [InputValidator] as IV
+}
+
+package "config/ (DVT) ✓" #fff3cc {
+    [FirestoreConfig\nCollection names] as FC #fff3cc
+    [QualityConfig\n18 mappings] as QC #fff3cc
+    [DimensionConfig\nAdjustments] as DC #fff3cc
+    [AppConfig\n75-day period] as AC #fff3cc
+}
+
+package "Data Layer" {
+    [SlotRepositoryImpl] as SR
+    [DeviceRepositoryImpl] as DR
+    [AppConfigRepositoryImpl] as ACR
+    [SheetDbRepository] as SDB
+}
+
+package "Model Layer (Data Only)" {
+    [WarehouseSlot\nUses configs] as WS
+    [FirestoreSlot] as FS
+    [SlotAction] as SA
+    [SlotType\nUses FirestoreConfig] as ST
+}
+
+database "Firebase\nFirestore" as FB
+cloud "FTP Server" as FTP
+
+' UI to ViewModel
+SS --> SVM
+MIS --> MIVM
+OS --> OVM
+HS --> HVM
+
+' ViewModel to Domain (via UseCases)
+SVM --> AM
+SVM --> UM
+MIVM --> QP
+MIVM --> CIS
+MIVM --> ASA
+MIVM --> USA
+MIVM --> DM
+MIVM --> IV
+OVM --> SR
+HVM --> SR
+
+' Auth/Update use states
+AM --> AS
+UM --> US
+
+' UseCases to Repositories
+ASA --> SR
+ASA --> SDB
+USA --> SR
+CIS --> SR
+
+' Data to External
+SR --> FB
+DR --> FB
+ACR --> FB
+UM --> FTP
+
+' Config usage
+SR --> FC
+ST --> FC
+WS --> QC
+WS --> DC
+CIS --> AC
+
+' Model usage
+SR --> WS
+SR --> FS
+SR --> SA
+
+note right of AS
+  SoS Compliant:
+  Isolated states for
+  each auth concern
+end note
+
+note right of US
+  SoS Compliant:
+  Isolated states for
+  availability, download,
+  installation, post-update
+end note
+
+note bottom of FC
+  DVT Compliant:
+  All configuration
+  centralized
+end note
+
+note right of QP
+  AVT Compliant:
+  Extracted algorithm
+  with interface
+end note
+
+@enduml

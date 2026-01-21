@@ -50,6 +50,43 @@ hranolky-firestore/
   caption: [Target module structure after refactoring]
 )
 
+=== Architecture Comparison
+
+The following diagrams illustrate the structural changes from the original architecture to the refactored NS-compliant design.
+
+*Before Refactoring:*
+- ViewModels contained mixed concerns (business logic, UI state, navigation)
+- Configuration scattered across multiple files (magic strings, hardcoded values)
+- Model classes embedded parsing and display logic
+- Monolithic state classes combining unrelated concerns (UpdateState with 15+ fields)
+
+*After Refactoring:*
+- ViewModels act as thin orchestrators, delegating to use cases
+- Configuration centralized in `config/` package (FirestoreConfig, QualityConfig, DimensionConfig, AppConfig)
+- Use cases encapsulate business logic (QuantityParser, CheckInventoryStatusUseCase)
+- States isolated by concern (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus)
+
+The architecture diagrams are available as Mermaid and PlantUML files in the `report/media/` directory:
+- `architecture-before.mmd` / `architecture-before.puml` — Original architecture
+- `architecture-after.mmd` / `architecture-after.puml` — Refactored architecture
+
+Key structural changes:
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Component*], [*Before*], [*After*],
+    [Config locations], [12+ files with hardcoded values], [4 centralized config files],
+    [ManageItemViewModel], [522 lines, 6+ concerns], [~450 lines, delegates to use cases],
+    [UpdateManager states], [15+ fields in single class], [5 isolated state classes],
+    [Business logic], [Embedded in ViewModels], [Extracted to use case layer],
+    [Quality mappings], [In WarehouseSlot.kt], [In QualityConfig.kt],
+    [Action logging], [Direct SheetDB calls], [Strategy pattern (ExternalActionLogger)],
+  ),
+  caption: [Structural changes summary]
+)
+
 == DVT Refactorings — Configuration Extraction
 
 === DVT-R1: Centralized Firestore Configuration
@@ -346,6 +383,52 @@ class ParseQuantityUseCase(
 ```,
   caption: [Quantity parsing with strategy pattern]
 )
+
+=== AVT-R3: Strategy Pattern for External Action Logging
+
+Abstract external logging behind an interface to allow different implementations:
+
+#figure(
+```kotlin
+// domain/usecase/ExternalActionLogger.kt
+interface ExternalActionLogger {
+    suspend fun logAction(
+        action: SlotAction,
+        slotId: String,
+        deviceId: String
+    ): Result<LoggingResult>
+}
+
+sealed class LoggingResult {
+    data class Success(val externalId: String? = null) : LoggingResult()
+    data object Skipped : LoggingResult()
+    data class NonBlockingFailure(val error: String) : LoggingResult()
+}
+
+// SheetDB implementation
+class SheetDbActionLogger(
+    private val sheetDbRepository: SheetDbRepository
+) : ExternalActionLogger {
+    override suspend fun logAction(...): Result<LoggingResult> {
+        if (action.action != "ADD") {
+            return Result.success(LoggingResult.Skipped)
+        }
+        // ... log to SheetDB
+    }
+}
+
+// No-op implementation for testing
+class NoOpExternalActionLogger : ExternalActionLogger {
+    override suspend fun logAction(...) = Result.success(LoggingResult.Skipped)
+}
+```,
+  caption: [Strategy pattern for external action logging]
+)
+
+*Benefits:*
+- SheetDB logging can be replaced without modifying `AddSlotActionUseCase`
+- Testing is simplified with `NoOpExternalActionLogger`
+- Different logging targets (Google Sheets API, custom REST API) can be added
 
 == SoS Refactorings — State Isolation
 

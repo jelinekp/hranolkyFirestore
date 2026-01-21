@@ -1,0 +1,108 @@
+@startuml architecture-before
+!theme plain
+skinparam componentStyle rectangle
+skinparam backgroundColor white
+skinparam defaultFontSize 10
+
+title Architecture BEFORE NS Refactoring
+
+package "UI Layer" {
+    [StartScreen] as SS
+    [ManageItemScreen] as MIS
+    [OverviewScreen] as OS
+    [HistoryScreen] as HS
+
+    package "ViewModels" {
+        [StartViewModel\n170 lines] as SVM
+        [ManageItemViewModel\n522 lines\n⚠️ 6+ concerns] as MIVM #ffcccc
+        [OverviewViewModel\n365 lines] as OVM
+        [HistoryViewModel\n56 lines] as HVM
+    }
+}
+
+package "Domain Layer" {
+    [AuthManager\n272 lines] as AM
+    [UpdateManager\n628 lines ⚠️] as UM #ffcccc
+    [DeviceManager\n85 lines] as DM
+    [InputValidator\n80 lines] as IV
+    [AddSlotActionUseCase] as ASA
+}
+
+package "Data Layer" {
+    [SlotRepositoryImpl\n323 lines] as SR
+    [DeviceRepositoryImpl] as DR
+    [AppConfigRepositoryImpl] as ACR
+    [SheetDbRepository] as SDB
+}
+
+package "Model Layer" {
+    [WarehouseSlot\n186 lines ⚠️\nLogic mixed with data] as WS #ffcccc
+    [FirestoreSlot] as FS
+    [SlotAction] as SA
+    [SlotType\nHardcoded names] as ST
+}
+
+database "Firebase\nFirestore" as FB
+cloud "FTP Server" as FTP
+
+' UI to ViewModel
+SS --> SVM
+MIS --> MIVM
+OS --> OVM
+HS --> HVM
+
+' ViewModel to Domain
+SVM --> AM
+SVM --> UM
+MIVM --> SR
+MIVM --> DM
+MIVM --> IV
+MIVM --> ASA
+OVM --> SR
+HVM --> SR
+
+' Domain to Data
+ASA --> SR
+ASA --> SDB
+
+' Data to External
+SR --> FB
+DR --> FB
+ACR --> FB
+UM --> FTP
+
+' Model usage
+SR --> WS
+SR --> FS
+SR --> SA
+MIVM --> WS
+
+note right of MIVM
+  SoC Violation:
+  • Device identification
+  • Quantity parsing (40+ lines)
+  • Inventory calculations
+  • Preferences management
+  • Navigation logic
+  • Undo operations
+end note
+
+note right of UM
+  SoC/SoS Violation:
+  • Version checking
+  • Download management
+  • Installation handling
+  • Post-update state
+  • Progress tracking
+  • 15+ state fields
+end note
+
+note right of WS
+  DVT/SoC Violation:
+  • 18 quality mappings
+  • Dimension adjustments
+  • Parsing logic
+  • Display formatting
+end note
+
+@enduml

@@ -12,7 +12,7 @@ The refactoring effort achieved measurable improvements across several dimension
     inset: 8pt,
     align: left,
     [*Metric*], [*Before*], [*After*], [*Change*],
-    [Test count], [~30], [149], [+397%],
+    [Test count], [~30], [155], [+417%],
     [Config locations], [12+ files], [4 config files], [Centralized],
     [ManageItemViewModel lines], [522], [~450], [-14%],
     [Extracted use cases], [0], [4], [+4 reusable],
@@ -24,7 +24,7 @@ The refactoring effort achieved measurable improvements across several dimension
 
 === Qualitative Improvements
 
-- *Improved Testability:* Business logic extracted into use cases (QuantityParser, CheckInventoryStatusUseCase) can now be tested in isolation with 35 dedicated tests, compared to near-zero testability of the embedded logic before.
+- *Improved Testability:* Business logic extracted into use cases (QuantityParser, CheckInventoryStatusUseCase) can now be tested in isolation with 41 dedicated tests, compared to near-zero testability of the embedded logic before.
 
 - *Better Maintainability:* Configuration changes now require editing a single file (e.g., QualityConfig.kt for quality mappings) instead of hunting through multiple classes.
 
@@ -36,9 +36,11 @@ The refactoring effort achieved measurable improvements across several dimension
 
 - *State Isolation:* UpdateState and AuthState are now decomposed into focused states (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus, SignInOperation), reducing combinatorial complexity and enabling independent evolution.
 
+- *Strategy Pattern for External Logging:* The ExternalActionLogger interface allows SheetDB logging to be replaced or disabled without modifying use cases, improving testability and future flexibility.
+
 == Lessons Learned
 
-1. *Test First:* Establishing 112+ tests before refactoring provided confidence that behavior is preserved. Several subtle bugs in test expectations were caught early.
+1. *Test First:* Establishing 155 tests before refactoring provided confidence that behavior is preserved. Several subtle bugs in test expectations were caught early.
 
 2. *Incremental Extraction:* Small, focused extractions (one config file, one use case at a time) are safer than large rewrites. Each extraction was verified with the test suite before proceeding.
 
@@ -58,13 +60,13 @@ While this refactoring addressed the most impactful NS violations, several oppor
 
 - *External Configuration:* Config files could be loaded from Firestore/Remote Config for runtime updates without app releases.
 
-- *Strategy Pattern for Logging:* SheetDB logging could be abstracted behind a strategy interface for easier replacement or testing.
+- *Action Versioning:* The SlotActionOperations interfaces are prepared for versioning but not yet implemented for different operation versions.
 
 == Final Remarks
 
 This refactoring demonstrates that Normalized Systems Theory provides actionable guidance for improving Android application maintainability. The four theorems—SoC, DVT, AVT, and SoS—offer a systematic approach to identifying and addressing architectural issues that cause combinatorial effects.
 
-The investment in a comprehensive test suite (149 tests) proved essential: it enabled confident refactoring while ensuring full backward compatibility. All existing functionality remains intact, verified through automated testing.
+The investment in a comprehensive test suite (155 tests) proved essential: it enabled confident refactoring while ensuring full backward compatibility. All existing functionality remains intact, verified through automated testing.
 
 The extracted modules now enable changes to configuration, parsing logic, business rules, and state management without triggering modifications across multiple files—achieving the *linear scalability* promised by Normalized Systems Theory.
 

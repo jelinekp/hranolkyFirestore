@@ -1,0 +1,82 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f9f9f9', 'primaryTextColor': '#333', 'primaryBorderColor': '#666', 'lineColor': '#666', 'secondaryColor': '#f0f0f0', 'tertiaryColor': '#fff'}}}%%
+flowchart TB
+    subgraph UI["UI Layer"]
+        direction TB
+        StartScreen["StartScreen.kt"]
+        ManageItemScreen["ManageItemScreen.kt"]
+        OverviewScreen["OverviewScreen.kt"]
+        HistoryScreen["HistoryScreen.kt"]
+
+        subgraph ViewModels["ViewModels (Mixed Concerns)"]
+            StartVM["StartViewModel\n170 lines"]
+            ManageItemVM["ManageItemViewModel\n522 lines ⚠️\n• Device ID\n• Quantity parsing\n• Inventory calc\n• Preferences\n• Navigation\n• Undo logic"]
+            OverviewVM["OverviewViewModel\n365 lines"]
+            HistoryVM["HistoryViewModel\n56 lines"]
+        end
+    end
+
+    subgraph Domain["Domain Layer (Mixed)"]
+        AuthManager["AuthManager.kt\n272 lines\n• Sign-in flow\n• State management"]
+        UpdateManager["UpdateManager.kt\n628 lines ⚠️\n• Version check\n• Download\n• Install\n• Post-update\n• Progress tracking"]
+        DeviceManager["DeviceManager.kt\n85 lines"]
+        InputValidator["InputValidator.kt\n80 lines"]
+        AddSlotAction["AddSlotActionUseCase.kt"]
+    end
+
+    subgraph Data["Data Layer"]
+        SlotRepo["SlotRepositoryImpl.kt\n323 lines"]
+        DeviceRepo["DeviceRepositoryImpl.kt"]
+        AppConfigRepo["AppConfigRepositoryImpl.kt"]
+        SheetDbRepo["SheetDbRepository.kt"]
+    end
+
+    subgraph Model["Model Layer (Logic Mixed)"]
+        WarehouseSlot["WarehouseSlot.kt\n186 lines ⚠️\n• Data fields\n• Parsing logic\n• Quality mappings\n• Dimension adjust\n• Display format"]
+        FirestoreSlot["FirestoreSlot.kt"]
+        SlotAction["SlotAction.kt"]
+        SlotType["SlotType.kt\n• Hardcoded names"]
+    end
+
+    subgraph External["External Services"]
+        Firestore[(Firebase\nFirestore)]
+        FTP["FTP Server"]
+    end
+
+    %% UI connections
+    StartScreen --> StartVM
+    ManageItemScreen --> ManageItemVM
+    OverviewScreen --> OverviewVM
+    HistoryScreen --> HistoryVM
+
+    %% ViewModel to Domain
+    StartVM --> AuthManager
+    StartVM --> UpdateManager
+    ManageItemVM --> SlotRepo
+    ManageItemVM --> DeviceManager
+    ManageItemVM --> InputValidator
+    ManageItemVM --> AddSlotAction
+    OverviewVM --> SlotRepo
+    HistoryVM --> SlotRepo
+
+    %% Domain to Data
+    AddSlotAction --> SlotRepo
+    AddSlotAction --> SheetDbRepo
+
+    %% Data to External
+    SlotRepo --> Firestore
+    DeviceRepo --> Firestore
+    AppConfigRepo --> Firestore
+    UpdateManager --> FTP
+
+    %% Model usage (scattered)
+    SlotRepo --> WarehouseSlot
+    SlotRepo --> FirestoreSlot
+    SlotRepo --> SlotAction
+    ManageItemVM --> WarehouseSlot
+
+    classDef warning fill:#ffcccc,stroke:#cc0000
+    classDef normal fill:#e6f3ff,stroke:#0066cc
+    classDef external fill:#f0f0f0,stroke:#666
+
+    class ManageItemVM,UpdateManager,WarehouseSlot warning
+    class Firestore,FTP external

@@ -44,6 +44,7 @@ Using NS Theory's four core theorems—Separation of Concerns (SoC), Data Versio
     [SoC/AVT], [CheckInventoryStatusUseCase.kt], [Business logic isolated, 17 tests],
     [AVT], [UndoSlotActionUseCase.kt], [Undo operation decoupled],
     [AVT], [SlotActionOperations.kt], [Interfaces for action versioning],
+    [AVT], [ExternalActionLogger.kt], [Strategy pattern for logging, 6 tests],
     [SoS], [UpdateStates.kt], [5 focused states, 19 tests],
     [SoS], [AuthStates.kt], [4 focused states, 18 tests],
   ),
@@ -60,10 +61,10 @@ A comprehensive test suite was established as the foundation:
     [*Test Category*], [*Test Count*],
     [Domain Logic (InputValidator, Parsers)], [46],
     [Model Classes (WarehouseSlot, SlotAction)], [27],
-    [Use Cases (Inventory, Quantity)], [35],
+    [Use Cases (Inventory, Quantity, Logging)], [41],
     [ViewModels (Start, History)], [14],
     [State Isolation (Update, Auth)], [37],
-    [*Total*], [*149*],
+    [*Total*], [*155*],
   ),
   caption: [Test suite coverage summary]
 )
