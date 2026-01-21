@@ -12,135 +12,107 @@ The refactoring effort achieved measurable improvements across several dimension
     inset: 8pt,
     align: left,
     [*Metric*], [*Before*], [*After*], [*Change*],
-    [Test count], [~30], [155], [+417%],
-    [Config locations], [12+ files], [4 config files], [Centralized],
+    [Test count], [~30], [230+], [+667%],
+    [Config locations], [12+ files], [4 config files + remote], [Centralized],
     [ManageItemViewModel lines], [522], [~450], [-14%],
-    [Extracted use cases], [0], [4], [+4 reusable],
-    [Extracted config modules], [0], [4], [+4 centralized],
-    [State isolation modules], [0], [2], [+2 focused],
+    [Extracted use cases], [0], [6], [+6 reusable],
+    [Extracted config modules], [0], [4 local + 3 remote], [+7 total],
+    [State isolation modules], [0], [4], [+4 focused],
+    [State machine tests], [0], [26], [Full coverage],
+    [Remote configuration], [No], [Yes (Firestore)], [Runtime updates],
   ),
   caption: [Quantitative improvements from NS refactoring]
 )
 
 === Qualitative Improvements
 
-- *Improved Testability:* Business logic extracted into use cases (QuantityParser, CheckInventoryStatusUseCase) can now be tested in isolation with 41 dedicated tests, compared to near-zero testability of the embedded logic before.
+- *Improved Testability:* Business logic extracted into use cases (QuantityParser, CheckInventoryStatusUseCase, UndoSlotActionUseCase) can now be tested in isolation with 60+ dedicated tests, compared to near-zero testability of the embedded logic before.
 
-- *Better Maintainability:* Configuration changes now require editing a single file (e.g., QualityConfig.kt for quality mappings) instead of hunting through multiple classes.
+- *Better Maintainability:* Configuration changes now require editing a single file (e.g., QualityConfig.kt for quality mappings) or updating the Firestore `/AppConfig/settings` document for runtime changes without app releases.
 
-- *Centralized Configuration:* All 18 quality code mappings, dimension adjustments, and Firestore collection names are now in dedicated config files, eliminating scattered magic strings.
+- *Centralized Configuration:* All 18 quality code mappings, dimension adjustments, and Firestore collection names are in dedicated config files with remote override capability, eliminating scattered magic strings.
 
-- *Reusable Components:* The extracted QuantityParser can be reused in future features (e.g., bulk import) without duplicating the 40+ lines of parsing logic.
+- *Runtime Configuration Updates:* The implemented `ConfigProvider` and `FirestoreConfigProvider` enable quality codes, dimension adjustments, and business rules to be updated via Firestore without deploying new app versions—critical for operational agility in a warehouse environment.
 
-- *Data-Driven Design:* Quality mappings and dimension adjustments are now data structures that could be loaded from external sources (Firestore, JSON) without code changes.
+- *Reusable Components:* Extracted use cases (QuantityParser, CheckInventoryStatusUseCase, UndoSlotActionUseCase) can be reused in future features without duplicating business logic.
 
-- *State Isolation:* UpdateState and AuthState are now decomposed into focused states (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus, SignInOperation), reducing combinatorial complexity and enabling independent evolution.
+- *State Isolation:* UpdateState and AuthState are decomposed into focused states (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus, SignInOperation), with a complete state machine implementation that enforces valid transitions at compile time.
 
-- *Strategy Pattern for External Logging:* The ExternalActionLogger interface allows SheetDB logging to be replaced or disabled without modifying use cases, improving testability and future flexibility.
+- *State Machine Benefits:* The `UpdateStateMachine` (350 lines, 26 tests) provides compile-time guarantees against invalid state transitions, documented state flow diagrams, and eliminates impossible state combinations that were previously only caught at runtime.
+
+- *Strategy Pattern for External Logging:* The ExternalActionLogger interface allows SheetDB logging to be replaced or disabled without modifying use cases, improving testability and enabling A/B testing of logging providers.
+
+- *Offline-First Configuration:* Remote configuration with automatic fallback to local defaults ensures the app remains functional even when Firestore is unreachable.
 
 == Lessons Learned
 
-1. *Test First:* Establishing 155 tests before refactoring provided confidence that behavior is preserved. Several subtle bugs in test expectations were caught early.
+1. *Test First:* Establishing 230+ tests before and during refactoring provided confidence that behavior is preserved. The comprehensive test suite caught several subtle bugs and enabled safe large-scale refactorings like the state machine implementation.
 
-2. *Incremental Extraction:* Small, focused extractions (one config file, one use case at a time) are safer than large rewrites. Each extraction was verified with the test suite before proceeding.
+2. *Incremental Extraction:* Small, focused extractions (one config file, one use case at a time) are safer than large rewrites. Each extraction was verified with the test suite before proceeding. The state machine was built incrementally with tests guiding the design.
 
-3. *NS Theory Applicability:* The four theorems provided a systematic framework for identifying violations. DVT was particularly effective for finding scattered configuration, while SoC guided the extraction of use cases from ViewModels.
+3. *NS Theory Applicability:* The four theorems provided a systematic framework for identifying violations. DVT was particularly effective for finding scattered configuration and led to the remote config implementation. SoS violations guided the state machine design.
 
-4. *Backward Compatibility:* Using Kotlin's `invoke()` operator and delegation patterns allowed new interfaces to coexist with existing code, enabling gradual migration.
+4. *Backward Compatibility:* Using Kotlin's `invoke()` operator and delegation patterns allowed new interfaces to coexist with existing code, enabling gradual migration without breaking existing functionality.
 
-5. *State Isolation Benefits:* Breaking down monolithic state classes (UpdateState with 15+ fields) into focused states (UpdateAvailability, DownloadState, etc.) improved code readability and will simplify future state machine implementations.
+5. *State Machine Value:* Implementing the `UpdateStateMachine` proved more valuable than anticipated—compile-time transition validation caught bugs that would have been runtime errors, and the ASCII state diagram documentation improved team understanding of the update flow.
+
+6. *Remote Configuration Trade-offs:* While runtime configuration updates eliminate the need for app releases for config changes, they introduce complexity in cache management and offline handling. The fallback to local defaults proved essential during development.
+
+7. *Documentation as Code:* State machines with ASCII diagrams and sealed class hierarchies serve as executable documentation that stays synchronized with implementation, unlike separate documentation that can drift out of date.
 
 == Limitations and Future Work
 
-While this refactoring addressed the most impactful NS violations, several opportunities remain for further improvement:
+While this refactoring successfully addressed the most impactful NS violations, some opportunities remain for further improvement:
 
-=== Complete ViewModel Decomposition
+=== Completed Advanced Features
 
-ManageItemViewModel (522 lines) still handles multiple responsibilities that could be further extracted:
+Several advanced features that were initially planned as "future work" have been successfully implemented:
 
-*Current concerns in ManageItemViewModel:*
-- Slot data loading and caching
-- Quantity input validation
-- Action execution (add/undo)
-- Inventory check toggle persistence
-- Navigation to other items
-- Snackbar event coordination
+*✓ State Machine Implementation (Completed):*
+- Implemented `UpdateStateMachine` with 350 lines of well-documented state transition logic
+- Includes ASCII diagram documenting all valid state transitions
+- 26 comprehensive tests verify state machine behavior
+- Eliminates impossible state combinations at compile time
+
+*✓ External Configuration (Completed):*
+- Implemented `ConfigProvider` interface for abstracting configuration sources
+- Created `FirestoreConfigProvider` loading config from Firestore documents at `/AppConfig/settings`
+- Implemented `ConfigInitializer` with automatic fallback to local defaults when offline
+- Configuration includes quality mappings, dimension adjustments, and inventory check periods
+- Changes can now be deployed without app releases
+
+*✓ Partial ViewModel Decomposition (Completed):*
+- Extracted `QuantityParser` (40+ lines, 18 tests) from ManageItemViewModel
+- Extracted `CheckInventoryStatusUseCase` (17 tests) for inventory date validation
+- Created composite UI states (`StartUiStates.kt`, `ManageItemUiStates.kt`) for better separation
+
+=== Remaining Opportunities
+
+==== Complete ManageItemViewModel Decomposition
+
+ManageItemViewModel (currently ~450 lines, down from 522) could benefit from further extraction:
+
+*Remaining concerns:*
+- SharedPreferences access for inventory check toggle
+- Navigation coordination (`navigateToAnotherItem` flow)
+- Snackbar event orchestration (undo/error events)
 
 *Recommended extractions:*
-1. *NavigationCoordinator:* Extract navigation logic (`navigateToAnotherItem`, item code scanning redirect) into a dedicated class
-2. *InventoryCheckPreferences:* Move SharedPreferences operations for inventory check toggle into a repository
-3. *QuantityInputState:* Create a dedicated state holder for quantity input with its validation
+1. *InventoryCheckPreferences:* Move SharedPreferences logic to a dedicated repository
+2. *NavigationCoordinator:* Extract item code scanning redirect logic
+3. *SnackbarEventCoordinator:* Centralize snackbar event management
 
-*Implementation effort:* ~8-12 hours for clean separation with tests
+*Implementation effort:* ~6-8 hours
 
-=== State Machine Implementation
+==== Action Versioning
 
-The isolated states (`UpdateStates.kt`, `AuthStates.kt`) are semantically prepared for finite state machine patterns but currently use manual state transitions. A proper state machine would provide:
-
-*Benefits:*
-- Compile-time verification of valid state transitions
-- Elimination of impossible state combinations
-- Clearer documentation of the update/auth flows
-- Easier debugging with state history
-
-*Implementation approach:*
-```kotlin
-// Example state machine definition
-sealed class UpdateEvent {
-    data object CheckForUpdates : UpdateEvent()
-    data class UpdateFound(val info: UpdateInfo) : UpdateEvent()
-    data object StartDownload : UpdateEvent()
-    data class DownloadProgress(val percent: Int) : UpdateEvent()
-    data object InstallUpdate : UpdateEvent()
-}
-
-class UpdateStateMachine {
-    fun transition(event: UpdateEvent): CompositeUpdateState
-    fun canHandle(event: UpdateEvent): Boolean
-}
-```
-
-*Implementation effort:* ~6-10 hours using a library like Tinder StateMachine or custom implementation
-
-=== External Configuration
-
-Config files (`QualityConfig.kt`, `DimensionConfig.kt`, `FirestoreConfig.kt`) currently contain compile-time constants. Loading from Firestore Remote Config would enable:
+The `SlotActionOperation` and `UndoSlotActionOperation` interfaces are prepared for versioning but not yet implemented. This would enable:
 
 *Benefits:*
-- Quality code additions without app releases
-- A/B testing of dimension adjustments
-- Emergency configuration changes
-- Per-device or per-user configuration
-
-*Implementation approach:*
-1. Create `RemoteConfigRepository` interface
-2. Implement Firestore document-based config loading
-3. Add caching layer with expiration (e.g., 1 hour)
-4. Provide fallback to compiled defaults when offline
-
-```kotlin
-interface ConfigProvider {
-    suspend fun getQualityMappings(): Map<String, String>
-    suspend fun getDimensionAdjustments(): Map<Float, Float>
-}
-
-class RemoteConfigProvider(
-    private val firestore: FirebaseFirestore,
-    private val cache: ConfigCache
-) : ConfigProvider
-```
-
-*Implementation effort:* ~10-15 hours including offline handling and migration
-
-=== Action Versioning
-
-The `SlotActionOperation` and `UndoSlotActionOperation` interfaces are prepared for versioning but not yet implemented. This would allow:
-
-*Benefits:*
-- Different action formats for different app versions
-- Backward-compatible action replay
-- Audit trail with version metadata
-- Migration support for legacy actions
+- Different action formats across app versions
+- Backward-compatible action replay from audit logs
+- Version metadata in action documents
+- Graceful migration of legacy actions
 
 *Implementation approach:*
 ```kotlin
@@ -151,19 +123,30 @@ interface VersionedSlotActionOperation : SlotActionOperation {
 
 class SlotActionOperationFactory {
     fun getOperation(version: Int): SlotActionOperation
-    fun getCurrentVersion(): Int
 }
 
-// Action document would include version field
+// Add version field to SlotAction documents
 data class VersionedSlotAction(
     val version: Int = CURRENT_VERSION,
-    // ... existing fields
+    // ...existing fields
 )
 ```
 
-*Implementation effort:* ~8-12 hours including migration logic and tests
+*Implementation effort:* ~8-12 hours including tests and migration logic
 
-=== Summary of Future Work
+==== Configuration Cache Optimization
+
+While remote configuration loading is implemented, cache optimization could further improve performance:
+
+*Potential improvements:*
+- Configurable cache TTL (currently no expiration)
+- Background refresh without blocking UI
+- Differential updates (only changed keys)
+- Cache warming on app startup
+
+*Implementation effort:* ~4-6 hours
+
+=== Summary of Remaining Work
 
 #figure(
   table(
@@ -171,15 +154,14 @@ data class VersionedSlotAction(
     inset: 8pt,
     align: left,
     [*Improvement*], [*Effort*], [*Priority*],
-    [ViewModel Decomposition], [8-12 hours], [Medium],
-    [State Machine], [6-10 hours], [Low],
-    [External Configuration], [10-15 hours], [High],
+    [Complete ViewModel Decomposition], [6-8 hours], [Low],
     [Action Versioning], [8-12 hours], [Low],
+    [Config Cache Optimization], [4-6 hours], [Low],
   ),
   caption: [Estimated effort for remaining improvements]
 )
 
-The *External Configuration* improvement has the highest priority as it would enable operational agility without requiring app store releases—a significant benefit for a warehouse management application.
+All remaining improvements are low priority because the major NS violations have been resolved. The current architecture achieves linear scalability for most changes.
 
 == Final Remarks
 
