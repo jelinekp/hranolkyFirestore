@@ -2,7 +2,7 @@ package eu.jelinek.hranolky.ui.start
 
 import android.app.Application
 import eu.jelinek.hranolky.domain.AuthManager
-import eu.jelinek.hranolky.domain.AuthState
+import eu.jelinek.hranolky.domain.auth.AuthState
 import eu.jelinek.hranolky.domain.DeviceManager
 import eu.jelinek.hranolky.domain.InputValidator
 import eu.jelinek.hranolky.domain.UpdateManager
@@ -58,7 +58,7 @@ class StartViewModelTest {
         }
 
         updateManager = mockk(relaxed = true) {
-            every { updateState } returns MutableStateFlow(eu.jelinek.hranolky.domain.UpdateState())
+            every { updateState } returns MutableStateFlow(eu.jelinek.hranolky.domain.update.UpdateState())
         }
 
         deviceManager = mockk(relaxed = true)

@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import eu.jelinek.hranolky.domain.UpdateState
+import eu.jelinek.hranolky.domain.update.UpdateState
 
 /**
  * Full-screen overlay shown during app installation.

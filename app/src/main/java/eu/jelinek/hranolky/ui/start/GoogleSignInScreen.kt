@@ -25,7 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import eu.jelinek.hranolky.R
-import eu.jelinek.hranolky.domain.AuthState
+import eu.jelinek.hranolky.domain.auth.AuthState
 
 
 @Composable

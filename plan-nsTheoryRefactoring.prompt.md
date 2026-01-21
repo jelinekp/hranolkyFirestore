@@ -171,42 +171,60 @@ hranolky-firestore/
 - **FormatHelperFunctionsTest:** 5 tests for date formatting utilities
 - **StartViewModelTest:** 11 tests for scanned code handling and navigation
 - **HistoryViewModelTest:** 3 tests for slot history loading and state management
-- **Total:** ~80 tests passing
+- **QuantityParserTest:** 18 tests for quantity input parsing
+- **CheckInventoryStatusUseCaseTest:** 17 tests for inventory status checking
+- **Total:** ~112 tests passing
 
 ---
 
 ## Phase 4: Implement Refactorings (35-40 hours)
 
 ### 4.1 DVT Refactorings - Configuration Extraction
-- [ ] Create `config/` package for centralized configuration
-- [ ] Extract Firestore collection names to config
-- [ ] Extract permission/user lists to config
-- [ ] Extract feature flags to config
-- [ ] Create typed configuration classes
+- [x] Create `config/` package for centralized configuration
+- [x] Extract Firestore collection names to config (`FirestoreConfig.kt`)
+- [x] Extract quality code mappings to config (`QualityConfig.kt`)
+- [x] Extract dimension adjustments to config (`DimensionConfig.kt`)
+- [x] Extract app settings to config (`AppConfig.kt`)
+- [x] Update SlotType to use FirestoreConfig
+- [x] Update SlotRepositoryImpl to use FirestoreConfig
+- [x] Update WarehouseSlot to use DimensionConfig and QualityConfig
 
 ### 4.2 SoC Refactorings - Responsibility Separation
-- [ ] Extract business logic from ViewModels to Use Cases
-- [ ] Separate UI state from domain state
+- [x] Extract inventory check logic to `CheckInventoryStatusUseCase`
+- [x] Extract quantity parsing to `QuantityParser` class
+- [x] Add new use cases to Koin dependency injection
+- [x] Create tests for CheckInventoryStatusUseCase (17 tests)
+- [x] Create tests for QuantityParser (18 tests)
+- [ ] Separate UI state from domain state in ViewModels
 - [ ] Create dedicated repository interfaces
-- [ ] Extract validation logic to dedicated validators
 
 ### 4.3 AVT Refactorings - Action Independence
-- [ ] Create use case classes for each business operation
-- [ ] Implement strategy pattern for variable algorithms
-- [ ] Decouple action interfaces from implementations
+- [x] Create use case interfaces for slot operations (`SlotActionOperations.kt`)
+- [x] Implement SlotActionOperation interface in AddSlotActionUseCase
+- [x] Create UndoSlotActionUseCase with UndoSlotActionOperation interface
+- [x] Add backward-compatible invoke operator for existing code
+- [ ] Implement strategy pattern for variable algorithms (SheetDB logging)
 - [ ] Add action versioning support
 
 ### 4.4 SoS Refactorings - State Isolation
-- [ ] Split combined UI states into focused states
-- [ ] Implement state machines for complex flows
-- [ ] Isolate authentication state management
+- [x] Review existing state classes for SoS compliance
+- [x] Split UpdateState into isolated focused states (UpdateStates.kt with CompositeUpdateState)
+- [x] Isolate authentication state management (AuthStates.kt with CompositeAuthState)
+- [ ] Implement state machines for complex flows (Update flow)
 - [ ] Create dedicated state holders per feature
 
+Note: ManageItemScreenState, AddActionValidationState are already reasonably focused.
+Primary SoS violation was in UpdateManager (618 lines). Created new UpdateStates.kt
+in domain/update package with isolated states: UpdateAvailability, DownloadState,
+InstallationState, PostUpdateState, and CompositeUpdateState for composition.
+Also created AuthStates.kt in domain/auth package with AuthenticationStatus,
+SignInOperation, AuthError, and CompositeAuthState.
+
 ### 4.5 Verify Tests Still Pass
-- [ ] Run full test suite after each refactoring
-- [ ] Fix any regressions immediately
-- [ ] Update tests only when behavior intentionally changes
-- [ ] Maintain test coverage percentage
+- [x] Run full test suite after each refactoring
+- [x] Fix any regressions immediately
+- [x] Update tests only when behavior intentionally changes
+- [x] Maintain test coverage percentage
 
 ---
 
