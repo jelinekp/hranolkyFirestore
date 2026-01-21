@@ -15,11 +15,18 @@ class HranolkyApplication : Application() {
         super.onCreate()
 
         // Disable Crashlytics in debug builds to avoid polluting production data
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+        try {
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+        } catch (@Suppress("UNUSED_PARAMETER") e: IllegalStateException) {
+            // Firebase not initialized - likely in unit tests
+        }
 
-        startKoin {
-            androidContext(this@HranolkyApplication)
-            modules(coreModule, uiModule, dataModule, domainModule)
+        // Only start Koin if it's not already started (for tests)
+        if (org.koin.core.context.GlobalContext.getOrNull() == null) {
+            startKoin {
+                androidContext(this@HranolkyApplication)
+                modules(coreModule, uiModule, dataModule, domainModule)
+            }
         }
     }
 }

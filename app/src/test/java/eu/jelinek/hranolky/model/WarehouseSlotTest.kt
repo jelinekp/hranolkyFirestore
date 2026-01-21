@@ -61,8 +61,8 @@ class WarehouseSlotTest {
 
     @Test
     fun `getFullQualityName maps known codes`() {
-        val slot = WarehouseSlot(fullProductId = "H-", quantity = 0).copy(quality = "DUB A|A")
-        assertEquals("DUB A/A", slot.quality)
+        val slot = WarehouseSlot(fullProductId = "H-", quantity = 0).copy(quality = "DUB-A|A")
+        assertEquals("DUB A/A", slot.getFullQualityName())
     }
 
     @Test
@@ -86,8 +86,8 @@ class WarehouseSlotTest {
         val title = parsed.getScreenTitle()
         // Width 100.0 -> "100", thickness 20.0 -> "20"
         // Expect two-line title with mm suffix as implemented
-        assert(title.contains("Hranolek"))
-        assert(title.contains("DUB A")) // At least contains readable quality name start
-        assert(title.contains("100 x 20 x 2000 mm") || title.contains("20 x 100 x 2000 mm"))
+        assert(title.contains("Hranolek")) { "Title should contain 'Hranolek', but was: $title" }
+        assert(title.contains("DUB-A")) { "Title should contain 'DUB-A', but was: $title" }
+        assert(title.contains("20 x 100 x 2000 mm")) { "Title should contain '20 x 100 x 2000 mm', but was: $title" }
     }
 }

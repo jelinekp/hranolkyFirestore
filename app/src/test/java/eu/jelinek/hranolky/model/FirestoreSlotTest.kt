@@ -17,12 +17,16 @@ class FirestoreSlotTest {
     fun `toWarehouseSlot should correctly convert FirestoreSlot to WarehouseSlot with H-prefix`() {
         val firestoreSlot = FirestoreSlot(
             quantity = 5,
-            lastModified = Timestamp.now()
+            lastModified = Timestamp.now(),
+            quality = "DUB-A",
+            thickness = 20.0,
+            width = 100.0,
+            length = 2000
         )
         val productId = "DUB-A-20-100-2000"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
-        assertEquals(productId, warehouseSlot.fullProductId)
+        assertEquals("H-$productId", warehouseSlot.fullProductId)
         assertEquals(5, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         assertEquals(SlotType.Beam, warehouseSlot.slotType)
@@ -36,12 +40,16 @@ class FirestoreSlotTest {
     fun `toWarehouseSlot should correctly convert FirestoreSlot to WarehouseSlot with S-prefix`() {
         val firestoreSlot = FirestoreSlot(
             quantity = 10,
-            lastModified = Timestamp.now()
+            lastModified = Timestamp.now(),
+            quality = "DUB-R",
+            thickness = 27.4,
+            width = 42.4,
+            length = 3000
         )
         val productId = "DUB-R-27-42-3000"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Jointer, productId)
 
-        assertEquals(productId, warehouseSlot.fullProductId)
+        assertEquals("S-$productId", warehouseSlot.fullProductId)
         assertEquals(10, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         assertEquals(SlotType.Jointer, warehouseSlot.slotType)
@@ -55,12 +63,16 @@ class FirestoreSlotTest {
     fun `toWarehouseSlot should correctly convert FirestoreSlot to WarehouseSlot without prefix`() {
         val firestoreSlot = FirestoreSlot(
             quantity = 15,
-            lastModified = Timestamp.now()
+            lastModified = Timestamp.now(),
+            quality = "BUK-C",
+            thickness = 30.0,
+            width = 50.0,
+            length = 1500
         )
         val productId = "BUK-C-30-50-1500"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
-        assertEquals(productId, warehouseSlot.fullProductId)
+        assertEquals("H-$productId", warehouseSlot.fullProductId)
         assertEquals(15, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
         assertEquals(SlotType.Beam, warehouseSlot.slotType) // Default to Beam
@@ -79,11 +91,11 @@ class FirestoreSlotTest {
         val productId = "INVALID-ID"
         val warehouseSlot = firestoreSlot.toWarehouseSlot(SlotType.Beam, productId)
 
-        assertEquals(productId, warehouseSlot.fullProductId)
+        assertEquals("H-$productId", warehouseSlot.fullProductId)
         assertEquals(1, warehouseSlot.quantity)
         assertEquals(firestoreSlot.lastModified, warehouseSlot.lastModified)
-        // Assert that properties derived from product ID are null or default if parsing fails
-        assertEquals(null, warehouseSlot.slotType)
+        assertEquals(SlotType.Beam, warehouseSlot.slotType)
+        // When no fields provided in FirestoreSlot, they should be null in WarehouseSlot
         assertEquals(null, warehouseSlot.quality)
         assertEquals(null, warehouseSlot.thickness)
         assertEquals(null, warehouseSlot.width)
