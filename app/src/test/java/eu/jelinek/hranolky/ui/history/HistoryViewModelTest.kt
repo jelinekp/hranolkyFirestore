@@ -79,4 +79,58 @@ class HistoryViewModelTest {
         val stateAfterLoad = vm.historyScreenState.value
         assertEquals(1, stateAfterLoad.lastModifiedJointerSlots.size)
     }
+
+    @Test
+    fun `loadJointerLastModifiedSlots only loads once`() {
+        var callCount = 0
+        val countingRepo = object : SlotRepository {
+            override fun getSlot(fullSlotId: String): Flow<WarehouseSlot?> = flowOf(null)
+            override fun getSlotActions(fullSlotId: String): Flow<List<SlotAction>> = flowOf(emptyList())
+            override suspend fun addSlotAction(
+                fullSlotId: String, actionType: ActionType, quantity: Long,
+                currentQuantity: Long, deviceId: String
+            ) = "test"
+            override suspend fun undoSlotAction(fullSlotId: String, actionDocumentId: String, quantityChange: Long) {}
+            override suspend fun createNewSlot(fullSlotId: String, quantity: Long) {}
+            override fun getLastModifiedSlots(slotType: SlotType): Flow<List<WarehouseSlot>> {
+                if (slotType == SlotType.Jointer) callCount++
+                return flowOf(emptyList())
+            }
+            override fun getAllSlots(slotType: SlotType): Flow<List<WarehouseSlot>> = flowOf(emptyList())
+        }
+
+        val vm = HistoryViewModel(Application(), countingRepo)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Call multiple times
+        vm.loadJointerLastModifiedSlots()
+        vm.loadJointerLastModifiedSlots()
+        vm.loadJointerLastModifiedSlots()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Should only have been called once due to the guard
+        assertEquals(1, callCount)
+    }
+
+    @Test
+    fun `initial state has empty lists`() {
+        val emptyRepo = object : SlotRepository {
+            override fun getSlot(fullSlotId: String): Flow<WarehouseSlot?> = flowOf(null)
+            override fun getSlotActions(fullSlotId: String): Flow<List<SlotAction>> = flowOf(emptyList())
+            override suspend fun addSlotAction(
+                fullSlotId: String, actionType: ActionType, quantity: Long,
+                currentQuantity: Long, deviceId: String
+            ) = "test"
+            override suspend fun undoSlotAction(fullSlotId: String, actionDocumentId: String, quantityChange: Long) {}
+            override suspend fun createNewSlot(fullSlotId: String, quantity: Long) {}
+            override fun getLastModifiedSlots(slotType: SlotType): Flow<List<WarehouseSlot>> = flowOf(emptyList())
+            override fun getAllSlots(slotType: SlotType): Flow<List<WarehouseSlot>> = flowOf(emptyList())
+        }
+
+        val vm = HistoryViewModel(Application(), emptyRepo)
+        // Before advancing, state should be default
+        val state = vm.historyScreenState.value
+        assertEquals(emptyList<WarehouseSlot>(), state.lastModifiedBeamSlots)
+        assertEquals(emptyList<WarehouseSlot>(), state.lastModifiedJointerSlots)
+    }
 }

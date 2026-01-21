@@ -1,0 +1,315 @@
+# Plan: Normalized Systems Theory Analysis and Refactoring
+
+## Assignment Overview
+- **Course:** NIE-NSS (Normalized Systems)
+- **Scope:** 4 ECTS (100-120 working hours)
+- **Codebase:** hranolky-firestore Android application
+- **Language:** Kotlin
+
+## Deliverables
+1. Written report of NS-based code review (Typst document in `report/` directory)
+2. Refactored codebase complying with NS theory
+
+---
+
+## Phase 1: Codebase Analysis (25-30 hours)
+
+### 1.1 Structural Overview
+- [x] Map the complete project structure
+- [x] Document all modules: `app/`, `firestore-config/`, `firestore-dump/`, `firestore-up/`
+- [x] Identify architectural layers (UI, Domain, Data)
+- [ ] Create dependency graph between components
+
+**Findings:**
+```
+hranolky-firestore/
+├── app/                          # Main Android application
+│   └── src/main/java/eu/jelinek/hranolky/
+│       ├── HranolkyApplication.kt    # Application class with Koin DI
+│       ├── data/                     # Repositories + DI module
+│       │   ├── SlotRepository.kt     # Interface
+│       │   ├── SlotRepositoryImpl.kt # 323 lines - Firestore operations
+│       │   ├── DeviceRepository*.kt  # Device info persistence
+│       │   ├── AppConfigRepository*.kt # App config from Firestore
+│       │   └── di/dataModule.kt
+│       ├── domain/                   # Business logic
+│       │   ├── AuthManager.kt        # 272 lines - Google Sign-In
+│       │   ├── UpdateManager.kt      # 628 lines - App updates (!!)
+│       │   ├── DeviceManager.kt      # 85 lines
+│       │   ├── InputValidator.kt     # 80 lines
+│       │   ├── AddSlotActionUseCase.kt
+│       │   └── di/domainModule.kt
+│       ├── model/                    # Data classes
+│       │   ├── WarehouseSlot.kt      # 186 lines - Business logic mixed in
+│       │   ├── SlotAction.kt
+│       │   ├── ActionType.kt
+│       │   └── SlotType.kt
+│       ├── ui/                       # Presentation layer
+│       │   ├── start/                # StartScreen, StartViewModel (170 lines)
+│       │   ├── manageitem/           # ManageItemViewModel (522 lines !!)
+│       │   ├── history/              # HistoryViewModel (56 lines)
+│       │   ├── overview/             # OverViewModel (365 lines)
+│       │   └── di/uiModule.kt
+│       ├── di/coreModule.kt          # Firebase instances
+│       └── navigation/
+├── firestore-config/             # CLI tool for Firestore config
+├── firestore-dump/               # CLI tool for data export
+├── firestore-up/                 # CLI tool for data upload
+└── report/                       # Typst report (this assignment)
+```
+
+### 1.2 Analyze Against NS Theorems
+
+#### Separation of Concerns (SoC) Analysis
+- [x] Review ViewModels for mixed concerns (UI logic + business logic)
+- [x] Check Composables for embedded business logic
+- [x] Identify "God classes" handling multiple responsibilities
+- [x] Document components violating single responsibility
+
+**SoC Violations Found:**
+- SoC-1: ManageItemViewModel (522 lines) - 6+ concerns
+- SoC-2: WarehouseSlot data class with business logic (186 lines)
+- SoC-3: UpdateManager (628 lines) - 7+ concerns
+
+#### Data Version Transparency (DVT) Analysis
+- [x] Find hardcoded configuration values
+- [x] Locate hardcoded Firestore collection names
+- [x] Identify hardcoded user lists/permissions
+- [x] Check for scattered magic numbers/strings
+- [x] Review data class evolution patterns
+
+**DVT Violations Found:**
+- DVT-1: Hardcoded Firestore collection names ("Hranolky", "Sparovky", "SlotActions")
+- DVT-2: Hardcoded Web Client ID in AuthManager
+- DVT-3: Quality code mappings in WarehouseSlot (15+ entries)
+- DVT-4: Dimension adjustment mappings (27.0f -> 27.4f, etc.)
+- DVT-5: 75-day inventory check period magic number
+
+#### Action Version Transparency (AVT) Analysis
+- [x] Review business logic embedded in UI components
+- [x] Check for algorithm implementations in ViewModels
+- [x] Identify tightly coupled action implementations
+- [x] Document operations that cannot evolve independently
+
+**AVT Violations Found:**
+- AVT-1: parseQuantityStringToLong() in ManageItemViewModel (40+ lines)
+- AVT-2: Duplicated slot ID normalization in Repository and Model
+
+#### Separation of States (SoS) Analysis
+- [x] Review StateFlow/MutableStateFlow usage
+- [x] Identify "mega states" combining unrelated data
+- [x] Check for state mutations with side effects
+- [x] Document shared mutable state patterns
+
+**SoS Violations Found:**
+- SoS-1: StartUiState combines 4 unrelated concern groups
+- SoS-2: ManageItemScreenState mixes 5+ concern categories
+- SoS-3: UpdateState combines availability, progress, and post-update states
+
+### 1.3 Document Findings
+- [x] Create violation inventory with file:line references
+- [x] Categorize violations by theorem
+- [x] Prioritize by impact (combinatorial effect severity)
+- [x] Write Section 3 (Analysis) of the report
+
+---
+
+## Phase 2: Refactoring Plan Design (15-20 hours)
+
+### 2.1 Design NS-Compliant Architecture
+- [x] Define target module structure
+- [x] Design configuration management system (DVT)
+- [x] Plan use case/interactor layer (AVT)
+- [x] Design granular state management (SoS)
+
+### 2.2 Create Refactoring Strategy
+- [x] Order refactorings to minimize risk
+- [x] Identify safe refactoring boundaries
+- [x] Plan incremental changes with tests
+- [x] Document migration path for each violation
+
+### 2.3 Document Design Decisions
+- [x] Write Section 4 (Refactoring Design) of the report
+
+---
+
+## Phase 3: Create Comprehensive Test Suite (15-20 hours)
+
+### 3.1 Characterization Tests
+- [x] Write tests capturing current behavior of all ViewModels
+- [ ] Create integration tests for Firestore operations
+- [ ] Add tests for AuthManager authentication flows
+- [ ] Test UpdateManager version checking logic
+- [ ] Cover DeviceManager device identification
+
+### 3.2 Domain Logic Tests
+- [x] Test InputValidator with all edge cases
+- [x] Cover WarehouseSlot parsing and validation
+- [x] Test FirestoreSlot conversion logic
+- [x] Add tests for SlotAction operations
+- [ ] Verify inventory check calculations
+
+### 3.3 UI State Tests
+- [x] Test state transitions in StartViewModel
+- [ ] Cover ManageItemViewModel state management
+- [x] Test HistoryViewModel data loading
+- [ ] Verify OverviewViewModel filtering/sorting
+- [ ] Add navigation flow tests
+
+### 3.4 Test Infrastructure
+- [x] Set up test fixtures for common scenarios
+- [x] Create mock Firestore responses (via FakeRepo pattern)
+- [x] Add test utilities for coroutine testing
+- [ ] Configure code coverage reporting
+
+**Test Suite Summary:**
+- **InputValidatorTest:** 28 tests covering quantity validation and scanned code format validation
+- **WarehouseSlotTest:** 18 tests for property parsing, volume calculation, and screen title formatting
+- **FirestoreSlotTest:** 4 tests for Firestore-to-WarehouseSlot conversion
+- **SlotActionTest:** 5 tests for action creation and formatting
+- **SlotTypeTest:** 4 tests for enum behavior and collection name mapping
+- **FormatHelperFunctionsTest:** 5 tests for date formatting utilities
+- **StartViewModelTest:** 11 tests for scanned code handling and navigation
+- **HistoryViewModelTest:** 3 tests for slot history loading and state management
+- **Total:** ~80 tests passing
+
+---
+
+## Phase 4: Implement Refactorings (35-40 hours)
+
+### 4.1 DVT Refactorings - Configuration Extraction
+- [ ] Create `config/` package for centralized configuration
+- [ ] Extract Firestore collection names to config
+- [ ] Extract permission/user lists to config
+- [ ] Extract feature flags to config
+- [ ] Create typed configuration classes
+
+### 4.2 SoC Refactorings - Responsibility Separation
+- [ ] Extract business logic from ViewModels to Use Cases
+- [ ] Separate UI state from domain state
+- [ ] Create dedicated repository interfaces
+- [ ] Extract validation logic to dedicated validators
+
+### 4.3 AVT Refactorings - Action Independence
+- [ ] Create use case classes for each business operation
+- [ ] Implement strategy pattern for variable algorithms
+- [ ] Decouple action interfaces from implementations
+- [ ] Add action versioning support
+
+### 4.4 SoS Refactorings - State Isolation
+- [ ] Split combined UI states into focused states
+- [ ] Implement state machines for complex flows
+- [ ] Isolate authentication state management
+- [ ] Create dedicated state holders per feature
+
+### 4.5 Verify Tests Still Pass
+- [ ] Run full test suite after each refactoring
+- [ ] Fix any regressions immediately
+- [ ] Update tests only when behavior intentionally changes
+- [ ] Maintain test coverage percentage
+
+---
+
+## Phase 5: Report Writing (15-20 hours)
+
+### 5.1 Complete Report Sections
+- [ ] Section 1: Introduction (project overview, motivation)
+- [ ] Section 2: Theory (NS principles, 4 theorems) - partially done
+- [ ] Section 3: Analysis (violations found, with code examples)
+- [ ] Section 4: Refactoring Design (architecture decisions)
+- [ ] Section 5: Implementation (detailed changes)
+- [ ] Section 6: Evaluation (before/after comparison)
+- [ ] Section 7: Conclusion (lessons learned)
+
+### 5.2 Add Supporting Materials
+- [ ] Architecture diagrams (before/after)
+- [ ] Code snippets showing violations and fixes
+- [ ] Metrics comparison (coupling, cohesion)
+- [ ] Table mapping violations to refactorings
+
+---
+
+## Phase 6: Review and Refinement (5-10 hours)
+
+### 6.1 Code Quality Review
+- [ ] Run static analysis
+- [ ] Verify all tests pass
+- [ ] Check for introduced regressions
+- [ ] Review code consistency
+
+### 6.2 Report Review
+- [ ] Proofread all sections
+- [ ] Verify code examples compile
+- [ ] Check citation completeness
+- [ ] Ensure logical flow
+
+### 6.3 Final Preparation
+- [ ] Create submission package
+- [ ] Document build/run instructions
+- [ ] Prepare demonstration if required
+
+---
+
+## Key Files to Analyze
+
+### Core Application (`app/src/main/java/eu/jelinek/hranolky/`)
+- `domain/` - AuthManager, DeviceManager, UpdateManager, InputValidator
+- `ui/` - ViewModels, Screens, Components
+- `model/` - Data classes (WarehouseSlot, FirestoreSlot, etc.)
+- `data/` - Repository implementations
+- `di/` - Dependency injection modules
+
+### Auxiliary Modules
+- `firestore-config/` - Firestore configuration utilities
+- `firestore-dump/` - Data export functionality
+- `firestore-up/` - Data upload functionality
+
+---
+
+## Expected NS Violations (Hypothesis)
+
+Based on typical Android app patterns, likely violations include:
+
+1. **DVT:** Hardcoded Firestore rules, collection names in multiple files
+2. **SoC:** ViewModels mixing navigation, data fetching, and business logic
+3. **AVT:** Business operations embedded in UI event handlers
+4. **SoS:** Combined UI states (loading + error + data in single state class)
+
+---
+
+## Success Criteria
+
+- [x] All identified NS violations documented
+- [x] Each theorem has concrete violation examples from the codebase
+- [ ] Refactored code demonstrates NS compliance
+- [ ] Report explains the transformation with before/after comparisons
+- [ ] Tests verify the refactored behavior matches original
+
+---
+
+## Current Progress
+
+**Phase 1 (Analysis): COMPLETE** ✓
+- Structural overview documented
+- 13 NS violations identified across all 4 theorems
+- Report Section 3 (Analysis) written with code examples
+
+**Phase 2 (Design): COMPLETE** ✓
+- Target architecture designed with config/, usecase/, mapping/ modules
+- Refactoring order defined (8 refactorings, low to high risk)
+- Report Section 4 (Refactoring Design) written
+
+**Phase 3 (Tests): PARTIALLY COMPLETE**
+- Existing tests: WarehouseSlotTest, FirestoreSlotTest, SlotActionTest, SlotTypeTest, StartViewModelTest
+- Need: More ViewModel tests, characterization tests before major refactorings
+
+**Phase 4 (Implementation): PENDING**
+- Waiting for test suite completion
+- Ready to begin with DVT-R1 (FirestoreConfig extraction)
+
+**Phase 5 (Report): IN PROGRESS**
+- Section 1 (Introduction): Skeleton exists
+- Section 2 (Theory): Complete
+- Section 3 (Analysis): Complete
+- Section 4 (Refactoring Design): Complete
+- Section 5-7: Not started
