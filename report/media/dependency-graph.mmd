@@ -1,0 +1,160 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#f9f9f9', 'primaryTextColor': '#333', 'primaryBorderColor': '#666', 'lineColor': '#666'}}}%%
+graph TB
+    subgraph External["External Dependencies"]
+        Firebase[(Firebase Firestore)]
+        FirebaseAuth[(Firebase Auth)]
+        GoogleSignIn["Google Sign-In"]
+        SheetDB["SheetDB API"]
+        FTP["FTP Server"]
+    end
+
+    subgraph DI["Dependency Injection (Koin)"]
+        coreModule["coreModule\n• FirebaseFirestore"]
+        dataModule["dataModule\n• SlotRepository\n• DeviceRepository\n• AppConfigRepository\n• SheetDbRepository\n• FirebaseAuth"]
+        domainModule["domainModule\n• AuthManager\n• UpdateManager\n• DeviceManager\n• InputValidator\n• QuantityParser\n• CheckInventoryStatusUseCase\n• AddSlotActionUseCase\n• UndoSlotActionUseCase"]
+        uiModule["uiModule\n• StartViewModel\n• ManageItemViewModel\n• OverViewModel\n• HistoryViewModel"]
+    end
+
+    subgraph Config["config/ (DVT-Compliant)"]
+        FirestoreConfig["FirestoreConfig"]
+        QualityConfig["QualityConfig"]
+        DimensionConfig["DimensionConfig"]
+        AppConfig["AppConfig"]
+    end
+
+    subgraph Data["Data Layer"]
+        SlotRepository["«interface»\nSlotRepository"]
+        SlotRepositoryImpl["SlotRepositoryImpl"]
+        DeviceRepository["«interface»\nDeviceRepository"]
+        DeviceRepositoryImpl["DeviceRepositoryImpl"]
+        AppConfigRepository["«interface»\nAppConfigRepository"]
+        AppConfigRepositoryImpl["AppConfigRepositoryImpl"]
+        SheetDbRepository["«interface»\nSheetDbRepository"]
+        KtorSheetDbRepository["KtorSheetDbRepository"]
+    end
+
+    subgraph Domain["Domain Layer"]
+        subgraph Auth["auth/"]
+            AuthManager["AuthManager"]
+            AuthStates["AuthStates\n• AuthenticationStatus\n• SignInOperation\n• AuthError\n• CompositeAuthState"]
+        end
+
+        subgraph Update["update/"]
+            UpdateManager["UpdateManager"]
+            UpdateStates["UpdateStates\n• UpdateAvailability\n• DownloadState\n• InstallationState\n• PostUpdateState"]
+        end
+
+        subgraph UseCase["usecase/"]
+            AddSlotActionUseCase["AddSlotActionUseCase"]
+            UndoSlotActionUseCase["UndoSlotActionUseCase"]
+            CheckInventoryStatusUseCase["CheckInventoryStatusUseCase"]
+            SlotActionOperations["«interface»\nSlotActionOperation\nUndoSlotActionOperation"]
+            ExternalActionLogger["«interface»\nExternalActionLogger"]
+            SheetDbActionLogger["SheetDbActionLogger"]
+            NoOpExternalActionLogger["NoOpExternalActionLogger"]
+        end
+
+        InputValidator["InputValidator"]
+        QuantityParser["QuantityParser"]
+        DeviceManager["DeviceManager"]
+    end
+
+    subgraph Model["Model Layer"]
+        WarehouseSlot["WarehouseSlot"]
+        FirestoreSlot["FirestoreSlot"]
+        SlotAction["SlotAction"]
+        SlotType["SlotType"]
+        ActionType["ActionType"]
+    end
+
+    subgraph UI["UI Layer"]
+        subgraph ViewModels["ViewModels"]
+            StartViewModel["StartViewModel"]
+            ManageItemViewModel["ManageItemViewModel"]
+            OverViewModel["OverViewModel"]
+            HistoryViewModel["HistoryViewModel"]
+        end
+
+        subgraph Screens["Screens"]
+            StartScreen["StartScreen"]
+            ManageItemScreen["ManageItemScreen"]
+            OverviewScreen["OverviewScreen"]
+            HistoryScreen["HistoryScreen"]
+        end
+    end
+
+    %% DI Dependencies
+    dataModule --> coreModule
+    domainModule --> dataModule
+    uiModule --> domainModule
+
+    %% Interface Implementations
+    SlotRepositoryImpl -.implements.-> SlotRepository
+    DeviceRepositoryImpl -.implements.-> DeviceRepository
+    AppConfigRepositoryImpl -.implements.-> AppConfigRepository
+    KtorSheetDbRepository -.implements.-> SheetDbRepository
+    AddSlotActionUseCase -.implements.-> SlotActionOperations
+    UndoSlotActionUseCase -.implements.-> SlotActionOperations
+    SheetDbActionLogger -.implements.-> ExternalActionLogger
+    NoOpExternalActionLogger -.implements.-> ExternalActionLogger
+
+    %% Data Layer Dependencies
+    SlotRepositoryImpl --> Firebase
+    SlotRepositoryImpl --> FirestoreConfig
+    DeviceRepositoryImpl --> Firebase
+    AppConfigRepositoryImpl --> Firebase
+    KtorSheetDbRepository --> SheetDB
+
+    %% Domain Layer Dependencies
+    AuthManager --> FirebaseAuth
+    AuthManager --> GoogleSignIn
+    AuthManager --> AuthStates
+    UpdateManager --> AppConfigRepository
+    UpdateManager --> FTP
+    UpdateManager --> UpdateStates
+    DeviceManager --> DeviceRepository
+
+    %% UseCase Dependencies
+    AddSlotActionUseCase --> SlotRepository
+    AddSlotActionUseCase --> SheetDbRepository
+    AddSlotActionUseCase --> ExternalActionLogger
+    UndoSlotActionUseCase --> SlotRepository
+
+    %% ViewModel Dependencies
+    StartViewModel --> AuthManager
+    StartViewModel --> UpdateManager
+    StartViewModel --> SlotRepository
+    StartViewModel --> DeviceManager
+    StartViewModel --> InputValidator
+    ManageItemViewModel --> SlotRepository
+    ManageItemViewModel --> DeviceManager
+    ManageItemViewModel --> InputValidator
+    ManageItemViewModel --> QuantityParser
+    ManageItemViewModel --> CheckInventoryStatusUseCase
+    OverViewModel --> SlotRepository
+    HistoryViewModel --> SlotRepository
+
+    %% Screen to ViewModel
+    StartScreen --> StartViewModel
+    ManageItemScreen --> ManageItemViewModel
+    OverviewScreen --> OverViewModel
+    HistoryScreen --> HistoryViewModel
+
+    %% Model Dependencies
+    WarehouseSlot --> QualityConfig
+    WarehouseSlot --> DimensionConfig
+    SlotType --> FirestoreConfig
+    CheckInventoryStatusUseCase --> AppConfig
+
+    %% Data Layer uses Models
+    SlotRepositoryImpl --> WarehouseSlot
+    SlotRepositoryImpl --> FirestoreSlot
+    SlotRepositoryImpl --> SlotAction
+
+    classDef interface fill:#ffffcc,stroke:#999900
+    classDef config fill:#ccffcc,stroke:#009900
+    classDef external fill:#f0f0f0,stroke:#666
+
+    class SlotRepository,DeviceRepository,AppConfigRepository,SheetDbRepository,SlotActionOperations,ExternalActionLogger interface
+    class FirestoreConfig,QualityConfig,DimensionConfig,AppConfig config
+    class Firebase,FirebaseAuth,GoogleSignIn,SheetDB,FTP external

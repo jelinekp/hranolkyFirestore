@@ -1,0 +1,157 @@
+@startuml dependency-graph
+!theme plain
+skinparam linetype ortho
+skinparam packageBorderColor #666666
+skinparam packageBackgroundColor #f9f9f9
+
+title Hranolky Firestore - Component Dependency Graph
+
+package "External Services" <<External>> #f0f0f0 {
+    database Firebase as "Firebase\nFirestore"
+    database FirebaseAuth as "Firebase\nAuth"
+    cloud SheetDB as "SheetDB\nAPI"
+    cloud FTP as "FTP\nServer"
+}
+
+package "config/ (DVT-Compliant)" <<Config>> #ccffcc {
+    object FirestoreConfig
+    object QualityConfig
+    object DimensionConfig
+    object AppConfig
+}
+
+package "Data Layer" #e6f3ff {
+    interface SlotRepository <<interface>>
+    interface DeviceRepository <<interface>>
+    interface AppConfigRepository <<interface>>
+    interface SheetDbRepository <<interface>>
+
+    class SlotRepositoryImpl
+    class DeviceRepositoryImpl
+    class AppConfigRepositoryImpl
+    class KtorSheetDbRepository
+
+    SlotRepositoryImpl ..|> SlotRepository
+    DeviceRepositoryImpl ..|> DeviceRepository
+    AppConfigRepositoryImpl ..|> AppConfigRepository
+    KtorSheetDbRepository ..|> SheetDbRepository
+}
+
+package "Domain Layer" #fff2e6 {
+    package "auth/" {
+        class AuthManager
+        class AuthStates <<states>>
+    }
+
+    package "update/" {
+        class UpdateManager
+        class UpdateStates <<states>>
+    }
+
+    package "usecase/" {
+        interface SlotActionOperation <<interface>>
+        interface ExternalActionLogger <<interface>>
+
+        class AddSlotActionUseCase
+        class UndoSlotActionUseCase
+        class CheckInventoryStatusUseCase
+        class SheetDbActionLogger
+        class NoOpExternalActionLogger
+
+        AddSlotActionUseCase ..|> SlotActionOperation
+        UndoSlotActionUseCase ..|> SlotActionOperation
+        SheetDbActionLogger ..|> ExternalActionLogger
+        NoOpExternalActionLogger ..|> ExternalActionLogger
+    }
+
+    class InputValidator
+    class QuantityParser
+    class DeviceManager
+}
+
+package "Model Layer" #ffe6e6 {
+    class WarehouseSlot
+    class FirestoreSlot
+    class SlotAction
+    enum SlotType
+    enum ActionType
+}
+
+package "UI Layer" #e6ffe6 {
+    package "ViewModels" {
+        class StartViewModel
+        class ManageItemViewModel
+        class OverViewModel
+        class HistoryViewModel
+    }
+
+    package "Screens" {
+        class StartScreen <<Composable>>
+        class ManageItemScreen <<Composable>>
+        class OverviewScreen <<Composable>>
+        class HistoryScreen <<Composable>>
+    }
+}
+
+' Data Layer External Dependencies
+SlotRepositoryImpl --> Firebase
+DeviceRepositoryImpl --> Firebase
+AppConfigRepositoryImpl --> Firebase
+KtorSheetDbRepository --> SheetDB
+
+' Data Layer Config Dependencies
+SlotRepositoryImpl ..> FirestoreConfig
+SlotType ..> FirestoreConfig
+
+' Domain Layer Dependencies
+AuthManager --> FirebaseAuth
+AuthManager --> AuthStates
+UpdateManager --> AppConfigRepository
+UpdateManager --> FTP
+UpdateManager --> UpdateStates
+DeviceManager --> DeviceRepository
+
+' UseCase Dependencies
+AddSlotActionUseCase --> SlotRepository
+AddSlotActionUseCase --> SheetDbRepository
+AddSlotActionUseCase ..> ExternalActionLogger
+UndoSlotActionUseCase --> SlotRepository
+CheckInventoryStatusUseCase ..> AppConfig
+
+' Model Config Dependencies
+WarehouseSlot ..> QualityConfig
+WarehouseSlot ..> DimensionConfig
+
+' ViewModel Dependencies
+StartViewModel --> AuthManager
+StartViewModel --> UpdateManager
+StartViewModel --> SlotRepository
+StartViewModel --> DeviceManager
+StartViewModel --> InputValidator
+
+ManageItemViewModel --> SlotRepository
+ManageItemViewModel --> DeviceManager
+ManageItemViewModel --> InputValidator
+ManageItemViewModel --> QuantityParser
+ManageItemViewModel --> CheckInventoryStatusUseCase
+
+OverViewModel --> SlotRepository
+HistoryViewModel --> SlotRepository
+
+' Screen Dependencies
+StartScreen --> StartViewModel
+ManageItemScreen --> ManageItemViewModel
+OverviewScreen --> OverViewModel
+HistoryScreen --> HistoryViewModel
+
+legend right
+  |= Color |= Layer |
+  | <#f0f0f0> | External Services |
+  | <#ccffcc> | Configuration (DVT) |
+  | <#e6f3ff> | Data Layer |
+  | <#fff2e6> | Domain Layer |
+  | <#ffe6e6> | Model Layer |
+  | <#e6ffe6> | UI Layer |
+endlegend
+
+@enduml

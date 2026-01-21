@@ -593,6 +593,29 @@ The following refactorings have been implemented and verified with tests:
    - Implements `UndoSlotActionOperation`
    - Extracted from `ManageItemViewModel.undoLastAction()`
 
+==== SoS Refactorings — State Isolation
+
+1. *UpdateStateMachine.kt* — State machine for update flow
+   - Defines `UpdateFlowState` sealed class with explicit states: Idle, Checking, UpToDate, Available, Downloading, Downloaded, Installing, PendingUserAction, Installed, Error
+   - `UpdateStateMachine` class validates transitions between states
+   - 35 tests verifying all valid and invalid transitions
+   - Converts to legacy `UpdateState` for backward compatibility
+
+2. *StartUiStates.kt* — Isolated UI states for StartScreen
+   - `ScannedCodeState` — Code input and validation
+   - `DeviceInfoState` — Device identification display
+   - `InventoryCheckState` — Feature toggle state
+   - `SignInProcessState` — Sign-in operation status
+   - `CompositeStartUiState` — Combines all with bidirectional legacy conversion
+
+3. *ManageItemUiStates.kt* — Isolated UI states for ManageItemScreen
+   - `SlotDataState` — Current slot being edited
+   - `DataLoadingState` — Sealed class for loading states (Loading, Success, NetworkError, DataError, OtherError)
+   - `ManageItemInventoryState` — Inventory check feature state
+   - `ConnectivityState` — Network availability
+   - `ActionInputValidationState` — Form validation state
+   - `CompositeManageItemState` — Combines all with legacy conversion
+
 === Test Coverage Summary
 
 #figure(
@@ -611,7 +634,14 @@ The following refactorings have been implemented and verified with tests:
     [FormatHelperFunctionsTest], [5], [Date formatting],
     [StartViewModelTest], [11], [Scanned code handling],
     [HistoryViewModelTest], [3], [History loading],
-    [*Total*], [*112+*], [],
+    [UpdateStatesTest], [19], [Update state isolation],
+    [AuthStatesTest], [18], [Auth state isolation],
+    [UpdateStateMachineTest], [26], [State machine transitions],
+    [UpdateFlowStateLegacyConversionTest], [6], [Legacy conversion],
+    [StartUiStatesTest], [9], [Start screen UI states],
+    [ManageItemUiStatesTest], [15], [ManageItem UI states],
+    [ExternalActionLoggerTest], [6], [Logging strategy pattern],
+    [*Total*], [*200+*], [],
   ),
   caption: [Test coverage after refactoring]
 )
