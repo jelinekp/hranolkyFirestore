@@ -1,6 +1,8 @@
 package eu.jelinek.hranolky.model
 
 import android.util.Log
+import eu.jelinek.hranolky.config.DimensionConfig
+import eu.jelinek.hranolky.config.QualityConfig
 
 data class WarehouseSlot(
     val fullProductId: String,
@@ -37,20 +39,10 @@ data class WarehouseSlot(
         } else {
 
             val rawThickness = parts[2].toFloat()
-
-            val thickness = when (rawThickness) {
-                20.0f -> 20.0f
-                27.0f -> 27.4f
-                42.0f -> 42.4f
-                else -> rawThickness
-            }
+            val thickness = DimensionConfig.adjustThickness(rawThickness)
 
             val rawWidth = parts[3].toFloat()
-
-            val width = when (rawWidth) {
-                42.0f -> 42.4f
-                else -> rawWidth
-            }
+            val width = DimensionConfig.adjustWidth(rawWidth)
 
             val length = parts[4].toInt()
 
@@ -82,27 +74,7 @@ data class WarehouseSlot(
     }
 
     fun getFullQualityName(): String {
-        return when (this.quality) {
-            null -> ""
-            "DUB-A|A" -> "DUB A/A"
-            "DUB-A|B" -> "DUB A/B"
-            "DUB-B|B" -> "DUB B/B"
-            "DUB-B|A" -> "DUB B/A"
-            "DUB-ABP" -> "DUB A/B-P"
-            "DUB-RST" -> "DUB RUSTIK"
-            "DUB-CNK" -> "DUB CINK"
-            "DUB-RSC" -> "DUB RUSTIK CINK"
-            "ZIR-ZIR" -> "ZIRBE"
-            "ZIR-BMS" -> "ZIRBE MS"
-            "ZIR-CNK" -> "ZIRBE CINK"
-            "ZBD-BDC" -> "ZIRBE+BUK/DUB/BUK CINK/DUB CINK"
-            "ZBD-CNK" -> "ZIRBE CINK+BUK/DUB/BUK CINK/DUB CINK"
-            "BUK-BUK" -> "BUK"
-            "BUK-CNK" -> "BUK CINK"
-            "JSN-JSN" -> "JASAN"
-            "KŠT-KŠT" -> "KAŠTAN"
-            else -> this.quality
-        }
+        return QualityConfig.getFullQualityName(this.quality)
     }
 
     fun getShortQualityName(): String {

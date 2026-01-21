@@ -3,6 +3,7 @@ import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import eu.jelinek.hranolky.config.FirestoreConfig
 import eu.jelinek.hranolky.data.SlotRepository
 import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.FirestoreSlot
@@ -68,7 +69,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
 
         val listenerRegistration = firestoreDb.collection(collectionName)
             .document(normalizedId)
-            .collection("SlotActions")
+            .collection(FirestoreConfig.Subcollections.SLOT_ACTIONS)
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(10)
             .addSnapshotListener { querySnapshot, error ->
@@ -159,7 +160,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         )
 
         val actionDocRef = try {
-            docRef.collection("SlotActions").add(slotAction).await()
+            docRef.collection(FirestoreConfig.Subcollections.SLOT_ACTIONS).add(slotAction).await()
         } catch (e: Exception) {
             Log.e(TAG, "addSlotAction: Error logging slot action for $normalizedId", e)
             throw e
@@ -180,7 +181,7 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
         Log.d(TAG, "undoSlotAction: Undoing action $actionDocumentId for $normalizedId in $collectionName")
 
         val docRef = firestoreDb.collection(collectionName).document(normalizedId)
-        val actionDocRef = docRef.collection("SlotActions").document(actionDocumentId)
+        val actionDocRef = docRef.collection(FirestoreConfig.Subcollections.SLOT_ACTIONS).document(actionDocumentId)
 
         try {
             firestoreDb.runTransaction { transaction ->

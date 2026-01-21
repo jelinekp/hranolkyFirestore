@@ -1,6 +1,7 @@
 package eu.jelinek.hranolky.model
 
 import eu.jelinek.hranolky.R
+import eu.jelinek.hranolky.config.FirestoreConfig
 
 enum class SlotType {
     Beam, Jointer;
@@ -21,8 +22,8 @@ enum class SlotType {
 
     fun toFirestoreCollectionName(): String {
         return when (this) {
-            Beam -> "Hranolky"
-            Jointer -> "Sparovky"
+            Beam -> FirestoreConfig.Collections.BEAMS
+            Jointer -> FirestoreConfig.Collections.JOINTERS
         }
     }
 

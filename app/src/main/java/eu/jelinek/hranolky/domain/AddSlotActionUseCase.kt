@@ -20,8 +20,21 @@ class AddSlotActionUseCase(
     private val slotRepository: SlotRepository,
     private val sheetDbRepository: SheetDbRepository,
     private val inputValidator: InputValidator
-) {
+) : SlotActionOperation {
+
+    /**
+     * Operator invoke for backward compatibility
+     */
     suspend operator fun invoke(
+        fullSlotId: String,
+        slot: WarehouseSlot,
+        actionType: ActionType,
+        quantity: String,
+        currentQuantity: Long,
+        deviceId: String
+    ): Result<AddSlotActionResult> = execute(fullSlotId, slot, actionType, quantity, currentQuantity, deviceId)
+
+    override suspend fun execute(
         fullSlotId: String,
         slot: WarehouseSlot,
         actionType: ActionType,

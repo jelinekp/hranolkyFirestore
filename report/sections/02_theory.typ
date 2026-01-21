@@ -44,7 +44,26 @@ If you cannot write a unit test for a piece of functionality without instantiati
 
 *Violation example in hranolky-firestore:*
 ```kotlin
-// TODO find an example in my app
+// ManageItemViewModel.kt (522 lines) handles 6+ concerns:
+class ManageItemViewModel(...) : AndroidViewModel(application) {
+    // Concern 1: Device identification
+    private fun getDeviceId(): String { ... }
+
+    // Concern 2: Quantity parsing (40+ lines)
+    private fun parseQuantityStringToLong(quantityStr: String): Result<Long> { ... }
+
+    // Concern 3: Inventory date calculations
+    private fun checkInventoryDone() { ... }
+
+    // Concern 4: SharedPreferences access
+    private val sharedPreferences by lazy { ... }
+
+    // Concern 5: Navigation coordination
+    private val _navigateToAnotherItem = MutableSharedFlow<String>()
+
+    // Concern 6: Undo action management
+    fun undoLastAction(undoableAction: UndoableAction) { ... }
+}
 ```
 
 === Data Version Transparency (DVT)

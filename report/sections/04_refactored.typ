@@ -457,3 +457,79 @@ After refactoring, the codebase will exhibit:
 - *Configuration centralization:* Single source for Firestore paths, business rules
 - *Type-safe states:* Sealed classes prevent invalid state combinations
 - *Linear change propagation:* Adding a quality code requires editing one file
+
+== Implementation Status
+
+=== Completed Refactorings
+
+The following refactorings have been implemented and verified with tests:
+
+==== DVT Refactorings — Configuration Extraction
+
+1. *FirestoreConfig.kt* — Centralized Firestore collection names and paths
+   - `COLLECTION_BEAMS`, `COLLECTION_JOINTERS` constants
+   - `SUBCOLLECTION_ACTIONS` constant
+   - Used by `SlotType` enum and `SlotRepositoryImpl`
+
+2. *AppConfig.kt* — Application-wide settings
+   - Inventory check stale period (75 days)
+   - Future: feature flags, timeouts
+
+3. *QualityConfig.kt* — Quality code display name mappings
+   - 18 quality code mappings (DUB-A|A → "DUB A/A", etc.)
+   - Used by `WarehouseSlot.getFullQualityName()`
+
+4. *DimensionConfig.kt* — Dimension adjustment rules
+   - Thickness adjustments (27mm → 27.4mm, 42mm → 42.4mm)
+   - Width adjustments (42mm → 42.4mm)
+   - Used by `WarehouseSlot.parsePropertiesFromProductId()`
+
+==== SoC Refactorings — Responsibility Separation
+
+1. *CheckInventoryStatusUseCase.kt* — Inventory status checking logic
+   - Extracted from `ManageItemViewModel.checkInventoryDone()`
+   - 17 unit tests covering all edge cases
+
+2. *QuantityParser.kt* — Quantity input parsing
+   - Extracted from `ManageItemViewModel.parseQuantityStringToLong()`
+   - Supports simple numbers, sums (50+30+20), item code detection
+   - 18 unit tests covering parsing scenarios
+
+==== AVT Refactorings — Action Independence
+
+1. *SlotActionOperations.kt* — Interfaces for slot operations
+   - `SlotActionOperation` interface for adding actions
+   - `UndoSlotActionOperation` interface for undoing actions
+   - Enables future algorithm versioning
+
+2. *AddSlotActionUseCase* — Now implements `SlotActionOperation`
+   - Backward-compatible `invoke` operator maintained
+   - Interface allows alternative implementations
+
+3. *UndoSlotActionUseCase.kt* — Dedicated undo operation
+   - Implements `UndoSlotActionOperation`
+   - Extracted from `ManageItemViewModel.undoLastAction()`
+
+=== Test Coverage Summary
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Test Class*], [*Tests*], [*Coverage*],
+    [QuantityParserTest], [18], [All parsing scenarios],
+    [CheckInventoryStatusUseCaseTest], [17], [All inventory check scenarios],
+    [InputValidatorTest], [28], [Quantity validation, code validation],
+    [WarehouseSlotTest], [18], [Property parsing, volume calculation],
+    [FirestoreSlotTest], [4], [Firestore conversion],
+    [SlotActionTest], [5], [Action creation],
+    [SlotTypeTest], [4], [Enum behavior],
+    [FormatHelperFunctionsTest], [5], [Date formatting],
+    [StartViewModelTest], [11], [Scanned code handling],
+    [HistoryViewModelTest], [3], [History loading],
+    [*Total*], [*112+*], [],
+  ),
+  caption: [Test coverage after refactoring]
+)
+
