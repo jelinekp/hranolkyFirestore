@@ -54,19 +54,63 @@ hranolky-firestore/
 
 The following diagrams illustrate the structural changes from the original architecture to the refactored NS-compliant design.
 
-*Before Refactoring:*
-- ViewModels contained mixed concerns (business logic, UI state, navigation)
-- Configuration scattered across multiple files (magic strings, hardcoded values)
-- Model classes embedded parsing and display logic
-- Monolithic state classes combining unrelated concerns (UpdateState with 15+ fields)
+==== Before Refactoring
 
-*After Refactoring:*
-- ViewModels act as thin orchestrators, delegating to use cases
-- Configuration centralized in `config/` package (FirestoreConfig, QualityConfig, DimensionConfig, AppConfig)
-- Use cases encapsulate business logic (QuantityParser, CheckInventoryStatusUseCase)
-- States isolated by concern (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus)
+The original architecture exhibited several NS violations:
 
-The architecture diagrams are available as Mermaid and PlantUML files in the `report/media/` directory:
+#figure(
+  image("../media/architecture-before.png", width: 95%),
+  caption: [Original architecture showing NS violations: God classes (ManageItemViewModel: 522 lines, UpdateManager: 628 lines), business logic in data classes (WarehouseSlot: 186 lines), and hardcoded configuration values scattered across components.]
+) <fig-arch-before>
+
+Key issues in the original architecture:
+- *SoC Violations:* ManageItemViewModel (522 lines, 6+ concerns), UpdateManager (628 lines, 7+ concerns), WarehouseSlot with embedded parsing logic
+- *DVT Violations:* Hardcoded collection names ("Hranolky", "Sparovky"), quality mappings in WarehouseSlot, dimension adjustments scattered
+- *SoS Violations:* Monolithic state classes (StartUiState, ManageItemScreenState, UpdateState with 15+ fields)
+- *AVT Violations:* Business logic embedded directly in ViewModels, tight coupling between UI and domain operations
+
+==== After Refactoring
+
+The refactored architecture addresses all identified violations:
+
+#figure(
+  image("../media/architecture-after.png", width: 95%),
+  caption: [Refactored NS-compliant architecture with centralized configuration, use case layer for business logic, isolated state objects, and clear separation of concerns across all layers.]
+) <fig-arch-after>
+
+Architectural improvements:
+- *Configuration Layer:* Centralized config objects (FirestoreConfig, QualityConfig, DimensionConfig, AppConfig) address DVT violations
+- *Use Case Layer:* Extracted business logic (QuantityParser, CheckInventoryStatusUseCase, SlotActionOperations) enables independent evolution (AVT)
+- *Isolated States:* Granular state classes (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus) address SoS violations
+- *Thin ViewModels:* ViewModels delegate to use cases, acting as orchestrators rather than business logic containers (SoC)
+
+=== Component Dependency Graph
+
+The refactored system's component dependencies are visualized below. The diagram demonstrates:
+
+1. *Layer Separation:* Clear boundaries between UI, Domain, Data, and Configuration layers
+2. *DVT Compliance:* Centralized configuration components (green) used across layers
+3. *SoC Compliance:* Granular components with focused responsibilities (e.g., AuthManager, UpdateManager, use cases)
+4. *AVT Compliance:* Interface-based abstractions (SlotActionOperation, ExternalActionLogger) enable independent action evolution
+5. *Dependency Direction:* Dependencies flow from UI → Domain → Data → External Services, following clean architecture principles
+
+#figure(
+  image("../media/dependency-graph.png", width: 100%),
+  caption: [Component dependency graph showing refactored architecture with NS-compliant structure. Color legend: External Services (gray), Configuration/DVT (green), Data Layer (blue), Domain Layer (yellow), Model Layer (pink), UI Layer (light green).]
+) <fig-dependency-graph>
+
+The diagram highlights several key architectural improvements:
+
+- *Configuration Layer* (green): Four dedicated configuration components (FirestoreConfig, QualityConfig, DimensionConfig, AppConfig) centralize all data-version-dependent values, addressing DVT violations.
+
+- *Domain Layer* (yellow): Separated concerns with dedicated managers (AuthManager, UpdateManager, DeviceManager) and isolated state objects (AuthStates, UpdateStates). Use cases implement interface contracts (SlotActionOperation, ExternalActionLogger) for independent evolution.
+
+- *Data Layer* (blue): Repository interfaces with concrete implementations provide abstraction over external services, enabling testability and future data source changes.
+
+- *UI Layer* (light green): ViewModels delegate business logic to domain use cases, acting as thin coordinators between UI events and domain operations.
+
+The architecture diagrams are available as source files in the `report/media/` directory:
+- `dependency-graph.puml` — PlantUML source for component dependencies
 - `architecture-before.mmd` / `architecture-before.puml` — Original architecture
 - `architecture-after.mmd` / `architecture-after.puml` — Refactored architecture
 

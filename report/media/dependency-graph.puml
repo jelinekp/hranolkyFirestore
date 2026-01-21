@@ -1,5 +1,6 @@
 @startuml dependency-graph
 !theme plain
+allowmixing
 skinparam linetype ortho
 skinparam packageBorderColor #666666
 skinparam packageBackgroundColor #f9f9f9
@@ -7,17 +8,17 @@ skinparam packageBackgroundColor #f9f9f9
 title Hranolky Firestore - Component Dependency Graph
 
 package "External Services" <<External>> #f0f0f0 {
-    database Firebase as "Firebase\nFirestore"
-    database FirebaseAuth as "Firebase\nAuth"
-    cloud SheetDB as "SheetDB\nAPI"
-    cloud FTP as "FTP\nServer"
+    database "Firebase\nFirestore" as Firebase
+    database "Firebase\nAuth" as FirebaseAuth
+    cloud "SheetDB\nAPI" as SheetDB
+    cloud "FTP\nServer" as FTP
 }
 
-package "config/ (DVT-Compliant)" <<Config>> #ccffcc {
-    object FirestoreConfig
-    object QualityConfig
-    object DimensionConfig
-    object AppConfig
+package "Configuration (DVT)" <<Config>> #ccffcc {
+    component FirestoreConfig
+    component QualityConfig
+    component DimensionConfig
+    component AppConfig
 }
 
 package "Data Layer" #e6f3ff {
@@ -38,31 +39,25 @@ package "Data Layer" #e6f3ff {
 }
 
 package "Domain Layer" #fff2e6 {
-    package "auth/" {
-        class AuthManager
-        class AuthStates <<states>>
-    }
+    class AuthManager
+    class AuthStates <<states>>
 
-    package "update/" {
-        class UpdateManager
-        class UpdateStates <<states>>
-    }
+    class UpdateManager
+    class UpdateStates <<states>>
 
-    package "usecase/" {
-        interface SlotActionOperation <<interface>>
-        interface ExternalActionLogger <<interface>>
+    interface SlotActionOperation <<interface>>
+    interface ExternalActionLogger <<interface>>
 
-        class AddSlotActionUseCase
-        class UndoSlotActionUseCase
-        class CheckInventoryStatusUseCase
-        class SheetDbActionLogger
-        class NoOpExternalActionLogger
+    class AddSlotActionUseCase
+    class UndoSlotActionUseCase
+    class CheckInventoryStatusUseCase
+    class SheetDbActionLogger
+    class NoOpExternalActionLogger
 
-        AddSlotActionUseCase ..|> SlotActionOperation
-        UndoSlotActionUseCase ..|> SlotActionOperation
-        SheetDbActionLogger ..|> ExternalActionLogger
-        NoOpExternalActionLogger ..|> ExternalActionLogger
-    }
+    AddSlotActionUseCase ..|> SlotActionOperation
+    UndoSlotActionUseCase ..|> SlotActionOperation
+    SheetDbActionLogger ..|> ExternalActionLogger
+    NoOpExternalActionLogger ..|> ExternalActionLogger
 
     class InputValidator
     class QuantityParser
@@ -78,19 +73,15 @@ package "Model Layer" #ffe6e6 {
 }
 
 package "UI Layer" #e6ffe6 {
-    package "ViewModels" {
-        class StartViewModel
-        class ManageItemViewModel
-        class OverViewModel
-        class HistoryViewModel
-    }
+    class StartViewModel
+    class ManageItemViewModel
+    class OverViewModel
+    class HistoryViewModel
 
-    package "Screens" {
-        class StartScreen <<Composable>>
-        class ManageItemScreen <<Composable>>
-        class OverviewScreen <<Composable>>
-        class HistoryScreen <<Composable>>
-    }
+    class StartScreen <<Composable>>
+    class ManageItemScreen <<Composable>>
+    class OverviewScreen <<Composable>>
+    class HistoryScreen <<Composable>>
 }
 
 ' Data Layer External Dependencies

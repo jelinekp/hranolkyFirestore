@@ -24,6 +24,10 @@ The hranolky-firestore application is a native Kotlin Android application with t
 The application manages warehouse inventory for two product types: *Hranolky* (beams) and *Spárovky* (jointers).
 Users scan QR codes on inventory slots using Zebra TC200J terminals to track additions, removals, and inventory checks.
 
+The component structure and dependencies are visualized in @fig-dependency-graph (see Refactored System Design section),
+which shows the relationships between layers and external services. The following analysis identifies violations
+within this architecture that prevent the system from achieving NS-compliant evolvability.
+
 == Separation of Concerns (SoC) Violations <soc-violations>
 
 According to NS Theory, each software element should address exactly one concern.
