@@ -50,9 +50,7 @@ object LocalConfigDefaults {
      */
     val dimensionAdjustments: Map<Float, Float> = mapOf(
         27.0f to 27.4f,
-        32.0f to 32.4f,
-        42.0f to 42.4f,
-        52.0f to 52.5f
+        42.0f to 42.4f
     )
 
     /**
