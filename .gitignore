@@ -82,3 +82,5 @@ gradlew.bat
 # App icon
 hranolky_tablet.png
 
+report/*.pdf
+
