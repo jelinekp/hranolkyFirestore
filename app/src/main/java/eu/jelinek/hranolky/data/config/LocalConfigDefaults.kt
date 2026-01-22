@@ -1,7 +1,11 @@
 package eu.jelinek.hranolky.data.config
 
+import eu.jelinek.hranolky.domain.config.ConfigCache
+import eu.jelinek.hranolky.domain.config.ConfigChangeEvent
 import eu.jelinek.hranolky.domain.config.ConfigProvider
 import eu.jelinek.hranolky.domain.config.FirestoreCollectionConfig
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Local (compile-time) configuration defaults.
@@ -92,4 +96,21 @@ class LocalConfigProvider : ConfigProvider {
     }
 
     override fun isRemoteConfigLoaded(): Boolean = false
+
+    override suspend fun warmUp() {
+        // No-op for local config - already in memory
+    }
+
+    override fun observeConfigChanges(): Flow<ConfigChangeEvent> = emptyFlow()
+
+    override fun stopObservingChanges() {
+        // No-op for local config
+    }
+
+    override fun getCacheStats(): ConfigCache.CacheStats = ConfigCache.CacheStats(
+        hitCount = 0,
+        missCount = 0,
+        size = 4, // Always has 4 config entries
+        version = 0
+    )
 }

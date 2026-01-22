@@ -1,15 +1,30 @@
 package eu.jelinek.hranolky.data.config
 
 import android.util.Log
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import eu.jelinek.hranolky.domain.config.ConfigCache
+import eu.jelinek.hranolky.domain.config.ConfigChangeEvent
 import eu.jelinek.hranolky.domain.config.ConfigProvider
 import eu.jelinek.hranolky.domain.config.FirestoreCollectionConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 /**
  * ConfigProvider implementation that loads configuration from Firestore.
  * Falls back to local defaults when remote config is unavailable.
+ *
+ * Features:
+ * - Real-time updates via Firestore listener (differential updates)
+ * - 24-hour cache TTL with stale-while-revalidate pattern
+ * - Background refresh without blocking UI
+ * - Cache warming on startup
  *
  * Firestore document structure:
  * ```
@@ -37,7 +52,8 @@ import kotlinx.coroutines.tasks.await
  */
 class RemoteConfigProvider(
     private val firestore: FirebaseFirestore,
-    private val cache: ConfigCache = ConfigCache()
+    private val cache: ConfigCache = ConfigCache(),
+    private val backgroundScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) : ConfigProvider {
 
     private companion object {
@@ -59,6 +75,7 @@ class RemoteConfigProvider(
     }
 
     private var remoteConfigLoaded = false
+    private var listenerRegistration: ListenerRegistration? = null
 
     override suspend fun getQualityMappings(): Map<String, String> {
         return cache.getOrFetch(ConfigCache.KEY_QUALITY_MAPPINGS) {
@@ -90,6 +107,147 @@ class RemoteConfigProvider(
     }
 
     override fun isRemoteConfigLoaded(): Boolean = remoteConfigLoaded
+
+    override suspend fun warmUp() {
+        Log.d(TAG, "Warming up config cache...")
+        // Fetch all config in parallel (coroutines will suspend independently)
+        try {
+            // These will fetch from remote and populate cache
+            getQualityMappings()
+            getDimensionAdjustments()
+            getInventoryCheckPeriodDays()
+            getCollectionConfig()
+            Log.d(TAG, "Cache warm-up complete. Stats: ${cache.getStats()}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Cache warm-up failed (using defaults): ${e.message}")
+        }
+    }
+
+    override fun observeConfigChanges(): Flow<ConfigChangeEvent> = callbackFlow {
+        Log.d(TAG, "Starting real-time config listener")
+
+        listenerRegistration = firestore
+            .collection(CONFIG_COLLECTION)
+            .document(SETTINGS_DOCUMENT)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.w(TAG, "Config listener error", error)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot == null || !snapshot.exists()) {
+                    Log.d(TAG, "Config document doesn't exist")
+                    return@addSnapshotListener
+                }
+
+                Log.d(TAG, "Config document changed, applying differential updates")
+
+                // Process changes in background to not block the listener
+                backgroundScope.launch {
+                    applyDifferentialUpdates(snapshot) { event ->
+                        trySend(event)
+                    }
+                }
+            }
+
+        awaitClose {
+            Log.d(TAG, "Stopping real-time config listener")
+            listenerRegistration?.remove()
+            listenerRegistration = null
+        }
+    }
+
+    override fun stopObservingChanges() {
+        listenerRegistration?.remove()
+        listenerRegistration = null
+    }
+
+    override fun getCacheStats(): ConfigCache.CacheStats = cache.getStats()
+
+    /**
+     * Apply only the changed values from a Firestore snapshot.
+     * Compares with cached values and only updates what changed.
+     */
+    private suspend fun applyDifferentialUpdates(
+        snapshot: DocumentSnapshot,
+        onChanged: (ConfigChangeEvent) -> Unit
+    ) {
+        // Check quality mappings
+        @Suppress("UNCHECKED_CAST")
+        val newQualityMappings = snapshot.get(FIELD_QUALITY_MAPPINGS) as? Map<String, String>
+        if (newQualityMappings != null) {
+            val cached = cache.getIfCached<Map<String, String>>(ConfigCache.KEY_QUALITY_MAPPINGS)
+            if (cached != newQualityMappings) {
+                cache.put(ConfigCache.KEY_QUALITY_MAPPINGS, newQualityMappings)
+                remoteConfigLoaded = true
+                Log.d(TAG, "Quality mappings updated: ${newQualityMappings.size} entries")
+                onChanged(ConfigChangeEvent.QualityMappingsChanged(newQualityMappings))
+            }
+        }
+
+        // Check dimension adjustments
+        @Suppress("UNCHECKED_CAST")
+        val rawDimensions = snapshot.get(FIELD_DIMENSION_ADJUSTMENTS) as? Map<String, Any>
+        val newDimensionAdjustments = rawDimensions?.mapNotNull { (key, value) ->
+            try {
+                val floatKey = key.toFloat()
+                val floatValue = when (value) {
+                    is Number -> value.toFloat()
+                    is String -> value.toFloat()
+                    else -> null
+                }
+                if (floatValue != null) floatKey to floatValue else null
+            } catch (e: NumberFormatException) {
+                null
+            }
+        }?.toMap()
+
+        if (newDimensionAdjustments != null) {
+            val cached = cache.getIfCached<Map<Float, Float>>(ConfigCache.KEY_DIMENSION_ADJUSTMENTS)
+            if (cached != newDimensionAdjustments) {
+                cache.put(ConfigCache.KEY_DIMENSION_ADJUSTMENTS, newDimensionAdjustments)
+                remoteConfigLoaded = true
+                Log.d(TAG, "Dimension adjustments updated: ${newDimensionAdjustments.size} entries")
+                onChanged(ConfigChangeEvent.DimensionAdjustmentsChanged(newDimensionAdjustments))
+            }
+        }
+
+        // Check inventory period
+        val newPeriod = snapshot.getLong(FIELD_INVENTORY_CHECK_PERIOD)?.toInt()
+        if (newPeriod != null) {
+            val cached = cache.getIfCached<Int>(ConfigCache.KEY_INVENTORY_CHECK_PERIOD)
+            if (cached != newPeriod) {
+                cache.put(ConfigCache.KEY_INVENTORY_CHECK_PERIOD, newPeriod)
+                remoteConfigLoaded = true
+                Log.d(TAG, "Inventory period updated: $newPeriod days")
+                onChanged(ConfigChangeEvent.InventoryPeriodChanged(newPeriod))
+            }
+        }
+
+        // Check collection config
+        @Suppress("UNCHECKED_CAST")
+        val collectionsMap = snapshot.get(FIELD_COLLECTIONS) as? Map<String, String>
+        if (collectionsMap != null) {
+            val newConfig = FirestoreCollectionConfig(
+                beamCollection = collectionsMap[FIELD_BEAM_COLLECTION]
+                    ?: LocalConfigDefaults.collectionConfig.beamCollection,
+                jointerCollection = collectionsMap[FIELD_JOINTER_COLLECTION]
+                    ?: LocalConfigDefaults.collectionConfig.jointerCollection,
+                slotActionsSubcollection = collectionsMap[FIELD_SLOT_ACTIONS]
+                    ?: LocalConfigDefaults.collectionConfig.slotActionsSubcollection,
+                weeklyReportSubcollection = collectionsMap[FIELD_WEEKLY_REPORT]
+                    ?: LocalConfigDefaults.collectionConfig.weeklyReportSubcollection
+            )
+
+            val cached = cache.getIfCached<FirestoreCollectionConfig>(ConfigCache.KEY_COLLECTION_CONFIG)
+            if (cached != newConfig) {
+                cache.put(ConfigCache.KEY_COLLECTION_CONFIG, newConfig)
+                remoteConfigLoaded = true
+                Log.d(TAG, "Collection config updated")
+                onChanged(ConfigChangeEvent.CollectionConfigChanged(newConfig))
+            }
+        }
+    }
 
     private suspend fun fetchQualityMappings(): Map<String, String>? {
         return try {

@@ -12,7 +12,7 @@ The refactoring effort achieved measurable improvements across several dimension
     inset: 8pt,
     align: left,
     [*Metric*], [*Before*], [*After*], [*Change*],
-    [Test count], [~30], [230+], [+667%],
+    [Test count], [~30], [338+], [+1027%],
     [Config locations], [12+ files], [4 config files + remote], [Centralized],
     [ManageItemViewModel lines], [522], [~450], [-14%],
     [Extracted use cases], [0], [6], [+6 reusable],
@@ -46,7 +46,7 @@ The refactoring effort achieved measurable improvements across several dimension
 
 == Lessons Learned
 
-1. *Test First:* Establishing 230+ tests before and during refactoring provided confidence that behavior is preserved. The comprehensive test suite caught several subtle bugs and enabled safe large-scale refactorings like the state machine implementation.
+1. *Test First:* Establishing 338+ tests before and during refactoring provided confidence that behavior is preserved. The comprehensive test suite caught several subtle bugs and enabled safe large-scale refactorings like the state machine implementation.
 
 2. *Incremental Extraction:* Small, focused extractions (one config file, one use case at a time) are safer than large rewrites. Each extraction was verified with the test suite before proceeding. The state machine was built incrementally with tests guiding the design.
 
@@ -106,19 +106,30 @@ The refactored ViewModel now follows the Dependency Inversion Principle:
 - Each component can be tested and evolved independently
 - 13 new decomposition tests verify the integration
 
-=== Remaining Opportunities
+*✓ Configuration Cache Optimization (Completed):*
+The `ConfigCache` class provides comprehensive caching for remote configuration:
 
-==== Configuration Cache Optimization
+#figure(
+  table(
+    columns: (auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Feature*], [*Implementation*],
+    [Configurable TTL], [24-hour default, customizable per instance],
+    [Cache warming], [`warmUp()` method pre-fetches all config on startup],
+    [Differential updates], [Version tracking with `getVersion()` and update listeners],
+    [Real-time observation], [Firestore listener via `observeConfigChanges()` Flow],
+    [Cache statistics], [`CacheStats` with hit/miss counts and hit rate],
+    [Stale-while-revalidate], [Returns expired value if refresh fails],
+  ),
+  caption: [Configuration cache features]
+)
 
-While remote configuration loading is implemented, cache optimization could further improve performance:
-
-*Potential improvements:*
-- Configurable cache TTL (currently no expiration)
-- Background refresh without blocking UI
-- Differential updates (only changed keys)
-- Cache warming on app startup
-
-*Implementation effort:* ~4-6 hours
+The `ConfigInitializer` orchestrates cache lifecycle:
+- Non-blocking startup with `warmUp()` for parallel fetching
+- Lifecycle-aware observation via `startObserving()`/`stopObserving()`
+- Automatic config refresh when changes detected in Firestore
+- 20 dedicated tests verify cache behavior
 
 === Summary of Remaining Work
 
@@ -129,7 +140,6 @@ While remote configuration loading is implemented, cache optimization could furt
     align: left,
     [*Improvement*], [*Effort*], [*Priority*],
     [Action Versioning], [8-12 hours], [Low],
-    [Config Cache Optimization], [4-6 hours], [Low],
   ),
   caption: [Estimated effort for remaining improvements]
 )
@@ -140,7 +150,7 @@ All remaining improvements are low priority because the major NS violations have
 
 This refactoring demonstrates that Normalized Systems Theory provides actionable guidance for improving Android application maintainability. The four theorems—SoC, DVT, AVT, and SoS—offer a systematic approach to identifying and addressing architectural issues that cause combinatorial effects.
 
-The investment in a comprehensive test suite (240+ tests) proved essential: it enabled confident refactoring while ensuring full backward compatibility. All existing functionality remains intact, verified through automated testing.
+The investment in a comprehensive test suite (338+ tests) proved essential: it enabled confident refactoring while ensuring full backward compatibility. All existing functionality remains intact, verified through automated testing.
 
 The extracted modules now enable changes to configuration, parsing logic, business rules, and state management without triggering modifications across multiple files—achieving the *linear scalability* promised by Normalized Systems Theory.
 

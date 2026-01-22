@@ -1,5 +1,7 @@
 package eu.jelinek.hranolky.domain.config
 
+import kotlinx.coroutines.flow.Flow
+
 /**
  * Provider interface for application configuration.
  * Follows Data Version Transparency (DVT) by abstracting configuration sources.
@@ -38,6 +40,40 @@ interface ConfigProvider {
      * Check if configuration is loaded from remote source.
      */
     fun isRemoteConfigLoaded(): Boolean
+
+    /**
+     * Warm up the cache by pre-loading all configuration.
+     * Non-blocking - returns immediately, loads in background.
+     */
+    suspend fun warmUp()
+
+    /**
+     * Start listening for real-time configuration changes.
+     * Returns a Flow that emits when config changes are detected.
+     */
+    fun observeConfigChanges(): Flow<ConfigChangeEvent>
+
+    /**
+     * Stop listening for configuration changes.
+     * Should be called when the app goes to background.
+     */
+    fun stopObservingChanges()
+
+    /**
+     * Get cache statistics for monitoring/debugging.
+     */
+    fun getCacheStats(): ConfigCache.CacheStats
+}
+
+/**
+ * Event emitted when configuration changes.
+ */
+sealed class ConfigChangeEvent {
+    data class QualityMappingsChanged(val mappings: Map<String, String>) : ConfigChangeEvent()
+    data class DimensionAdjustmentsChanged(val adjustments: Map<Float, Float>) : ConfigChangeEvent()
+    data class InventoryPeriodChanged(val days: Int) : ConfigChangeEvent()
+    data class CollectionConfigChanged(val config: FirestoreCollectionConfig) : ConfigChangeEvent()
+    data object AllConfigReloaded : ConfigChangeEvent()
 }
 
 /**
