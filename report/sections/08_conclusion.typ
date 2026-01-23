@@ -79,4 +79,4 @@ For practitioners considering similar refactoring efforts, the key recommendatio
 3. Maintain backward compatibility through interfaces and delegation
 4. Use NS theorems as a systematic checklist for identifying violations
 
-The hranolky-firestore application is now better positioned for future evolution, with clear separation of concerns and centralized configuration that will reduce maintenance cost and defect risk.
+The *Beams and Jointers* (_Hranolky a Spárovky_) application is now better positioned for future evolution, with clear separation of concerns and centralized configuration that will reduce maintenance cost and defect risk.

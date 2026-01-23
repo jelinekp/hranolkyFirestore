@@ -63,7 +63,7 @@
 #pagebreak()
 
 // Content
-#include "sections/01_introduction.typ"
+#include "sections/01_executive_summary.typ"
 
 #set heading(numbering: "1.")
 #include "sections/02_theory.typ"

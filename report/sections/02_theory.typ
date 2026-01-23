@@ -42,7 +42,7 @@ changes to one concern require modifications to the entire component, creating u
 Each extracted module should be independently testable and deployable.
 If you cannot write a unit test for a piece of functionality without instantiating an entire ViewModel, SoC is likely violated.
 
-*Violation example in hranolky-firestore:*
+*Violation example in Beams and Jointers app:*
 ```kotlin
 // ManageItemViewModel.kt (522 lines) handles 6+ concerns:
 class ManageItemViewModel(...) : AndroidViewModel(application) {
