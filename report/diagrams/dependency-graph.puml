@@ -4,9 +4,15 @@ allowmixing
 skinparam linetype ortho
 skinparam packageBorderColor #666666
 skinparam packageBackgroundColor #f9f9f9
+skinparam nodesep 30
+skinparam ranksep 80
+skinparam defaultFontName DejaVu Sans
+skinparam defaultFontSize 13
+scale max 800 width
 
 title Hranolky Firestore - Component Dependency Graph
 
+' External Services Layer - Top
 package "External Services" <<External>> #f0f0f0 {
     database "Firebase\nFirestore" as Firebase
     database "Firebase\nAuth" as FirebaseAuth
@@ -14,6 +20,10 @@ package "External Services" <<External>> #f0f0f0 {
     cloud "FTP\nServer" as FTP
 }
 
+' Force vertical spacing
+Firebase -[hidden]down-> FirestoreConfig
+
+' Configuration Layer
 package "Configuration (DVT)" <<Config>> #ccffcc {
     component FirestoreConfig
     component QualityConfig
@@ -21,6 +31,9 @@ package "Configuration (DVT)" <<Config>> #ccffcc {
     component AppConfig
 }
 
+FirestoreConfig -[hidden]down-> SlotRepository
+
+' Data Layer
 package "Data Layer" #e6f3ff {
     interface SlotRepository <<interface>>
     interface DeviceRepository <<interface>>
@@ -38,12 +51,15 @@ package "Data Layer" #e6f3ff {
     KtorSheetDbRepository ..|> SheetDbRepository
 }
 
+SlotRepository -[hidden]down-> AuthManager
+
+' Domain Layer
 package "Domain Layer" #fff2e6 {
     class AuthManager
     class AuthStates <<states>>
-
     class UpdateManager
     class UpdateStates <<states>>
+    class DeviceManager
 
     interface SlotActionOperation <<interface>>
     interface ExternalActionLogger <<interface>>
@@ -51,19 +67,21 @@ package "Domain Layer" #fff2e6 {
     class AddSlotActionUseCase
     class UndoSlotActionUseCase
     class CheckInventoryStatusUseCase
+
     class SheetDbActionLogger
     class NoOpExternalActionLogger
+    class InputValidator
+    class QuantityParser
 
     AddSlotActionUseCase ..|> SlotActionOperation
     UndoSlotActionUseCase ..|> SlotActionOperation
     SheetDbActionLogger ..|> ExternalActionLogger
     NoOpExternalActionLogger ..|> ExternalActionLogger
-
-    class InputValidator
-    class QuantityParser
-    class DeviceManager
 }
 
+AuthManager -[hidden]down-> WarehouseSlot
+
+' Model Layer
 package "Model Layer" #ffe6e6 {
     class WarehouseSlot
     class FirestoreSlot
@@ -72,12 +90,20 @@ package "Model Layer" #ffe6e6 {
     enum ActionType
 }
 
-package "UI Layer" #e6ffe6 {
+WarehouseSlot -[hidden]down-> StartViewModel
+
+' UI Layer - ViewModels
+package "UI - ViewModels" #e6ffe6 {
     class StartViewModel
     class ManageItemViewModel
     class OverViewModel
     class HistoryViewModel
+}
 
+StartViewModel -[hidden]down-> StartScreen
+
+' UI Layer - Screens
+package "UI - Screens" #e6ffe6 {
     class StartScreen <<Composable>>
     class ManageItemScreen <<Composable>>
     class OverviewScreen <<Composable>>

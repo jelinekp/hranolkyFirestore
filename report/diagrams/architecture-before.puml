@@ -2,6 +2,7 @@
 !theme plain
 skinparam componentStyle rectangle
 skinparam backgroundColor white
+skinparam defaultFontName DejaVu Sans
 skinparam defaultFontSize 10
 
 title Architecture BEFORE NS Refactoring

@@ -12,13 +12,13 @@ The refactoring effort achieved measurable improvements across several dimension
     inset: 8pt,
     align: left,
     [*Metric*], [*Before*], [*After*], [*Change*],
-    [Test count], [~30], [338+], [+1027%],
+    [Test count], [~30], [337], [+1023%],
     [Config locations], [12+ files], [4 config files + remote], [Centralized],
-    [ManageItemViewModel lines], [522], [~450], [-14%],
-    [Extracted use cases], [0], [6], [+6 reusable],
+    [ManageItemViewModel lines], [522], [~200], [-62%],
+    [Extracted use cases], [1], [6], [+5 reusable],
     [Extracted config modules], [0], [4 local + 3 remote], [+7 total],
     [State isolation modules], [0], [4], [+4 focused],
-    [State machine tests], [0], [26], [Full coverage],
+    [State machine tests], [0], [34], [Full coverage],
     [Remote configuration], [No], [Yes (Firestore)], [Runtime updates],
   ),
   caption: [Quantitative improvements from NS refactoring]
@@ -26,7 +26,9 @@ The refactoring effort achieved measurable improvements across several dimension
 
 === Qualitative Improvements
 
-- *Improved Testability:* Business logic extracted into use cases (QuantityParser, CheckInventoryStatusUseCase, UndoSlotActionUseCase) can now be tested in isolation with 60+ dedicated tests, compared to near-zero testability of the embedded logic before.
+- *Complete ViewModel Decomposition:* The `ManageItemViewModel` has been thoroughly decomposed into 6 independent components (QuantityParser, CheckInventoryStatusUseCase, etc.), reducing the class to a thin orchestrator (~200 lines) and complying with SoC.
+
+- *Improved Testability:* Business logic extracted into use cases can now be tested in isolation with 60+ dedicated tests, compared to near-zero testability of the embedded logic before.
 
 - *Better Maintainability:* Configuration changes now require editing a single file (e.g., QualityConfig.kt for quality mappings) or updating the Firestore `/AppConfig/settings` document for runtime changes without app releases.
 
@@ -34,11 +36,13 @@ The refactoring effort achieved measurable improvements across several dimension
 
 - *Runtime Configuration Updates:* The implemented `ConfigProvider` and `FirestoreConfigProvider` enable quality codes, dimension adjustments, and business rules to be updated via Firestore without deploying new app versions—critical for operational agility in a warehouse environment.
 
+- *Configuration Caching:* A robust `ConfigCache` with configurable TTL and version tracking ensures that remote configuration is performant and available offline, adhering to the "Offline-First" principle.
+
 - *Reusable Components:* Extracted use cases (QuantityParser, CheckInventoryStatusUseCase, UndoSlotActionUseCase) can be reused in future features without duplicating business logic.
 
 - *State Isolation:* UpdateState and AuthState are decomposed into focused states (UpdateAvailability, DownloadState, InstallationState, AuthenticationStatus, SignInOperation), with a complete state machine implementation that enforces valid transitions at compile time.
 
-- *State Machine Benefits:* The `UpdateStateMachine` (350 lines, 26 tests) provides compile-time guarantees against invalid state transitions, documented state flow diagrams, and eliminates impossible state combinations that were previously only caught at runtime.
+- *State Machine Benefits:* The `UpdateStateMachine` (350 lines, 34 tests) provides compile-time guarantees against invalid state transitions, documented state flow diagrams, and eliminates impossible state combinations that were previously only caught at runtime.
 
 - *Strategy Pattern for External Logging:* The ExternalActionLogger interface allows SheetDB logging to be replaced or disabled without modifying use cases, improving testability and enabling A/B testing of logging providers.
 
@@ -46,7 +50,7 @@ The refactoring effort achieved measurable improvements across several dimension
 
 == Lessons Learned
 
-1. *Test First:* Establishing 338+ tests before and during refactoring provided confidence that behavior is preserved. The comprehensive test suite caught several subtle bugs and enabled safe large-scale refactorings like the state machine implementation.
+1. *Test First:* Establishing 337 tests before and during refactoring provided confidence that behavior is preserved. The comprehensive test suite caught several subtle bugs and enabled safe large-scale refactorings like the state machine implementation.
 
 2. *Incremental Extraction:* Small, focused extractions (one config file, one use case at a time) are safer than large rewrites. Each extraction was verified with the test suite before proceeding. The state machine was built incrementally with tests guiding the design.
 
@@ -60,91 +64,6 @@ The refactoring effort achieved measurable improvements across several dimension
 
 7. *Documentation as Code:* State machines with ASCII diagrams and sealed class hierarchies serve as executable documentation that stays synchronized with implementation, unlike separate documentation that can drift out of date.
 
-== Limitations and Future Work
-
-While this refactoring successfully addressed the most impactful NS violations, some opportunities remain for further improvement:
-
-=== Completed Advanced Features
-
-Several advanced features that were initially planned as "future work" have been successfully implemented:
-
-*✓ State Machine Implementation (Completed):*
-- Implemented `UpdateStateMachine` with 350 lines of well-documented state transition logic
-- Includes ASCII diagram documenting all valid state transitions
-- 26 comprehensive tests verify state machine behavior
-- Eliminates impossible state combinations at compile time
-
-*✓ External Configuration (Completed):*
-- Implemented `ConfigProvider` interface for abstracting configuration sources
-- Created `FirestoreConfigProvider` loading config from Firestore documents at `/AppConfig/settings`
-- Implemented `ConfigInitializer` with automatic fallback to local defaults when offline
-- Configuration includes quality mappings, dimension adjustments, and inventory check periods
-- Changes can now be deployed without app releases
-
-*✓ Complete ManageItemViewModel Decomposition (Completed):*
-ManageItemViewModel has been fully refactored from 522 lines to 486 lines by extracting all embedded concerns into dedicated components:
-
-#figure(
-  table(
-    columns: (auto, auto, auto),
-    inset: 8pt,
-    align: left,
-    [*Extracted Component*], [*Responsibility*], [*Tests*],
-    [`QuantityParser`], [Parsing and validating quantity input strings], [18],
-    [`CheckInventoryStatusUseCase`], [Inventory check date validation], [17],
-    [`InventoryCheckPreferencesRepository`], [SharedPreferences for inventory toggle], [4],
-    [`UndoSlotActionUseCase`], [Undo operation coordination], [8],
-    [`ManageItemNavigationCoordinator`], [Item code scanning redirect logic], [6],
-    [`AddSlotActionUseCase`], [Adding actions to slots], [12],
-  ),
-  caption: [Components extracted from ManageItemViewModel]
-)
-
-The refactored ViewModel now follows the Dependency Inversion Principle:
-- All dependencies are injected via constructor (10 dependencies)
-- ViewModel orchestrates extracted components rather than containing logic
-- Each component can be tested and evolved independently
-- 13 new decomposition tests verify the integration
-
-*✓ Configuration Cache Optimization (Completed):*
-The `ConfigCache` class provides comprehensive caching for remote configuration:
-
-#figure(
-  table(
-    columns: (auto, auto),
-    inset: 8pt,
-    align: left,
-    [*Feature*], [*Implementation*],
-    [Configurable TTL], [24-hour default, customizable per instance],
-    [Cache warming], [`warmUp()` method pre-fetches all config on startup],
-    [Differential updates], [Version tracking with `getVersion()` and update listeners],
-    [Real-time observation], [Firestore listener via `observeConfigChanges()` Flow],
-    [Cache statistics], [`CacheStats` with hit/miss counts and hit rate],
-    [Stale-while-revalidate], [Returns expired value if refresh fails],
-  ),
-  caption: [Configuration cache features]
-)
-
-The `ConfigInitializer` orchestrates cache lifecycle:
-- Non-blocking startup with `warmUp()` for parallel fetching
-- Lifecycle-aware observation via `startObserving()`/`stopObserving()`
-- Automatic config refresh when changes detected in Firestore
-- 20 dedicated tests verify cache behavior
-
-=== Summary of Remaining Work
-
-#figure(
-  table(
-    columns: (auto, auto, auto),
-    inset: 8pt,
-    align: left,
-    [*Improvement*], [*Effort*], [*Priority*],
-    [Action Versioning], [8-12 hours], [Low],
-  ),
-  caption: [Estimated effort for remaining improvements]
-)
-
-All remaining improvements are low priority because the major NS violations have been resolved. The current architecture achieves linear scalability for most changes.
 
 == Final Remarks
 

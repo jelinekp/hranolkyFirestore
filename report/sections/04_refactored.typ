@@ -59,7 +59,10 @@ The following diagrams illustrate the structural changes from the original archi
 The original architecture exhibited several NS violations:
 
 #figure(
-  image("../media/architecture-before.png", width: 95%),
+  pad(
+    x: -0.5cm,
+    image("../diagrams/svg/architecture-before.svg", width: calc.abs(105%))
+  ),
   caption: [Original architecture showing NS violations: God classes (ManageItemViewModel: 522 lines, UpdateManager: 628 lines), business logic in data classes (WarehouseSlot: 186 lines), and hardcoded configuration values scattered across components.]
 ) <fig-arch-before>
 
@@ -74,7 +77,10 @@ Key issues in the original architecture:
 The refactored architecture addresses all identified violations:
 
 #figure(
-  image("../media/architecture-after.png", width: 95%),
+  pad(
+    x: -1cm,
+    image("../diagrams/svg/architecture-after.svg", width: calc.abs(110%))
+  ),
   caption: [Refactored NS-compliant architecture with centralized configuration, use case layer for business logic, isolated state objects, and clear separation of concerns across all layers.]
 ) <fig-arch-after>
 
@@ -95,7 +101,10 @@ The refactored system's component dependencies are visualized below. The diagram
 5. *Dependency Direction:* Dependencies flow from UI → Domain → Data → External Services, following clean architecture principles
 
 #figure(
-  image("../media/dependency-graph.png", width: 100%),
+  pad(
+    x: -1cm,
+    image("../diagrams/svg/dependency-graph.svg", width: calc.abs(110%))
+  ),
   caption: [Component dependency graph showing refactored architecture with NS-compliant structure. Color legend: External Services (gray), Configuration/DVT (green), Data Layer (blue), Domain Layer (yellow), Model Layer (pink), UI Layer (light green).]
 ) <fig-dependency-graph>
 
@@ -131,7 +140,7 @@ Key structural changes:
   caption: [Structural changes summary]
 )
 
-== DVT Refactorings — Configuration Extraction
+== Implemented DVT Refactorings — Configuration Extraction
 
 === DVT-R1: Centralized Firestore Configuration
 
@@ -234,7 +243,47 @@ fun getFullQualityName(): String = QualityNameMapper.getDisplayName(quality)
   caption: [Quality mappings extracted to dedicated mapper]
 )
 
-== SoC Refactorings — Responsibility Separation
+=== DVT-R5: External Config Provider
+
+To enable runtime updates without app releases, a `ConfigProvider` interface abstracts configuration sources:
+
+#figure(
+```kotlin
+interface ConfigProvider {
+    suspend fun getQualityMappings(): Map<String, String>
+    suspend fun getDimensionAdjustments(): DimensionAdjustments
+    suspend fun getInventoryCheckPeriodDays(): Long
+}
+
+class FirestoreConfigProvider(
+    private val firestore: FirebaseFirestore
+) : ConfigProvider {
+    // Loads from /AppConfig/settings document
+}
+```,
+  caption: [ConfigProvider abstraction]
+)
+
+==== Configuration Cache Optimization
+
+Accessing remote configuration requires robust caching to ensure offline availability and responsiveness. The `ConfigCache` class implements:
+
+#figure(
+  table(
+    columns: (auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Feature*], [*Implementation*],
+    [Configurable TTL], [24-hour default, customizable per instance],
+    [Cache warming], [`warmUp()` method pre-fetches all config on startup],
+    [Differential updates], [Version tracking via `getVersion()` and listeners],
+    [Real-time observation], [Firestore listener via `observeConfigChanges()` Flow],
+    [Stale-while-revalidate], [Returns expired value if refresh fails],
+  ),
+  caption: [Configuration cache features]
+)
+
+== Implemented SoC Refactorings — Responsibility Separation
 
 === SoC-R1: Split ManageItemViewModel
 
@@ -352,7 +401,32 @@ class UpdateCoordinator(
   caption: [UpdateManager decomposed into focused classes]
 )
 
-== AVT Refactorings — Action Independence
+=== SoC-R4: Complete ManageItemViewModel Decomposition
+
+The ManageItemViewModel has been fully decomposed into dedicated components, reducing it from 522 lines to ~200 lines (orchestration only).
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: left,
+    [*Extracted Component*], [*Responsibility*], [*Tests*],
+    [`QuantityParser`], [Parsing and validating quantity input strings], [18],
+    [`CheckInventoryStatusUseCase`], [Inventory check date validation], [17],
+    [`InventoryCheckPreferencesRepository`], [SharedPreferences for inventory toggle], [4],
+    [`UndoSlotActionUseCase`], [Undo operation coordination], [8],
+    [`ManageItemNavigationCoordinator`], [Item code scanning redirect logic], [6],
+    [`AddSlotActionUseCase`], [Adding actions to slots], [12],
+  ),
+  caption: [Components extracted from ManageItemViewModel]
+)
+
+The refactored ViewModel now follows the Dependency Inversion Principle:
+- All dependencies are injected via constructor
+- ViewModel orchestrates extracted components rather than containing logic
+- 13 new decomposition tests verify the integration
+
+== Implemented AVT Refactorings — Action Independence
 
 === AVT-R1: Slot ID Normalization Use Case
 
@@ -474,7 +548,7 @@ class NoOpExternalActionLogger : ExternalActionLogger {
 - Testing is simplified with `NoOpExternalActionLogger`
 - Different logging targets (Google Sheets API, custom REST API) can be added
 
-== SoS Refactorings — State Isolation
+== Implemented SoS Refactorings — State Isolation
 
 === SoS-R1: Granular Start Screen States
 
@@ -548,145 +622,65 @@ fun UpdateState.canInstall(): Boolean = this is UpdateState.Downloading && progr
   caption: [Update state as sealed class hierarchy]
 )
 
-== Refactoring Order
+== Test Coverage Summary
 
-To minimize risk, refactorings will be applied in the following order:
-
-#figure(
-  table(
-    columns: (auto, auto, auto, auto),
-    inset: 8pt,
-    align: left,
-    [*Order*], [*Refactoring*], [*Risk*], [*Rationale*],
-    [1], [DVT-R1: FirestoreConfig], [Low], [Mechanical extraction, no behavior change],
-    [2], [DVT-R3: BusinessRules], [Low], [Constants extraction, easy to verify],
-    [3], [DVT-R4: QualityNameMapper], [Low], [Pure function extraction],
-    [4], [AVT-R1: NormalizeSlotIdUseCase], [Medium], [Removes duplication, needs testing],
-    [5], [SoC-R2: Pure WarehouseSlot], [Medium], [Extracts logic, changes API slightly],
-    [6], [SoC-R1: ManageItemViewModel], [High], [Core business logic extraction],
-    [7], [SoC-R3: Split UpdateManager], [Medium], [Large refactoring, good test coverage],
-    [8], [SoS-R1: Granular States], [Medium], [UI changes, manual testing needed],
-  ),
-  caption: [Refactoring order by risk level]
-)
-
-Each refactoring will be:
-1. Implemented in a focused commit
-2. Verified with existing tests
-3. Manually tested on a device before proceeding
-
-== Expected Outcomes
-
-After refactoring, the codebase will exhibit:
-
-- *Reduced file sizes:* ManageItemViewModel from 522 to ~200 lines
-- *Improved testability:* Each use case testable in isolation
-- *Configuration centralization:* Single source for Firestore paths, business rules
-- *Type-safe states:* Sealed classes prevent invalid state combinations
-- *Linear change propagation:* Adding a quality code requires editing one file
-
-== Implementation Status
-
-=== Completed Refactorings
-
-The following refactorings have been implemented and verified with tests:
-
-==== DVT Refactorings — Configuration Extraction
-
-1. *FirestoreConfig.kt* — Centralized Firestore collection names and paths
-   - `COLLECTION_BEAMS`, `COLLECTION_JOINTERS` constants
-   - `SUBCOLLECTION_ACTIONS` constant
-   - Used by `SlotType` enum and `SlotRepositoryImpl`
-
-2. *AppConfig.kt* — Application-wide settings
-   - Inventory check stale period (75 days)
-   - Future: feature flags, timeouts
-
-3. *QualityConfig.kt* — Quality code display name mappings
-   - 18 quality code mappings (DUB-A|A → "DUB A/A", etc.)
-   - Used by `WarehouseSlot.getFullQualityName()`
-
-4. *DimensionConfig.kt* — Dimension adjustment rules
-   - Thickness adjustments (27mm → 27.4mm, 42mm → 42.4mm)
-   - Width adjustments (42mm → 42.4mm)
-   - Used by `WarehouseSlot.parsePropertiesFromProductId()`
-
-==== SoC Refactorings — Responsibility Separation
-
-1. *CheckInventoryStatusUseCase.kt* — Inventory status checking logic
-   - Extracted from `ManageItemViewModel.checkInventoryDone()`
-   - 17 unit tests covering all edge cases
-
-2. *QuantityParser.kt* — Quantity input parsing
-   - Extracted from `ManageItemViewModel.parseQuantityStringToLong()`
-   - Supports simple numbers, sums (50+30+20), item code detection
-   - 18 unit tests covering parsing scenarios
-
-==== AVT Refactorings — Action Independence
-
-1. *SlotActionOperations.kt* — Interfaces for slot operations
-   - `SlotActionOperation` interface for adding actions
-   - `UndoSlotActionOperation` interface for undoing actions
-   - Enables future algorithm versioning
-
-2. *AddSlotActionUseCase* — Now implements `SlotActionOperation`
-   - Backward-compatible `invoke` operator maintained
-   - Interface allows alternative implementations
-
-3. *UndoSlotActionUseCase.kt* — Dedicated undo operation
-   - Implements `UndoSlotActionOperation`
-   - Extracted from `ManageItemViewModel.undoLastAction()`
-
-==== SoS Refactorings — State Isolation
-
-1. *UpdateStateMachine.kt* — State machine for update flow
-   - Defines `UpdateFlowState` sealed class with explicit states: Idle, Checking, UpToDate, Available, Downloading, Downloaded, Installing, PendingUserAction, Installed, Error
-   - `UpdateStateMachine` class validates transitions between states
-   - 35 tests verifying all valid and invalid transitions
-   - Converts to legacy `UpdateState` for backward compatibility
-
-2. *StartUiStates.kt* — Isolated UI states for StartScreen
-   - `ScannedCodeState` — Code input and validation
-   - `DeviceInfoState` — Device identification display
-   - `InventoryCheckState` — Feature toggle state
-   - `SignInProcessState` — Sign-in operation status
-   - `CompositeStartUiState` — Combines all with bidirectional legacy conversion
-
-3. *ManageItemUiStates.kt* — Isolated UI states for ManageItemScreen
-   - `SlotDataState` — Current slot being edited
-   - `DataLoadingState` — Sealed class for loading states (Loading, Success, NetworkError, DataError, OtherError)
-   - `ManageItemInventoryState` — Inventory check feature state
-   - `ConnectivityState` — Network availability
-   - `ActionInputValidationState` — Form validation state
-   - `CompositeManageItemState` — Combines all with legacy conversion
-
-=== Test Coverage Summary
+All 337 unit tests pass successfully with 0 failures and 0 ignored tests (execution time: 12.7s).
 
 #figure(
-  table(
-    columns: (auto, auto, auto),
-    inset: 8pt,
-    align: left,
-    [*Test Class*], [*Tests*], [*Coverage*],
-    [QuantityParserTest], [18], [All parsing scenarios],
-    [CheckInventoryStatusUseCaseTest], [17], [All inventory check scenarios],
-    [InputValidatorTest], [28], [Quantity validation, code validation],
-    [WarehouseSlotTest], [18], [Property parsing, volume calculation],
-    [FirestoreSlotTest], [4], [Firestore conversion],
-    [SlotActionTest], [5], [Action creation],
-    [SlotTypeTest], [4], [Enum behavior],
-    [FormatHelperFunctionsTest], [5], [Date formatting],
-    [StartViewModelTest], [11], [Scanned code handling],
-    [HistoryViewModelTest], [3], [History loading],
-    [UpdateStatesTest], [19], [Update state isolation],
-    [AuthStatesTest], [18], [Auth state isolation],
-    [UpdateStateMachineTest], [26], [State machine transitions],
-    [UpdateFlowStateLegacyConversionTest], [6], [Legacy conversion],
-    [StartUiStatesTest], [9], [Start screen UI states],
-    [ManageItemUiStatesTest], [15], [ManageItem UI states],
-    [ExternalActionLoggerTest], [6], [Logging strategy pattern],
-    [*Total*], [*200+*], [],
-  ),
-  caption: [Test coverage after refactoring]
+  text(size: 10pt)[
+    #table(
+      columns: (auto, auto, auto),
+      inset: 5pt,
+      align: left,
+      [*Test Class*], [*Tests*], [*Coverage*],
+
+      [*Domain Layer - Use Cases*], [], [],
+      [QuantityParserTest], [19], [Quantity parsing strategies],
+      [CheckInventoryStatusUseCaseTest], [13], [Inventory validation logic],
+      [InputValidatorTest], [28], [Input validation rules],
+      [ManageItemNavigationCoordinatorTest], [12], [Navigation coordination],
+      [SheetDbActionLoggerTest], [5], [External logging strategy],
+      [NoOpExternalActionLoggerTest], [1], [No-op logging strategy],
+
+      [*Domain Layer - Managers*], [], [],
+      [DeviceManagerTest], [8], [Device identification],
+
+      [*Domain Layer - State Machines*], [], [],
+      [UpdateStateMachineTest], [34], [Update flow transitions],
+      [AuthStateMachineTest], [25], [Auth flow transitions],
+      [UpdateStatesTest], [19], [Update state isolation],
+      [AuthStatesTest], [18], [Auth state isolation],
+
+      [*Domain Layer - Configuration*], [], [],
+      [ConfigCacheTest], [22], [Cache lifecycle and warming],
+      [LocalConfigProviderTest], [6], [Local config loading],
+
+      [*Data Layer*], [], [],
+      [InventoryCheckPreferencesRepositoryTest], [4], [SharedPreferences storage],
+      [FormatHelperFunctionsTest], [5], [Date formatting utilities],
+
+      [*Model Layer*], [], [],
+      [WarehouseSlotTest], [29], [Slot parsing and calculations],
+      [FirestoreSlotTest], [4], [Firestore conversions],
+      [SlotActionTest], [1], [Action creation],
+      [SlotTypeTest], [2], [Enum behavior],
+
+      [*UI Layer - ViewModels*], [], [],
+      [StartViewModelTest], [7], [Start screen orchestration],
+      [HistoryViewModelTest], [3], [History data loading],
+      [ManageItemViewModelDecompositionTest], [12], [ViewModel integration],
+
+      [*UI Layer - State Objects*], [], [],
+      [StartUiStatesTest], [9], [Start screen UI states],
+      [ManageItemUiStatesTest], [15], [ManageItem screen UI states],
+      [QuantityInputStateTest], [15], [Input state management],
+
+      [*UI Layer - Business Logic*], [], [],
+      [OverviewFilterSortingTest], [20], [Filter and sorting logic],
+
+      [*Total*], [*337*], [],
+    )
+  ],
+  caption: [Comprehensive test coverage after NS refactoring]
 )
 

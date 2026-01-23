@@ -1,50 +1,60 @@
-#!/bin/bash
-# Script to generate diagram images from PlantUML and Mermaid sources
-# Run this before compiling the Typst report
+#!/usr/bin/env bash
+  # bash
 
-set -e
+  cd diagrams
 
-MEDIA_DIR="$(cd "$(dirname "$0")/media" && pwd)"
-cd "$MEDIA_DIR"
+  set -euo pipefail
 
-echo "Generating diagrams in $MEDIA_DIR..."
-
-# Check for PlantUML
-if command -v plantuml &> /dev/null; then
-    echo "✓ Using system PlantUML"
-    plantuml -tpng *.puml
-elif command -v docker &> /dev/null; then
-    echo "✓ Using PlantUML via Docker"
-    docker run --rm -v "$MEDIA_DIR:/data" plantuml/plantuml:latest -tpng *.puml
-elif command -v java &> /dev/null; then
-    echo "✓ Using PlantUML via Java JAR"
-    PLANTUML_JAR="/tmp/plantuml.jar"
-    if [ ! -f "$PLANTUML_JAR" ]; then
-        echo "  Downloading PlantUML JAR..."
-        curl -sL https://github.com/plantuml/plantuml/releases/download/v1.2024.8/plantuml-1.2024.8.jar -o "$PLANTUML_JAR"
-    fi
-    java -jar "$PLANTUML_JAR" -tpng *.puml
-else
-    echo "❌ Error: PlantUML not available. Install PlantUML, Docker, or Java."
-    echo "   Debian/Ubuntu: sudo apt install plantuml"
-    echo "   Arch: sudo pacman -S plantuml"
-    echo "   macOS: brew install plantuml"
+  usage() {
+    echo "Usage: $0 svg|png"
     exit 1
-fi
+  }
 
-# Check for Mermaid CLI (optional)
-if command -v mmdc &> /dev/null; then
-    echo "✓ Generating Mermaid diagrams"
-    for mmd in *.mmd; do
-        if [ -f "$mmd" ]; then
-            basename="${mmd%.mmd}"
-            mmdc -i "$mmd" -o "${basename}.png" -b transparent
-        fi
-    done
-else
-    echo "⚠ Mermaid CLI not found (optional)"
-    echo "  Install: npm install -g @mermaid-js/mermaid-cli"
-fi
+  if [ $# -ne 1 ]; then usage; fi
+  fmt="$1"
+  if [ "$fmt" != "svg" ] && [ "$fmt" != "png" ]; then usage; fi
 
-echo "✓ Diagram generation complete!"
-ls -lh *.png 2>/dev/null || echo "No PNG files generated"
+  outdir="$fmt"
+  mkdir -p "$outdir"
+
+  # detect renderer
+  if command -v plantuml >/dev/null 2>&1; then
+    RENDER_CMD=(plantuml)
+  elif [ -n "${PLANTUML_JAR:-}" ] && [ -f "$PLANTUML_JAR" ]; then
+    RENDER_CMD=(java -jar "$PLANTUML_JAR")
+  elif [ -f "../plantuml.jar" ]; then
+    RENDER_CMD=(java -jar "../plantuml.jar")
+  else
+    echo "No plantuml found. Downloading plantuml.jar..."
+    PLANTUML_URL="https://github.com/plantuml/plantuml/releases/download/v1.2025.10/plantuml-1.2025.10.jar"
+    PLANTUML_PATH="../plantuml.jar"
+
+    if command -v curl >/dev/null 2>&1; then
+      curl -L "$PLANTUML_URL" -o "$PLANTUML_PATH"
+    elif command -v wget >/dev/null 2>&1; then
+      wget "$PLANTUML_URL" -O "$PLANTUML_PATH"
+    else
+      echo "Error: Neither curl nor wget found. Cannot download plantuml.jar"
+      exit 2
+    fi
+
+    echo "Downloaded plantuml.jar to $PLANTUML_PATH"
+    RENDER_CMD=(java -jar "$PLANTUML_PATH")
+  fi
+
+  count=0
+  while IFS= read -r -d '' file; do
+    name="$(basename "$file" .puml)"
+    out="$outdir/$name.$fmt"
+
+    if "${RENDER_CMD[@]}" --help >/dev/null 2>&1; then
+      "${RENDER_CMD[@]}" -t"$fmt" -pipe < "$file" > "$out"
+    else
+      "${RENDER_CMD[@]}" -t"$fmt" -pipe < "$file" > "$out"
+    fi
+
+    echo "Rendered: $file -> $out"
+    count=$((count+1))
+  done < <(find . -type f -name '*.puml' -print0)
+
+  echo "Done. Rendered $count file(s) into \`$outdir\`."

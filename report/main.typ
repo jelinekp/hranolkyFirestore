@@ -28,6 +28,7 @@
 
 #show raw: set text(font: "DejaVu Sans Mono", size: 8pt)
 #show figure.where(kind: raw): set figure(supplement: [Code])
+#show figure.caption: set text(size: 10pt, style: "italic")
 #show link: set text(fill: blue.darken(40%))
 #show outline.entry: set text(fill: blue.darken(50%))
 #show ref: set text(fill: blue.darken(40%))
