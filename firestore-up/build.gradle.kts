@@ -36,7 +36,7 @@ tasks.register<JavaExec>("upload") {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 // Create a fat JAR for easy running: build/libs/firestore-dump-all.jar

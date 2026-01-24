@@ -19,10 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.jelinek.hranolky.domain.update.UpdateState
 
 @Composable
 internal fun UpdateProgressBar(
-    updateState: eu.jelinek.hranolky.domain.UpdateState,
+    updateState: UpdateState,
     modifier: Modifier = Modifier
 ) {
     Column(

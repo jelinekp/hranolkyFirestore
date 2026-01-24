@@ -12,6 +12,7 @@ import android.os.Environment
 import android.util.Log
 import androidx.core.content.ContextCompat
 import eu.jelinek.hranolky.data.AppConfigRepository
+import eu.jelinek.hranolky.domain.update.UpdateState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -22,17 +23,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileInputStream
 
-data class UpdateState(
-    val isUpdateAvailable: Boolean = false,
-    val isDownloading: Boolean = false,
-    val isInstalling: Boolean = false,
-    val downloadProgress: Int = 0,
-    val latestVersion: String = "",
-    val latestVersionCode: Int = 0,
-    val releaseNotes: String = "",
-    val error: String? = null,
-    val justUpdated: Boolean = false // True if app just completed an update
-)
 
 class UpdateManager(private val appConfigRepository: AppConfigRepository) {
     private val _updateState = MutableStateFlow(UpdateState())

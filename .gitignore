@@ -37,9 +37,9 @@ google-services.json
 # Keystore files
 keystore.properties
 
-# Documentation files
-GOOGLE_SIGNIN_SETUP.md
-GEMINI.md
+# Documentation files (ignore all .md files except README.md)
+*.md
+!README.md
 
 # GitHub configuration
 .github/
@@ -61,17 +61,8 @@ app/src/main/res/mipmap-xxxhdpi/
 app/src/main/res/xml/
 app/src/test/java/eu/jelinek/hranolky/ExampleUnitTest.kt
 
-# Firestore module documentation
-firestore-dump/README.md
-firestore-up/BATCH_WRITING.md
-firestore-up/FIRESTORE_INDEXES_GUIDE.md
-firestore-up/IMPLEMENTATION_SUMMARY.md
-firestore-up/INDEXED_FIELDS_SUMMARY.md
-firestore-up/OPTIMIZATION_NOTES.md
+# Firestore module documentation (covered by *.md rule above)
 firestore-up/QUERY_EXAMPLES.kt
-firestore-up/QUICK_REFERENCE.md
-firestore-up/README.md
-firestore-up/src/main/kotlin/MigrationInstructions.md
 
 # Gradle properties and wrapper
 gradle.properties
@@ -82,3 +73,6 @@ gradlew.bat
 # App icon
 hranolky_tablet.png
 
+report/*.pdf
+report/*.jar
+report/diagrams/svg

@@ -2,9 +2,6 @@ package eu.jelinek.hranolky.ui.manageitem
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.SharedPreferences
-import android.icu.util.Calendar
-import android.preference.PreferenceManager
 import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
@@ -12,8 +9,14 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import eu.jelinek.hranolky.data.SlotRepository
+import eu.jelinek.hranolky.data.preferences.InventoryCheckPreferencesRepository
 import eu.jelinek.hranolky.domain.AddSlotActionUseCase
+import eu.jelinek.hranolky.domain.CheckInventoryStatusUseCase
 import eu.jelinek.hranolky.domain.InputValidator
+import eu.jelinek.hranolky.domain.QuantityParser
+import eu.jelinek.hranolky.domain.UndoSlotActionUseCase
+import eu.jelinek.hranolky.domain.navigation.ManageItemNavigationCoordinator
+import eu.jelinek.hranolky.domain.navigation.NavigationResult
 import eu.jelinek.hranolky.model.ActionType
 import eu.jelinek.hranolky.model.WarehouseSlot
 import eu.jelinek.hranolky.navigation.Screen
@@ -37,15 +40,31 @@ data class UndoableAction(
     val actionType: ActionType
 )
 
+/**
+ * ViewModel for managing individual warehouse slot items.
+ *
+ * This ViewModel has been refactored following the Separation of Concerns (SoC) principle:
+ * - QuantityParser: Handles quantity string parsing and validation
+ * - CheckInventoryStatusUseCase: Determines if inventory check is recent
+ * - InventoryCheckPreferencesRepository: Manages inventory check toggle persistence
+ * - UndoSlotActionUseCase: Handles undo operations
+ * - ManageItemNavigationCoordinator: Coordinates navigation to other items
+ * - AddSlotActionUseCase: Handles adding actions to slots
+ */
 class ManageItemViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val slotRepository: SlotRepository,
     private val addSlotActionUseCase: AddSlotActionUseCase,
-    private val inputValidator: InputValidator
+    private val inputValidator: InputValidator,
+    private val quantityParser: QuantityParser,
+    private val checkInventoryStatusUseCase: CheckInventoryStatusUseCase,
+    private val inventoryCheckPreferences: InventoryCheckPreferencesRepository,
+    private val undoSlotActionUseCase: UndoSlotActionUseCase,
+    private val navigationCoordinator: ManageItemNavigationCoordinator
 ) : AndroidViewModel(application) {
 
-    val TAG = "ManageItemViewModel"
+    private val TAG = "ManageItemViewModel"
 
     val fullSlotId: String? = savedStateHandle[Screen.ManageItemScreen.ID]
     private val _screenStateStream =
@@ -59,8 +78,8 @@ class ManageItemViewModel(
     private val _validationSharedFlowStream = MutableSharedFlow<AddActionValidationState>()
     val validationSharedFlowStream get() = _validationSharedFlowStream.asSharedFlow()
 
-    private val _navigateToAnotherItem = MutableSharedFlow<String>()
-    val navigateToAnotherItem = _navigateToAnotherItem.asSharedFlow()
+    // Navigation events delegated to coordinator
+    val navigateToAnotherItem = navigationCoordinator.navigateToAnotherItem
 
     // Undo snackbar events
     private val _undoSnackbarEvent = MutableSharedFlow<UndoableAction>()
@@ -73,14 +92,6 @@ class ManageItemViewModel(
     var quantityState = mutableStateOf("")
         private set
 
-    private companion object {
-        const val PREF_INVENTORY_CHECK_ENABLED = "inventory_check_enabled"
-    }
-
-    private val sharedPreferences: SharedPreferences by lazy {
-        PreferenceManager.getDefaultSharedPreferences(getApplication())
-    }
-
     fun onQuantityChanged(newQuantity: String) {
         quantityState.value = newQuantity
     }
@@ -92,59 +103,26 @@ class ManageItemViewModel(
         }
     }
 
+    /**
+     * Load inventory check setting from preferences repository (SoC extraction)
+     */
     private fun loadInventoryCheckSetting() {
-        val inventoryCheckEnabled =
-            sharedPreferences.getBoolean(PREF_INVENTORY_CHECK_ENABLED, false)
+        val inventoryCheckEnabled = inventoryCheckPreferences.isInventoryCheckEnabled()
         _screenStateStream.update {
             it.copy(isInventoryCheckEnabled = inventoryCheckEnabled)
         }
     }
 
+    /**
+     * Check if inventory has been verified recently using extracted use case (SoC extraction)
+     */
     private fun checkInventoryDone() {
         val slotActions = _screenStateStream.value.slot?.slotActions
-        if (slotActions.isNullOrEmpty()) {
-            _screenStateStream.update { it.copy(isInventoryCheckDone = false) }
-            Log.d(TAG, "checkInventoryDone: No slot actions found.")
-            return
-        }
+        val isInventoryCheckDone = checkInventoryStatusUseCase.isInventoryCheckDone(slotActions)
 
-        // Calculate the date 75 days ago
-        val calendar75DaysAgo = Calendar.getInstance()
-        calendar75DaysAgo.add(Calendar.DAY_OF_YEAR, -75)
-        val limitDate = calendar75DaysAgo.time // This is a java.util.Date
-
-        Log.d(TAG, "checkInventoryDone: Checking for INVENTORY_CHECK actions newer than $limitDate")
-
-        val recentInventoryCheckExists = slotActions.any { slotAction ->
-            // Assuming slotAction.action is a String that matches ActionType enum names
-            // And slotAction.timestamp is a com.google.firebase.Timestamp
-            if (slotAction.action == ActionType.INVENTORY_CHECK.toString() && slotAction.timestamp != null) {
-                val actionDate =
-                    slotAction.timestamp.toDate() // Convert Firebase Timestamp to java.util.Date
-                val isRecent = actionDate.after(limitDate)
-                if (isRecent) {
-                    Log.d(
-                        TAG,
-                        "checkInventoryDone: Found recent INVENTORY_CHECK action: $slotAction at $actionDate"
-                    )
-                }
-                isRecent
-            } else {
-                false
-            }
-        }
-
-        if (_screenStateStream.value.isInventoryCheckDone != recentInventoryCheckExists) {
-            _screenStateStream.update { it.copy(isInventoryCheckDone = recentInventoryCheckExists) }
-            Log.d(
-                TAG,
-                "checkInventoryDone: Updated isInventoryCheckDone to $recentInventoryCheckExists"
-            )
-        } else {
-            Log.d(
-                TAG,
-                "checkInventoryDone: isInventoryCheckDone state is already $recentInventoryCheckExists, no update."
-            )
+        if (_screenStateStream.value.isInventoryCheckDone != isInventoryCheckDone) {
+            _screenStateStream.update { it.copy(isInventoryCheckDone = isInventoryCheckDone) }
+            Log.d(TAG, "checkInventoryDone: Updated isInventoryCheckDone to $isInventoryCheckDone")
         }
     }
 
@@ -342,19 +320,21 @@ class ManageItemViewModel(
         }
     }
 
+    /**
+     * Undo a previously performed action using extracted use case (SoC extraction)
+     */
     fun undoLastAction(undoableAction: UndoableAction) {
         viewModelScope.launch {
-            try {
-                Log.d(TAG, "undoLastAction: Undoing action ${undoableAction.actionDocumentId}")
-                slotRepository.undoSlotAction(
-                    fullSlotId = undoableAction.fullSlotId,
-                    actionDocumentId = undoableAction.actionDocumentId,
-                    quantityChange = undoableAction.quantityChange
-                )
-                Log.d(TAG, "undoLastAction: Successfully undid action ${undoableAction.actionDocumentId}")
-            } catch (e: Exception) {
-                Log.e(TAG, "undoLastAction: Failed to undo action", e)
-                _errorSnackbarEvent.emit("Nepodařilo se vrátit změnu: ${e.message ?: "Chyba sítě"}")
+            val result = undoSlotActionUseCase.execute(
+                fullSlotId = undoableAction.fullSlotId,
+                actionDocumentId = undoableAction.actionDocumentId,
+                quantityChange = undoableAction.quantityChange
+            )
+
+            if (result.isFailure) {
+                val error = result.exceptionOrNull()
+                Log.e(TAG, "undoLastAction: Failed to undo action", error)
+                _errorSnackbarEvent.emit("Nepodařilo se vrátit změnu: ${error?.message ?: "Chyba sítě"}")
             }
         }
     }
@@ -413,56 +393,40 @@ class ManageItemViewModel(
         }
     }
 
+    /**
+     * Parses a quantity string using the extracted QuantityParser (SoC extraction).
+     * Handles item code detection and navigation via NavigationCoordinator.
+     */
     private fun parseQuantityStringToLong(quantityStr: String): Result<Long> {
-        if (quantityStr.isBlank()) {
-            return Result.failure(NumberFormatException("Množství nemůže být prázdné."))
-        }
-
-        // Handle simple numbers first
-        quantityStr.toLongOrNull()?.let {
-            if (it < 0) return Result.failure(NumberFormatException("Množství nemůže být záporné."))
-            return Result.success(it)
-        }
-
-        // Handle sums like "X+Y" or "X+Y+Z"
-        val parts = quantityStr.split('+')
-        if (parts.any { it.trim().isEmpty() }) { // Check for empty parts like "5++5" or "5+"
-            return Result.failure(NumberFormatException("Neplatný formát: prázdná část v součtu."))
-        }
-
-        if (parts.size > 1) {
-            var sum = 0L
-            for (part in parts) {
-                val trimmedPart = part.trim()
-                // Ensure part is not just whitespace if not caught by the above check
-                if (trimmedPart.isEmpty() && parts.size > 1) {
-                    return Result.failure(NumberFormatException("Neplatný formát: prázdná část v součtu."))
+        val parseResult = quantityParser.parse(
+            quantityStr = quantityStr,
+            itemCodeValidator = { itemCode ->
+                // Check if it's a valid item code for navigation
+                val result = navigationCoordinator.checkForItemCodeNavigation(
+                    scannedCode = itemCode,
+                    currentSlotId = fullSlotId
+                )
+                when (result) {
+                    is NavigationResult.NavigateToItem -> result.itemCode
+                    is NavigationResult.ContinueWithInput -> null
                 }
-                val number = trimmedPart.toLongOrNull()
-                    ?: return Result.failure(NumberFormatException("Neplatný formát čísla v části: '$trimmedPart'"))
-                if (number < 0) return Result.failure(NumberFormatException("Část součtu nemůže být záporná: '$trimmedPart'"))
-                sum += number
             }
-            return Result.success(sum)
-        }
+        )
 
-        // If it's not a number, check if it's a different item code
-        val itemCode = quantityStr.trim().uppercase()
-        val validatedItemCode = inputValidator.manipulateAndValidateItemCode(itemCode)
-
-        if (validatedItemCode != null) {
-            // It's a valid item code - trigger navigation
-            viewModelScope.launch {
-                Log.d(TAG, "parseQuantityStringToLong: Valid item code detected: $validatedItemCode. Triggering navigation.")
-                _navigateToAnotherItem.emit(validatedItemCode)
-                resetFields()
+        return when (parseResult) {
+            is QuantityParser.ParseResult.Success -> Result.success(parseResult.quantity)
+            is QuantityParser.ParseResult.Error -> Result.failure(NumberFormatException(parseResult.message))
+            is QuantityParser.ParseResult.ItemCodeDetected -> {
+                // Trigger navigation via coordinator
+                viewModelScope.launch {
+                    Log.d(TAG, "parseQuantityStringToLong: Item code detected: ${parseResult.itemCode}. Triggering navigation.")
+                    navigationCoordinator.navigateToItem(parseResult.itemCode)
+                    resetFields()
+                }
+                // Return a special error to indicate navigation is happening
+                Result.failure(NumberFormatException("Přesměrování na jinou položku..."))
             }
-            // Return a special error to indicate navigation is happening
-            return Result.failure(NumberFormatException("Přesměrování na jinou položku..."))
         }
-
-        // If it's not a simple number and not a valid sum or item code, it's an invalid format
-        return Result.failure(NumberFormatException("Neplatný formát množství."))
     }
 
 

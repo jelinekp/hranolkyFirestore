@@ -16,6 +16,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import eu.jelinek.hranolky.domain.auth.AuthState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
@@ -261,11 +262,4 @@ class AuthManager(
     }
 }
 
-data class AuthState(
-    val isSignedIn: Boolean = false,
-    val userEmail: String? = null,
-    val userName: String? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
 
