@@ -1,70 +1,29 @@
-= Current System Analysis
+= Case Study 1: Android Application Analysis
 
-This section analyzes the original codebase structure and identifies specific violations of Normalized Systems (NS) Theory.
-The analysis serves as the foundation for the refactoring work documented in the next section.
+This section analyzes the original codebase structure of the Android application and identifies specific violations of Normalized Systems (NS) Theory.
 
-== Application Domain
-
-#grid(
-  columns: (1fr, 40%),
-  column-gutter: 1.5em,
-  [
-    "Hranolky" (timber beams) are intermediate products used to manufacture "spárovky" (jointer boards), which are then used to produce solid wood furniture. The beams are cut from planks in a way that optimizes their placement into jointer boards. Because all wood defects such as cracks and knots must be removed, beams of various dimensions (length, width, thickness), wood species, and qualities are produced.
-
-    The existing ERP system only allows storing warehouse data in cubic meters with insufficient precision (maximum two decimal places). Additionally, the ERP system is slow and inflexible, so data is stored in aggregate form for a given wood species and quality. Individual item dimensions are not tracked.
-
-    To improve the utilization of warehouse materials, precise quantities of each unique beam type need to be known. Material quantities were previously calculated manually, only during quarterly inventories and annual audits.
-  ],
-  [
-    #v(0.5em)
-    #figure(
-      image("../media/sklad_hranolku.jpeg", width: 100%),
-      caption: [Warehouse storing wooden "hranolky" (timber beams)],
-    ) <fig-warehouse>
-  ],
-)
-
-#figure(
-  image("../media/sparovka.jpeg", width: 80%),
-  caption: [Jointer board ("spárovka") composed of individual timber beams],
-) <fig-jointer>
-
-=== Zebra Terminal and QR Code Integration
-
-#grid(
-  columns: (1fr, 35%),
-  column-gutter: 1.5em,
-  [
-    Since Zebra terminals are used at other company workplaces, they were chosen for recording material receipts and dispatches from this warehouse. The terminals have an integrated infrared barcode and QR code reader, enabling instant and reliable code scanning.
-
-    QR codes were selected over standard barcodes because they are more reliable, with automatic error correction capability when codes are damaged, and lower susceptibility to reading errors.
-
-    Each storage location with a specific beam type was assigned a QR code. A total of 252 QR codes were deployed throughout the warehouse. The QR code encodes the product identifier which includes wood species, quality grade, and dimensions.
-  ],
-  [
-    #figure(
-      image("../media/warehouse_zebra.png", width: 100%),
-      caption: [Zebra TC200J terminal with integrated infrared QR code reader],
-    ) <fig-zebra>
-  ],
-)
-
-#figure(
-        image("../media/label_captioned.png", width: 70%),
-        caption: [QR code label at a storage location],
-      ) <fig-qr-label>
-
-=== Android Application Overview
+== Application Overview
 
 #grid(
   columns: (1fr, 30%),
+
   column-gutter: 1.5em,
   [
-    The Android application was natively developed in Kotlin using Jetpack Compose. On the start screen (shown on the right), users can immediately scan a QR code. Upon application startup, Firebase authentication occurs in the background to enable database communication. Simultaneously, the app exchanges version information in the "Devices" collection and, if a new version exists (checked in the "AppConfig" collection), downloads and prompts the user to install the update.
+    The Android application was natively developed in Kotlin using Jetpack Compose.
+    On the start screen (shown on the right), users can immediately scan a QR code.
+    Upon application startup, Firebase authentication occurs in the background to enable database communication.
+    Simultaneously, the app exchanges version information in the "Devices" collection and,
+    if a new version exists (checked in the "AppConfig" collection),
+    downloads and prompts the user to install the update.
 
-    Integration of the infrared QR code reader was straightforward—adding a text field with automatic focus was sufficient. The scanned value is automatically entered into the text field when scan buttons are pressed.
+    Integration of the infrared QR code reader was straightforward—adding
+    a text field with automatic focus was sufficient.
+    The scanned value is automatically entered into the text field when scan buttons are pressed.
 
-    After scanning a code, the application attempts to load the corresponding document from the database. The document ID matches the unique QR code. If the item doesn't exist on the server during scanning, it is automatically created with properties parsed directly from the QR code.
+    After scanning a code, the application attempts to load the corresponding document from the database.
+    The document ID matches the unique QR code.
+    If the item doesn't exist on the server during scanning,
+    it is automatically created with properties parsed directly from the QR code.
   ],
   [
     #figure(
@@ -91,7 +50,10 @@ The analysis serves as the foundation for the refactoring work documented in the
   ],
 )
 
-On the item detail screen, users can easily add a movement by entering a number and clicking "Receipt" or "Dispatch" to record the transaction. The app also provides an overview of all warehouse items with filtering and sorting capabilities, a screen showing recent movements, and an inventory mode (available only during inventory periods on specific authorized devices).
+On the item detail screen,
+users can easily add a movement by entering a number and clicking "Receipt" or "Dispatch" to record the transaction.
+The app also provides an overview of all warehouse items with filtering and sorting capabilities,
+a screen showing recent movements, and an inventory mode (available only during inventory periods on specific authorized devices).
 
 == System Architecture
 

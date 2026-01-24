@@ -1,21 +1,16 @@
 = Executive Summary
 
-This report documents the refactoring of the *Beams and Jointers* (_Hranolky a Spárovky_) warehouse management application
-according to Normalized Systems (NS) Theory principles.
-The application, built with Kotlin and Jetpack Compose for Firebase, runs on Zebra TC200J Android terminals and
-manages inventory data for a woodworking company producing timber beams (_hranolky_) and jointer boards (_spárovky_).
+This report documents the refactoring of the *Beams and Jointers* (_Hranolky a Spárovky_) warehouse management system according to Normalized Systems (NS) Theory principles.
+The system consists of two primary components sharing a common Firebase backend:
+1.  A native *Android terminal application* (Zebra TC200J) for warehouse data entry.
+2.  A *React web application* for administration and reporting.
 
 == Motivation
 
-The original codebase, while functional, exhibited several maintainability challenges common to Android applications:
+Both codebases, while functional, exhibited maintainability challenges typical of rapid application development:
 
-- *Monolithic ViewModels:* The `ManageItemViewModel` contained 522 lines handling device identification, quantity parsing, and business rules. Similarly, `UpdateManager` (628 lines) handled downloading, installation, and UI updates in a single class.
-
-- *Scattered Configuration:* Firestore collection names ("Hranolky", "Sparovky"), quality code mappings, and business rules (75-day inventory validity) were hardcoded across multiple files.
-
-- *Mixed Responsibilities:* The `WarehouseSlot` data class (186 lines) contained parsing logic, dimension adjustments, and display formatting alongside pure data fields.
-
-- *Tight Coupling:* Algorithm implementations (quantity parsing, inventory status checking) were embedded directly in ViewModels, making them impossible to test in isolation or evolve independently.
+- *Android Challenges:* Monolithic ViewModels (e.g., `ManageItemViewModel` with 522 lines), scattered configuration, and business logic tightly coupled to UI components.
+- *Web App Challenges:* React components mixing UI rendering with complex filtering logic, hardcoded configuration values, and state management causing unnecessary re-renders.
 
 These issues created *combinatorial effects*—situations where small changes required modifications across multiple files, increasing maintenance cost and defect risk.
 
@@ -23,12 +18,14 @@ These issues created *combinatorial effects*—situations where small changes re
 
 Using NS Theory's four core theorems—Separation of Concerns (SoC), Data Version Transparency (DVT), Action Version Transparency (AVT), and Separation of States (SoS)—we:
 
-1. *Analyzed* the codebase to identify 13 specific violations across all four theorems
-2. *Designed* a target architecture with centralized configuration and extracted use cases
-3. *Established* a comprehensive test suite (338+ tests) as a safety net
-4. *Refactored* incrementally, verifying tests after each change
+1.  *Analyzed* both codebases to identify specific violations (13 in Android, 9 in Web App).
+2.  *Designed* target architectures enabling independent evolution of components.
+3.  *Established* comprehensive test suites (338 Android tests, 196 Web tests) as a safety net.
+4.  *Refactored* incrementally, verifying tests after each change.
 
 == Key Results
+
+=== Android Application Refactoring
 
 #figure(
   text(size: 10pt)[
@@ -49,43 +46,30 @@ Using NS Theory's four core theorems—Separation of Concerns (SoC), Data Versio
     [SoS], [AuthState/UpdateState], [Decomposed into granular sealed classes],
   )
   ],
-  caption: [Summary of extracted modules and improvements]
+  caption: [Summary of Android improvements]
 )
 
-A comprehensive test suite was established as the foundation:
+=== Web Application Refactoring
 
 #figure(
-text(size: 10pt)[
+  text(size: 10pt)[
     #table(
-    columns: (auto, auto),
+    columns: (auto, auto, auto),
     inset: 7pt,
     align: left,
-    [*Test Category*], [*Test Count*],
-    [Domain Logic (InputValidator, Parsers)], [46],
-    [Model Classes (WarehouseSlot, SlotAction)], [30+],
-    [Use Cases (Inventory, Quantity, Logging)], [60+],
-    [ViewModels (Start, History, ManageItem)], [60+],
-    [State Isolation (Update, Auth)], [37+],
-    [Configuration & Utils], [40+],
-    [*Total*], [*338*],
-  )],
-  caption: [Test suite coverage summary]
+    [*Category*], [*Extracted Module*], [*Benefit*],
+    [SoC], [Custom Hooks], [Logic separated from UI components],
+    [SoC], [Chart Subcomponents], [Complex chart broken down into 5 focused files],
+    [DVT], [Config Module], [Centralized admin emails and collection names],
+    [SoS], [Filter State Hook], [Isolated filtering logic, independently testable],
+  )
+  ],
+  caption: [Summary of Web App improvements]
 )
-
-== Document Structure
-
-The remainder of this report is organized as follows:
-
-- *Section 2 (Theory):* Introduces NS Theory and its four theorems, with Android-specific examples
-- *Section 3 (Analysis):* Documents violations found in the original codebase with code excerpts
-- *Section 4 (Refactoring):* Presents the target architecture and implementation details
-- *Section 5 (Conclusion):* Summarizes achievements, lessons learned, and future work
 
 == Conclusion
 
-The refactoring successfully improved the codebase's modularity and testability while maintaining
-full backward compatibility.
-All existing functionality remains intact, verified through comprehensive automated testing.
-The extracted modules now enable changes to configuration, parsing logic, and business rules
-without triggering modifications across multiple files—achieving the *linear scalability*
-promised by Normalized Systems Theory.
+The refactoring successfully improved the modularity and testability of both applications while maintaining full backward compatibility.
+The combined test suite of over *530 automated tests* ensures reliability.
+The extracted modules now enable changes to configuration, business rules, and UI logic without triggering modifications across multiple files—achieving the *linear scalability* promised by Normalized Systems Theory across the entire system.
+

@@ -1,6 +1,6 @@
-= Refactored System Design
+= Case Study 1: Android Application Refactoring
 
-This section documents the design decisions for refactoring the system to comply with Normalized Systems Theory.
+This section documents the design decisions for refactoring the Android application to comply with Normalized Systems Theory.
 Each violation identified in the previous section is addressed with a specific refactoring strategy.
 
 == Target Architecture Overview
@@ -263,6 +263,12 @@ class FirestoreConfigProvider(
 ```,
   caption: [ConfigProvider abstraction]
 )
+
+This strengthens DVT compliance by allowing configuration evolution without code changes.
+This means that changing a business rule or adding a new quality type can be done via Firestore updates rather than app updates,
+which can be unreliable due to user update delays.
+This external configuration approach also enables DVT not only at the level of the Android app,
+but for the Android app and web app combined, since both read from the same Firestore configuration.
 
 ==== Configuration Cache Optimization
 

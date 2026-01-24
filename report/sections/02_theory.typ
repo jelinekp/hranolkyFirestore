@@ -82,11 +82,6 @@ configuration should be centralized in dedicated modules.
 *Key insight:* If adding a new admin user, changing a database collection name, or adjusting
 a business rule threshold requires editing multiple files, DVT is violated.
 
-*Violation example:*
-```kotlin
-// TODO find an example in my app
-```
-
 === Action Version Transparency (AVT)
 
 The AVT theorem ensures that actions (operations, functions, algorithms)
@@ -118,15 +113,10 @@ changes to one state can inadvertently affect others.
 *Key insight:* State should be granular enough that a change to one concern
 does not trigger updates to unrelated UI components.
 
-*Violation example:*
-```kotlin
-// TODO find an example in my app
-```
-
 == Application to Android Development
 
-While NS Theory was originally developed for enterprise Java systems,
-its principles translate directly to Kotlin Android applications which share Java roots:
+Because Android app is written in Kotlin, which is an extension of Java,
+normalization system principles, which were originally developed for Java, translate directly to it:
 
 #figure(
   table(
@@ -140,6 +130,24 @@ its principles translate directly to Kotlin Android applications which share Jav
     [SoS], [Granular states], [Split combined UI states into focused state classes],
   ),
   caption: [NS Theorems mapped to Android patterns]
+)
+
+== Application to Frontend Development
+
+While NS Theory was originally developed for enterprise Java systems, its principles translate directly to React applications:
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    inset: 8pt,
+    align: left,
+    [*NS Theorem*], [*Frontend Pattern*], [*Refactoring Example*],
+    [SoC], [Custom Hooks & Components], [Extract logic to useSlotFiltering hook; extract ExportDialog to component],
+    [DVT], [Config Modules], [Centralize API configs and user lists in appConfig.ts],
+    [AVT], [Pure Utilities], [Move sorting and calculation logic to utility modules],
+    [SoS], [State Encapsulation], [Isolate filter state from layout state in separate hooks],
+  ),
+  caption: [NS Theorems mapped to React patterns]
 )
 
 == Benefits of NS-Compliant Architecture

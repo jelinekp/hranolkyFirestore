@@ -66,11 +66,14 @@
 #include "sections/01_executive_summary.typ"
 
 #set heading(numbering: "1.")
+#include "sections/01_domain_intro.typ"
 #include "sections/02_theory.typ"
-#include "sections/03_current.typ"
-#include "sections/04_refactored.typ"
+#include "sections/03_case_android_analysis.typ"
+#include "sections/05_case_android_refactoring.typ"
+#include "sections/04_case_web_analysis.typ"
+#include "sections/06_case_web_refactoring.typ"
 
 #set heading(numbering: none)
 #include "sections/08_conclusion.typ"
 
-#bibliography("references.bib")
+#bibliography("references.bib", style: "apa")
