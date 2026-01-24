@@ -1,0 +1,97 @@
+@startuml architecture_after
+
+skinparam packageStyle rectangle
+skinparam backgroundColor #FAFAFA
+skinparam classFontSize 10
+skinparam packageFontSize 12
+
+title "After Refactoring - NS Theory Architecture"
+
+package "screens" {
+  class Hranolky
+  class Sparovky
+  class AdminPanel
+}
+
+package "components" #LightGreen {
+  package "chart" {
+    class ChartOverlay
+    class ExpandedChartModal
+  }
+  package "export" {
+    class ExportDialog
+  }
+  package "table" {
+    class SlotsTable
+    class SortableTableHeader
+  }
+  package "admin" {
+    class AccessDenied
+    class DeviceRow
+  }
+  package "slots" {
+    class Filters
+  }
+  class VolumeInTimeChart
+  class ContentLayoutContainer
+  class ErrorBoundary
+  class LoadingOverlay
+}
+
+package "hooks" #LightBlue {
+  package "data" {
+    class useFetchAllWarehouseSlots
+    class useFetchFilteredVolumeHistory
+  }
+  class useSlotFiltering
+  class useChartLoadingState
+  class useExpandedModal
+  class useChartDataTransform
+}
+
+package "utils" #LightYellow {
+  class slotSorting
+  class chartAxisUtils
+  class slotFilterUtils
+}
+
+package "config" #LightGray {
+  class appConfig {
+    ADMIN_EMAILS
+    COLLECTION_NAMES
+    INVENTORY_CHECK_WEEKS
+  }
+}
+
+package "common/utils" #LightCyan {
+  class weekUtils
+  class qualityMapping
+  class volumeTypes
+}
+
+Hranolky --> ContentLayoutContainer
+ContentLayoutContainer --> Filters
+ContentLayoutContainer --> SlotsTable
+ContentLayoutContainer --> VolumeInTimeChart
+ContentLayoutContainer --> useSlotFiltering
+
+VolumeInTimeChart --> useChartLoadingState
+VolumeInTimeChart --> useExpandedModal
+VolumeInTimeChart --> useChartDataTransform
+VolumeInTimeChart --> chartAxisUtils
+VolumeInTimeChart --> ChartOverlay
+VolumeInTimeChart --> ExpandedChartModal
+
+Filters --> ExportDialog
+SlotsTable --> slotSorting
+
+useSlotFiltering --> slotFilterUtils
+AdminPanel --> AccessDenied
+AdminPanel --> DeviceRow
+AdminPanel --> appConfig
+
+note bottom of utils : Pure functions (SoC)
+note bottom of hooks : State isolation (SoS)
+note bottom of appConfig : Centralized config (DVT)
+
+@enduml

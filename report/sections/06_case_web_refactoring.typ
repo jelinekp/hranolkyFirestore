@@ -12,16 +12,16 @@ The original architecture featured a *flat component structure* with mixed conce
 
 #figure(
   table(
-    columns: (1fr, 2fr, 1fr),
+    columns: (1fr, 2fr),
     inset: 10pt,
     align: left,
     fill: (col, row) => if row == 0 { rgb("#FFB3B3") } else { white },
-    [*Component*], [*Mixed Responsibilities*], [*Lines*],
-    [`Filters.tsx`], [Filter UI + Export Dialog + Export Logic + Progress Bar], [321],
-    [`VolumeInTimeChart.tsx`], [Chart + Animation + Data Transform + Modal + Axis], [482],
-    [`SlotsTable.tsx`], [Table Rendering + Sorting Logic + Quality Mapping], [179],
-    [`ContentLayoutContainer`], [Layout + Filter State + Sorting State], [111],
-    [`AdminPanel.tsx`], [Access Control + Device Table + Edit State], [240],
+    [*Component*], [*Mixed Responsibilities*],
+    [`Filters.tsx`], [Filter UI + Export Dialog + Export Logic + Progress Bar],
+    [`VolumeInTimeChart.tsx`], [Chart + Animation + Data Transform + Modal + Axis],
+    [`SlotsTable.tsx`], [Table Rendering + Sorting Logic + Quality Mapping],
+    [`ContentLayoutContainer`], [Layout + Filter State + Sorting State],
+    [`AdminPanel.tsx`], [Access Control + Device Table + Edit State],
   ),
   caption: [Original component structure with mixed concerns],
 )
@@ -62,7 +62,7 @@ The refactored architecture follows NS Theory principles with *modular, single-r
     x: -1cm,
     image("../diagrams/svg/web_architecture_after.svg", width: calc.abs(110%)),
   ),
-  caption: [Directory structure after refactoring — 53 source files with clear boundaries],
+  caption: [Directory structure after refactoring — 66 source files with clear boundaries],
 )
 
 === Architectural Improvements
@@ -72,10 +72,10 @@ The refactored architecture follows NS Theory principles with *modular, single-r
   inset: 8pt,
   align: left,
   [*Metric*], [*Before*], [*After*],
-  [Source files], [35], [53 (+51%)],
+  [Source app logic files], [35], [66 (+89%)],
   [Average component size], [~200 lines], [~60 lines],
   [Largest component], [482 lines], [~150 lines],
-  [Test coverage], [0 tests], [146 tests],
+  [Test coverage], [0 tests], [196 tests],
   [Directory depth], [Flat], [Organized by concern],
 )
 
@@ -200,8 +200,14 @@ export function getFullQualityName(code: string | null): string {
 }
 ```
 
+Support for external configuration was added such that the configuration is now shared with the Android app.
+If the configuration cannot be loaded, the app falls back to built-in defaults.
+A new admin panel for editing shared app settings was also created.
+Privileged users can now update quality mappings, dimension corrections,
+inventory check intervals, etc at runtime without code changes or app releases.
+
 *SoC Benefit:* Adding new quality types requires only data changes, not code changes.
-The mapping can be loaded from external configuration if needed.
+The mappings are loaded from external configuration primarily.
 
 === Chart Components
 

@@ -1,3 +1,5 @@
+#import "../styles.typ": *
+
 = Conclusion
 
 == Achievements
@@ -15,14 +17,17 @@ The refactoring effort achieved measurable improvements across both the Android 
         columns: (auto, auto),
         inset: 6pt,
         align: left,
+        fill: (col, row) => if row == 0 { color-android-header } else { white },
         [*Android App Metric*], [*Value*],
-        [Total tests], [337],
-        [Test increase], [+1023%],
-        [Config locations], [Centralized],
-        [ViewModel size], [-62%],
-        [Extracted use cases], [6],
-        [State machine tests], [34],
-        [Remote config], [Enabled],
+        [Total tests], [#txt-add[*337*]],
+        [Test increase], [#txt-add[*+1023%*]],
+        [Kotlin files changed], [#txt-mod[*62*]],
+        [Production files], [39 #txt-mod[(+3,295 lines)]],
+        [Test files], [23 #txt-mod[(+3,836 lines)]],
+        [Total lines changed], [#txt-add[+7,362], #txt-del[-231], #txt-mod[*+7,131*]],
+        [Extracted use cases], [#txt-add[*6*]],
+        [State machine tests], [#txt-add[*34*]],
+        [Remote config], [#txt-mod[Shared with Web App]],
       ),
       caption: [Android App Results]
     )
@@ -33,19 +38,27 @@ The refactoring effort achieved measurable improvements across both the Android 
         columns: (auto, auto),
         inset: 6pt,
         align: left,
+        fill: (col, row) => if row == 0 { color-web-header } else { white },
         [*Web App Metric*], [*Value*],
-        [Total tests], [196],
-        [Test files], [26],
-        [Modules extracted], [20],
-        [Source files], [+51%],
-        [Chart component], [Split to 5],
-        [Code reorg], [~4700 lines],
-        [Error boundaries], [Added],
+        [Total tests], [#txt-add[*196*]],
+        [Total files changed], [#txt-mod[*120*]],
+        [Test files], [26 #txt-add[(+2,381 lines)]],
+        [App logic files], [66 #txt-mod[(+2,487 lines)]],
+        [Other files], [28 #txt-mod[(+1,030 lines)]],
+        [Total lines changed], [#txt-add[+6,911], #txt-del[-1,013], #txt-mod[*+5,898*]],
+        [Modules extracted], [#txt-add[*20*]],
+        [Chart component], [#txt-mod[Split to 5]],
+        [Error boundaries], [#txt-add[Added]],
+        [Remote config], [#txt-mod[Shared with Android App]],
       ),
       caption: [Web App Results]
     )
   ]
 )
+
+#text(size: 9pt, style: "italic")[
+  _Note: "Other files" includes documentation, configuration files, and assets. The significant insertions in App Logic reflect the introduction of new modules and strong typing._
+]
 
 === Qualitative Improvements
 
