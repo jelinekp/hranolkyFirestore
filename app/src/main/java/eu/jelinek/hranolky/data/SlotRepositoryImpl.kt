@@ -136,21 +136,12 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             throw IllegalStateException("Slot $normalizedId does not exist")
         }
 
-        // Update slot quantity
+        // Update slot quantity and add action atomically in a transaction
         val updateSlot = mapOf(
             "quantity" to FieldValue.increment(change),
             "lastModified" to FieldValue.serverTimestamp(),
         )
 
-        try {
-            docRef.update(updateSlot).await()
-            Log.d(TAG, "addSlotAction: Updated slot $normalizedId (increment $change)")
-        } catch (e: Exception) {
-            Log.e(TAG, "addSlotAction: Error updating slot quantity for $normalizedId", e)
-            throw e
-        }
-
-        // Add action to subcollection
         val slotAction = hashMapOf(
             "action" to actionType.toString(),
             "userId" to deviceId,
@@ -159,15 +150,24 @@ class SlotRepositoryImpl(private val firestoreDb: FirebaseFirestore) : SlotRepos
             "timestamp" to FieldValue.serverTimestamp(),
         )
 
-        val actionDocRef = try {
-            docRef.collection(FirestoreConfig.Subcollections.SLOT_ACTIONS).add(slotAction).await()
+        return try {
+            firestoreDb.runTransaction { transaction ->
+                // Update the slot quantity
+                transaction.update(docRef, updateSlot)
+                Log.d(TAG, "addSlotAction: [Transaction] Updated slot $normalizedId (increment $change)")
+
+                // Add action to subcollection within same transaction
+                val actionDocRef = docRef.collection(FirestoreConfig.Subcollections.SLOT_ACTIONS).document()
+                transaction.set(actionDocRef, slotAction)
+                Log.d(TAG, "addSlotAction: [Transaction] Added slot action to $normalizedId with ID ${actionDocRef.id}")
+
+                // Return the action document ID for use after transaction completes
+                actionDocRef.id
+            }.await()
         } catch (e: Exception) {
-            Log.e(TAG, "addSlotAction: Error logging slot action for $normalizedId", e)
+            Log.e(TAG, "addSlotAction: Error during atomic update+action for $normalizedId", e)
             throw e
         }
-
-        Log.d(TAG, "addSlotAction: Added slot action to $normalizedId with ID ${actionDocRef.id}")
-        return actionDocRef.id
     }
 
     override suspend fun undoSlotAction(
