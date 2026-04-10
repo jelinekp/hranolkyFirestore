@@ -35,6 +35,19 @@ tasks.register<JavaExec>("upload") {
     }
 }
 
+// Task to check slot consistency
+tasks.register<JavaExec>("checkConsistency") {
+    group = "verification"
+    description = "Checks Hranolky and Sparovky for consistency with SlotActions"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("SlotConsistencyCheckerKt")
+    args = buildList {
+        project.findProperty("credentials")?.let {
+            add(it.toString())
+        }
+    }
+}
+
 kotlin {
     jvmToolchain(21)
 }
