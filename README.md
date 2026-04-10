@@ -23,7 +23,6 @@ hranolkyFirestore/
 ├── firestore-config/             # CLI tool for Firestore config
 ├── firestore-dump/               # CLI tool for data export
 ├── firestore-up/                 # CLI tool for data upload
-└── report/                       # NS Theory analysis report (Typst)
 ```
 
 ## Building
@@ -52,7 +51,7 @@ hranolkyFirestore/
 
 ## Testing
 
-The project includes a comprehensive test suite (149 tests):
+The project includes a comprehensive test suite (306 tests):
 
 | Test Category | Count |
 |--------------|-------|
@@ -61,6 +60,7 @@ The project includes a comprehensive test suite (149 tests):
 | Use Cases (Inventory, Quantity) | 35 |
 | ViewModels (Start, History) | 14 |
 | State Isolation (Update, Auth) | 37 |
+... 
 
 Run tests:
 ```bash
@@ -89,16 +89,6 @@ This application follows Normalized Systems (NS) Theory principles:
 ### Separation of States (SoS)
 - `UpdateStates.kt` - isolated update flow states
 - `AuthStates.kt` - isolated authentication states
-
-## Report
-
-The NS Theory analysis report is in the `report/` directory (Typst format).
-
-To compile the report:
-```bash
-cd report
-typst compile main.typ
-```
 
 ## License
 
