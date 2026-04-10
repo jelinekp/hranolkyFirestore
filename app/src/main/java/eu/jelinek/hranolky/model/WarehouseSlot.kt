@@ -32,9 +32,11 @@ data class WarehouseSlot(
 
         // Extract quality and split parts from the potentially modified product ID
         val parts = processedProductId.split("-")
-        val quality = parts[0] + "-" + parts[1]
+        val quality = parts.getOrNull(0)?.let { firstPart ->
+            parts.getOrNull(1)?.let { secondPart -> "$firstPart-$secondPart" }
+        }
 
-        if (parts.size < 5) {
+        if (parts.size < 5 || quality == null) {
             Log.d("Parsed parts", "Parsed parts: ${parts.size}")
         } else {
 
@@ -54,7 +56,7 @@ data class WarehouseSlot(
                         SlotType.Beam
                     }
                 },
-                quality = quality,
+                quality = QualityConfig.getFullQualityName(quality.replace('/', '|')),
                 thickness = thickness,
                 width = width,
                 length = length,

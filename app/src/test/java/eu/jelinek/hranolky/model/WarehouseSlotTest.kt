@@ -65,6 +65,26 @@ class WarehouseSlotTest {
     }
 
     @Test
+    fun `parsePropertiesFromProductId handles short product id safely`() {
+        val slot = WarehouseSlot(fullProductId = "H-", quantity = 1)
+        val parsed = slot.parsePropertiesFromProductId()
+
+        assertEquals(slot, parsed)
+    }
+
+    @Test
+    fun `parsePropertiesFromProductId normalizes slash quality separator`() {
+        val slot = WarehouseSlot(fullProductId = "S-DUB-A/A-27-0095-2050", quantity = 5)
+        val parsed = slot.parsePropertiesFromProductId()
+
+        assertEquals(SlotType.Jointer, parsed.slotType)
+        assertEquals("DUB A/A", parsed.quality)
+        assertEquals(27.4f, parsed.thickness)
+        assertEquals(95.0f, parsed.width)
+        assertEquals(2050, parsed.length)
+    }
+
+    @Test
     fun `parsePropertiesFromProductId handles 42mm thickness adjustment`() {
         val slot = WarehouseSlot(fullProductId = "H-DUB-A-42-100-2000", quantity = 1)
         val parsed = slot.parsePropertiesFromProductId()
